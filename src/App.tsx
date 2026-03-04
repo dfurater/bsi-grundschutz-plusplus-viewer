@@ -1,0 +1,716 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ControlDetailPanel } from "./components/ControlDetailPanel";
+import { FacetPanel, type ActiveFilters } from "./components/FacetPanel";
+import { GroupOverview } from "./components/GroupOverview";
+import { GroupPage } from "./components/GroupPage";
+import { ResultList } from "./components/ResultList";
+import { SearchBar } from "./components/SearchBar";
+import { SourcePanel } from "./components/SourcePanel";
+import { SearchClient } from "./lib/searchClient";
+import {
+  buildControlHash,
+  buildGroupHash,
+  buildSearchHash,
+  defaultFilters,
+  parseHash,
+  type AppRoute
+} from "./lib/routing";
+import type {
+  CatalogMeta,
+  CatalogRegistry,
+  ControlDetail,
+  DatasetDescriptor,
+  ProfileAnalysis,
+  RelationGraphPayload,
+  SearchQuery,
+  SearchResponse,
+  SearchResultItem
+} from "./types";
+
+const DEFAULT_SEARCH_RESPONSE: SearchResponse = {
+  total: 0,
+  items: [],
+  facets: {
+    topGroupId: [],
+    secLevel: [],
+    effortLevel: [],
+    class: [],
+    modalverbs: [],
+    targetObjects: [],
+    tags: [],
+    relationTypes: []
+  },
+  elapsedMs: 0
+};
+
+async function computeSha256(text: string) {
+  const encoded = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest("SHA-256", encoded);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function mapRouteFilters(filters: ActiveFilters): SearchQuery["filters"] {
+  return {
+    topGroupId: [...filters.topGroupId],
+    groupId: [...filters.groupId],
+    secLevel: [...filters.secLevel],
+    effortLevel: [...filters.effortLevel],
+    class: [...filters.class],
+    modalverbs: [...filters.modalverbs],
+    targetObjects: [...filters.targetObjects],
+    tags: [...filters.tags],
+    relationTypes: [...filters.relationTypes]
+  };
+}
+
+function navigate(hash: string) {
+  if (window.location.hash === hash.replace(/^#/, "#")) {
+    return;
+  }
+  window.location.hash = hash;
+}
+
+function assetUrl(relativePath: string) {
+  const hrefWithoutHash = window.location.href.split("#")[0];
+  return new URL(relativePath, hrefWithoutHash).toString();
+}
+
+type ThemeMode = "light" | "dark";
+
+function getInitialTheme(): ThemeMode {
+  try {
+    const stored = window.localStorage.getItem("gspp-theme");
+    if (stored === "light" || stored === "dark") {
+      return stored;
+    }
+  } catch {
+    // Ignore storage errors and fall back to system preference.
+  }
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function getDatasetPaths(datasetId: string | null, withRegistry: boolean) {
+  if (withRegistry && datasetId) {
+    const base = `./data/datasets/${encodeURIComponent(datasetId)}`;
+    return {
+      metaUrl: assetUrl(`${base}/catalog-meta.json`),
+      indexUrl: assetUrl(`${base}/catalog-index.json`),
+      detailsUrl: assetUrl(`${base}/details`)
+    };
+  }
+
+  return {
+    metaUrl: assetUrl("./data/catalog-meta.json"),
+    indexUrl: assetUrl("./data/catalog-index.json"),
+    detailsUrl: assetUrl("./data/details")
+  };
+}
+
+export default function App() {
+  const client = useMemo(() => new SearchClient(), []);
+  const [route, setRoute] = useState<AppRoute>(() => parseHash(window.location.hash));
+  const [meta, setMeta] = useState<CatalogMeta | null>(null);
+  const [registry, setRegistry] = useState<CatalogRegistry | null>(null);
+  const [profileAnalysis, setProfileAnalysis] = useState<ProfileAnalysis | null>(null);
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string>("anwender");
+  const [bootState, setBootState] = useState<"loading" | "ready" | "error">("loading");
+  const [bootError, setBootError] = useState<string | null>(null);
+  const [bootProgress, setBootProgress] = useState(0);
+  const [bootStatusText, setBootStatusText] = useState("Index wird aufgebaut und geladen…");
+
+  const [searchText, setSearchText] = useState("");
+  const [sort, setSort] = useState<SearchQuery["sort"]>("relevance");
+  const [filters, setFilters] = useState<ActiveFilters>(defaultFilters());
+
+  const [searchResponse, setSearchResponse] = useState<SearchResponse>(DEFAULT_SEARCH_RESPONSE);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+
+  const [detail, setDetail] = useState<ControlDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [graphData, setGraphData] = useState<RelationGraphPayload | null>(null);
+  const [graphLoading, setGraphLoading] = useState(false);
+  const [graphError, setGraphError] = useState<string | null>(null);
+  const [graphHops, setGraphHops] = useState<1 | 2>(1);
+  const [graphFilter, setGraphFilter] = useState<"all" | "required" | "related">("all");
+
+  const [groupControls, setGroupControls] = useState<SearchResultItem[]>([]);
+  const [groupLoading, setGroupLoading] = useState(false);
+
+  const [offline, setOffline] = useState(!navigator.onLine);
+  const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
+  const requestCounter = useRef(0);
+  const graphRequestCounter = useRef(0);
+
+  async function initializeDataset(datasetId: string, registryOverride: CatalogRegistry | null) {
+    const withRegistry = Boolean(registryOverride?.datasets?.length);
+    const paths = getDatasetPaths(datasetId, withRegistry);
+
+    setBootState("loading");
+    setBootError(null);
+    setBootProgress(8);
+    setBootStatusText("Datensatz wird vorbereitet…");
+
+    const initPromise = client.init(paths.indexUrl, paths.detailsUrl);
+    setBootProgress(24);
+    setBootStatusText("Suchindex wird geladen…");
+
+    const metaResponse = await fetch(paths.metaUrl);
+    setBootProgress(52);
+    setBootStatusText("Metadaten werden gelesen…");
+
+    await initPromise;
+    setBootProgress(76);
+    setBootStatusText("Suche wird initialisiert…");
+
+    if (!metaResponse.ok) {
+      throw new Error(`Datensatz-Metadaten konnten nicht geladen werden (HTTP ${metaResponse.status}).`);
+    }
+
+    const metaPayload: CatalogMeta = await metaResponse.json();
+    setBootProgress(92);
+    setBootStatusText("Oberflaeche wird aufgebaut…");
+    setMeta(metaPayload);
+    setSelectedDatasetId(datasetId);
+    setSearchResponse(DEFAULT_SEARCH_RESPONSE);
+    setSearchError(null);
+    setDetail(null);
+    setDetailError(null);
+    setGraphData(null);
+    setGraphError(null);
+    setGroupControls([]);
+    setBootProgress(100);
+    setBootStatusText("Fertig");
+    setBootState("ready");
+  }
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    try {
+      window.localStorage.setItem("gspp-theme", theme);
+    } catch {
+      // Ignore storage errors.
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    const onHash = () => setRoute(parseHash(window.location.hash));
+    const onOnline = () => setOffline(false);
+    const onOffline = () => setOffline(true);
+
+    window.addEventListener("hashchange", onHash);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+
+    return () => {
+      window.removeEventListener("hashchange", onHash);
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function boot() {
+      try {
+        setBootState("loading");
+        setBootProgress(4);
+        setBootStatusText("Katalogverzeichnis wird geladen…");
+        const [registryResponse, profileResponse] = await Promise.all([
+          fetch(assetUrl("./data/catalog-registry.json")),
+          fetch(assetUrl("./data/profile-links.json"))
+        ]);
+        setBootProgress(16);
+        setBootStatusText("Datensatzbeziehungen werden geprueft…");
+
+        let registryPayload: CatalogRegistry | null = null;
+        if (registryResponse.ok) {
+          registryPayload = await registryResponse.json();
+        }
+
+        if (profileResponse.ok) {
+          const profilePayload: ProfileAnalysis = await profileResponse.json();
+          if (!cancelled) {
+            setProfileAnalysis(profilePayload);
+          }
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        if (registryPayload?.datasets?.length) {
+          setRegistry(registryPayload);
+          const hasDefault = registryPayload.datasets.some((dataset) => dataset.id === registryPayload.defaultDatasetId);
+          const initialId = hasDefault ? registryPayload.defaultDatasetId : registryPayload.datasets[0].id;
+          await initializeDataset(initialId, registryPayload);
+          return;
+        }
+
+        await initializeDataset("legacy", null);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setBootState("error");
+        setBootError(error instanceof Error ? error.message : "Initialisierung fehlgeschlagen.");
+      }
+    }
+
+    boot();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [client]);
+
+  useEffect(() => {
+    if (route.view !== "search") {
+      return;
+    }
+
+    setSearchText(route.query);
+    setSort(route.sort);
+    setFilters(route.filters);
+  }, [route]);
+
+  async function resolveTopGroupId(controlId: string): Promise<string | null> {
+    const response = await client.search({
+      text: controlId,
+      sort: "relevance",
+      filters: defaultFilters(),
+      limit: 8,
+      offset: 0
+    });
+
+    const exact = response.items.find((item) => item.id.toLowerCase() === controlId.toLowerCase());
+    return exact?.topGroupId ?? response.items[0]?.topGroupId ?? null;
+  }
+
+  async function loadControl(controlId: string, topGroupId: string | null) {
+    setDetailLoading(true);
+    setDetailError(null);
+
+    try {
+      const resolvedTopGroupId = topGroupId ?? (await resolveTopGroupId(controlId));
+      if (!resolvedTopGroupId) {
+        throw new Error(`Top-Gruppe fuer ${controlId} konnte nicht bestimmt werden.`);
+      }
+
+      const payload = await client.getControl(controlId, resolvedTopGroupId);
+      setDetail(payload);
+      setGraphError(null);
+    } catch (error) {
+      setDetail(null);
+      setDetailError(error instanceof Error ? error.message : "Control konnte nicht geladen werden.");
+      setGraphData(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  async function loadGraph(controlId: string, hops: 1 | 2) {
+    const current = ++graphRequestCounter.current;
+    setGraphLoading(true);
+    setGraphError(null);
+
+    try {
+      const payload = await client.getNeighborhood(controlId, hops);
+      if (current !== graphRequestCounter.current) {
+        return;
+      }
+      setGraphData(payload);
+    } catch (error) {
+      if (current !== graphRequestCounter.current) {
+        return;
+      }
+      setGraphData(null);
+      setGraphError(error instanceof Error ? error.message : "Graph konnte nicht geladen werden.");
+    } finally {
+      if (current === graphRequestCounter.current) {
+        setGraphLoading(false);
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (bootState !== "ready") {
+      return;
+    }
+
+    if (route.view !== "search") {
+      if (route.view !== "control") {
+        setDetail(null);
+        setGraphData(null);
+      }
+      return;
+    }
+
+    const current = ++requestCounter.current;
+    setSearchLoading(true);
+    setSearchError(null);
+
+    client
+      .search({
+        text: route.query,
+        sort: route.sort,
+        filters: mapRouteFilters(route.filters),
+        limit: 400,
+        offset: 0
+      })
+      .then((response) => {
+        if (current !== requestCounter.current) {
+          return;
+        }
+
+        setSearchResponse(response);
+
+        if (route.controlId) {
+          return loadControl(route.controlId, route.controlTopGroupId);
+        }
+
+        setDetail(null);
+        setGraphData(null);
+      })
+      .catch((error) => {
+        if (current !== requestCounter.current) {
+          return;
+        }
+        setSearchResponse(DEFAULT_SEARCH_RESPONSE);
+        setSearchError(error instanceof Error ? error.message : "Suche fehlgeschlagen.");
+      })
+      .finally(() => {
+        if (current === requestCounter.current) {
+          setSearchLoading(false);
+        }
+      });
+  }, [bootState, client, route]);
+
+  useEffect(() => {
+    if (bootState !== "ready" || route.view !== "group" || !meta) {
+      return;
+    }
+
+    const group = meta.groups.find((item) => item.id === route.groupId);
+    if (!group) {
+      setGroupControls([]);
+      return;
+    }
+
+    const queryFilters = defaultFilters();
+    queryFilters.topGroupId = [group.topGroupId];
+    if (group.depth > 1) {
+      queryFilters.groupId = [group.id];
+    }
+
+    setGroupLoading(true);
+    client
+      .search({
+        text: "",
+        sort: "id-asc",
+        filters: queryFilters,
+        limit: 1200,
+        offset: 0
+      })
+      .then((response) => {
+        setGroupControls(response.items);
+      })
+      .catch(() => {
+        setGroupControls([]);
+      })
+      .finally(() => {
+        setGroupLoading(false);
+      });
+  }, [bootState, client, route, meta]);
+
+  useEffect(() => {
+    if (bootState !== "ready" || route.view !== "control") {
+      return;
+    }
+    loadControl(route.controlId, route.topGroupId);
+  }, [bootState, route]);
+
+  useEffect(() => {
+    if (!detail) {
+      setGraphData(null);
+      return;
+    }
+    loadGraph(detail.id, graphHops);
+  }, [detail?.id, graphHops]);
+
+  async function handleUpload(file: File) {
+    try {
+      setBootState("loading");
+      setBootProgress(10);
+      setBootStatusText("Lokale Datei wird gelesen…");
+      const rawText = await file.text();
+      setBootProgress(32);
+      setBootStatusText("Datei wird validiert…");
+      const hash = await computeSha256(rawText);
+      const uploadPayload = await client.loadUpload(rawText);
+      setBootProgress(76);
+      setBootStatusText("Lokaler Datensatz wird integriert…");
+
+      const currentBuildInfo = meta?.buildInfo;
+      const nextMeta: CatalogMeta = {
+        ...(meta as CatalogMeta),
+        ...(uploadPayload.meta as CatalogMeta),
+        buildInfo: {
+          buildTimestamp: new Date().toISOString(),
+          appVersion: currentBuildInfo?.appVersion ?? "0.1.0",
+          indexVersion: currentBuildInfo?.indexVersion ?? "2",
+          catalogFileName: file.name,
+          catalogFileSha256: hash,
+          catalogFileSizeBytes: file.size
+        }
+      };
+
+      setMeta(nextMeta);
+      setBootProgress(100);
+      setBootStatusText("Fertig");
+      setBootState("ready");
+      setGraphData(null);
+      navigate(buildSearchHash("", "relevance", defaultFilters()));
+    } catch (error) {
+      setBootState("error");
+      setBootError(error instanceof Error ? error.message : "Upload konnte nicht verarbeitet werden.");
+    }
+  }
+
+  async function handleDatasetChange(datasetId: string) {
+    if (datasetId === selectedDatasetId) {
+      return;
+    }
+
+    try {
+      await initializeDataset(datasetId, registry);
+      navigate("#/");
+    } catch (error) {
+      setBootState("error");
+      setBootError(error instanceof Error ? error.message : "Datensatzwechsel fehlgeschlagen.");
+    }
+  }
+
+  function handleSubmitSearch() {
+    navigate(buildSearchHash(searchText, sort, filters, null, null));
+  }
+
+  function toggleFilter(key: keyof ActiveFilters, value: string) {
+    const nextFilters: ActiveFilters = {
+      ...filters,
+      [key]: filters[key].includes(value) ? filters[key].filter((item) => item !== value) : [...filters[key], value]
+    };
+    setFilters(nextFilters);
+    navigate(buildSearchHash(searchText, sort, nextFilters, null, null));
+  }
+
+  function handleSortChange(nextSort: SearchQuery["sort"]) {
+    setSort(nextSort);
+    navigate(buildSearchHash(searchText, nextSort, filters, null, null));
+  }
+
+  function handlePropertyFilterClick(facet: "secLevel" | "effortLevel" | "tags", value: string) {
+    const normalizedValue = value.trim();
+    if (!normalizedValue) {
+      return;
+    }
+
+    const baseFilters = route.view === "search" ? filters : defaultFilters();
+    const baseSort = route.view === "search" ? sort : "relevance";
+    const baseText = route.view === "search" ? searchText : "";
+
+    const alreadyPresent = baseFilters[facet].some(
+      (entry) => entry.toLocaleLowerCase("de-DE") === normalizedValue.toLocaleLowerCase("de-DE")
+    );
+
+    const nextFilters: ActiveFilters = {
+      ...baseFilters,
+      [facet]: alreadyPresent ? [...baseFilters[facet]] : [...baseFilters[facet], normalizedValue]
+    };
+
+    setFilters(nextFilters);
+    setSort(baseSort);
+    setSearchText(baseText);
+    navigate(buildSearchHash(baseText, baseSort, nextFilters, null, null));
+  }
+
+  function handleSelectResult(item: SearchResultItem) {
+    if (route.view === "search") {
+      navigate(buildSearchHash(searchText, sort, filters, item.id, item.topGroupId));
+      return;
+    }
+    navigate(buildControlHash(item.id, item.topGroupId));
+  }
+
+  async function handleRelationClick(controlId: string) {
+    const topGroupId = await resolveTopGroupId(controlId);
+    if (route.view === "search") {
+      navigate(buildSearchHash(searchText, sort, filters, controlId, topGroupId));
+      return;
+    }
+    navigate(buildControlHash(controlId, topGroupId));
+  }
+
+  function handleBreadcrumbGroupClick(groupId: string) {
+    navigate(buildGroupHash(groupId));
+  }
+
+  function handleBreadcrumbControlClick(controlId: string) {
+    handleRelationClick(controlId);
+  }
+
+  const selectedControlId =
+    route.view === "search" ? route.controlId : route.view === "control" ? route.controlId : detail?.id ?? null;
+
+  const currentGroup =
+    route.view === "group" && meta ? meta.groups.find((group) => group.id === route.groupId) ?? null : null;
+  const currentSubgroups =
+    route.view === "group" && meta && currentGroup
+      ? meta.groups.filter((group) => group.parentGroupId === currentGroup.id)
+      : [];
+
+  const datasetOptions = registry?.datasets?.length
+    ? registry.datasets.map((dataset) => ({ id: dataset.id, label: dataset.label }))
+    : [{ id: selectedDatasetId, label: meta?.title || "Katalog" }];
+
+  const activeDataset: DatasetDescriptor | null =
+    registry?.datasets?.find((dataset) => dataset.id === selectedDatasetId) ?? null;
+  const activeDatasetInfo = {
+    label: activeDataset?.label ?? meta?.title ?? "Katalog",
+    version: activeDataset?.version ?? meta?.version ?? null,
+    lastModified: activeDataset?.lastModified ?? meta?.lastModified ?? null,
+    oscalVersion: activeDataset?.oscalVersion ?? meta?.oscalVersion ?? null,
+    controls: activeDataset?.stats.controlCount ?? meta?.stats.controlCount ?? 0,
+    groups: activeDataset?.stats.groupCount ?? meta?.stats.groupCount ?? 0
+  };
+
+  if (bootState === "loading" && !meta) {
+    const progress = Math.min(100, Math.max(4, Math.round(bootProgress)));
+    return (
+      <main className="app-shell status-screen" aria-live="polite">
+        <section className="status-box loading-box">
+          <h1>Index wird aufgebaut und geladen…</h1>
+          <p>{bootStatusText}</p>
+          <div className="status-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+            <div className="status-progress-bar" style={{ width: `${progress}%` }} />
+          </div>
+          <small>{progress}%</small>
+        </section>
+      </main>
+    );
+  }
+
+  if (bootState === "error") {
+    return <main className="app-shell status-screen error">{bootError}</main>;
+  }
+
+  return (
+    <main className="app-shell">
+      <SearchBar
+        value={searchText}
+        sort={sort}
+        offline={offline}
+        theme={theme}
+        datasets={datasetOptions}
+        selectedDatasetId={selectedDatasetId}
+        activeDatasetInfo={activeDatasetInfo}
+        onChange={setSearchText}
+        onSubmit={handleSubmitSearch}
+        onSortChange={handleSortChange}
+        onDatasetChange={handleDatasetChange}
+        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
+        onGoHome={() => navigate("#/")}
+        onGoSource={() => navigate("#/about/source")}
+        onUpload={handleUpload}
+      />
+
+      {route.view === "home" ? (
+        <GroupOverview
+          meta={meta}
+          onOpenGroup={(groupId) => navigate(buildGroupHash(groupId))}
+          onStartSearch={() => navigate(buildSearchHash(searchText, sort, filters))}
+        />
+      ) : null}
+
+      {route.view === "source" ? (
+        <SourcePanel meta={meta} activeDataset={activeDataset} registry={registry} profileAnalysis={profileAnalysis} />
+      ) : null}
+
+      {route.view === "group" ? (
+        <GroupPage
+          group={currentGroup}
+          subgroups={currentSubgroups}
+          controls={groupControls}
+          loading={groupLoading}
+          onOpenSubgroup={(groupId) => navigate(buildGroupHash(groupId))}
+          onOpenControl={(item) => navigate(buildControlHash(item.id, item.topGroupId))}
+        />
+      ) : null}
+
+      {route.view === "search" ? (
+        <section className="search-layout">
+          <FacetPanel
+            facets={searchResponse.facets}
+            filters={filters}
+            onToggle={toggleFilter}
+            onReset={() => {
+              const next = defaultFilters();
+              setFilters(next);
+              navigate(buildSearchHash(searchText, sort, next, null, null));
+            }}
+          />
+          <ResultList
+            items={searchResponse.items}
+            total={searchResponse.total}
+            query={searchText}
+            selectedId={selectedControlId}
+            loading={searchLoading}
+            error={searchError}
+            onSelect={handleSelectResult}
+          />
+          <ControlDetailPanel
+            detail={detail}
+            loading={detailLoading}
+            error={detailError}
+            graphData={graphData}
+            graphLoading={graphLoading}
+            graphError={graphError}
+            graphHops={graphHops}
+            graphFilter={graphFilter}
+            onGraphHopsChange={setGraphHops}
+            onGraphFilterChange={setGraphFilter}
+            onRelationClick={handleRelationClick}
+            onPropertyFilterClick={handlePropertyFilterClick}
+            onBreadcrumbGroupClick={handleBreadcrumbGroupClick}
+            onBreadcrumbControlClick={handleBreadcrumbControlClick}
+          />
+        </section>
+      ) : null}
+
+      {route.view === "control" ? (
+        <section className="single-control-layout">
+          <ControlDetailPanel
+            detail={detail}
+            loading={detailLoading}
+            error={detailError}
+            graphData={graphData}
+            graphLoading={graphLoading}
+            graphError={graphError}
+            graphHops={graphHops}
+            graphFilter={graphFilter}
+            onGraphHopsChange={setGraphHops}
+            onGraphFilterChange={setGraphFilter}
+            onRelationClick={handleRelationClick}
+            onPropertyFilterClick={handlePropertyFilterClick}
+            onBreadcrumbGroupClick={handleBreadcrumbGroupClick}
+            onBreadcrumbControlClick={handleBreadcrumbControlClick}
+          />
+        </section>
+      ) : null}
+    </main>
+  );
+}

@@ -1,0 +1,30 @@
+{
+  "name": "grundschutz-plusplus-catalog",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npm run build:data && vite",
+    "build:data": "node scripts/build-catalog.mjs",
+    "build": "npm run build:data && tsc -b && vite build",
+    "preview": "vite preview --strictPort --host 127.0.0.1 --port 4173",
+    "qa:lighthouse": "lhci autorun --config=./lighthouserc.json",
+    "qa:a11y": "playwright test --config=playwright.a11y.config.ts",
+    "qa": "npm run build && start-server-and-test preview http://127.0.0.1:4173 \"npm run qa:lighthouse && npm run qa:a11y\""
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@lhci/cli": "^0.15.1",
+    "@playwright/test": "^1.52.0",
+    "start-server-and-test": "^2.1.2",
+    "typescript": "^5.8.2",
+    "vite": "^5.4.11"
+  }
+}
