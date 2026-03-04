@@ -24,6 +24,10 @@ interface SearchBarProps {
   onGoHome: () => void;
   onGoSource: () => void;
   onUpload: (file: File) => void;
+  selectedControlCount: number;
+  exportingCsv: boolean;
+  exportMessage: string | null;
+  onExportCsv: () => void;
 }
 
 export function SearchBar({
@@ -41,7 +45,11 @@ export function SearchBar({
   onToggleTheme,
   onGoHome,
   onGoSource,
-  onUpload
+  onUpload,
+  selectedControlCount,
+  exportingCsv,
+  exportMessage,
+  onExportCsv
 }: SearchBarProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const popoverRef = useRef<HTMLSpanElement | null>(null);
@@ -173,6 +181,19 @@ export function SearchBar({
           </button>
           <button
             className="secondary"
+            onClick={onExportCsv}
+            type="button"
+            disabled={selectedControlCount === 0 || exportingCsv}
+            title={
+              selectedControlCount === 0
+                ? "Mindestens ein Control auswählen"
+                : "Ausgewählte Controls als CSV herunterladen"
+            }
+          >
+            {exportingCsv ? `CSV wird erstellt (${selectedControlCount})` : `CSV exportieren (${selectedControlCount})`}
+          </button>
+          <button
+            className="secondary"
             onClick={() => fileInputRef.current?.click()}
             type="button"
             title="Lokale JSON-Datei laden"
@@ -194,6 +215,7 @@ export function SearchBar({
           />
         </div>
       </div>
+      {exportMessage ? <p className="export-status">{exportMessage}</p> : null}
 
       <div className="search-controls">
         <input

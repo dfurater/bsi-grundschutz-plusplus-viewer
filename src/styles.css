@@ -353,6 +353,12 @@ summary:focus-visible {
   flex-wrap: wrap;
 }
 
+.export-status {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
 .primary,
 .secondary,
 .link-button {
@@ -360,6 +366,12 @@ summary:focus-visible {
   border-radius: 11px;
   padding: 0.55rem 0.82rem;
   cursor: pointer;
+}
+
+.primary:disabled,
+.secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .primary {
@@ -567,6 +579,14 @@ summary:focus-visible {
   align-items: center;
   padding: 0.9rem;
   border-bottom: 1px solid var(--line);
+  gap: 0.7rem;
+}
+
+.result-list-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
 }
 
 .result-list ul {
@@ -587,6 +607,24 @@ summary:focus-visible {
   background: var(--card-bg);
   color: var(--text);
   cursor: pointer;
+}
+
+.result-card-shell {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card-bg);
+  padding: 0.5rem;
+}
+
+.result-card-shell.export-selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.result-card-shell .result-card {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.4rem 0.2rem 0.2rem;
 }
 
 .result-card.selected {
@@ -616,6 +654,19 @@ summary:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
+}
+
+.control-selection {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  user-select: none;
+}
+
+.control-selection input {
+  margin: 0;
 }
 
 .chip {
@@ -861,13 +912,25 @@ summary:focus-visible {
   gap: 0.4rem;
 }
 
+.group-control-row {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card-bg);
+  padding: 0.45rem;
+}
+
+.group-control-list li.export-selected .group-control-row {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
 .group-control-list button {
   width: 100%;
   text-align: left;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 0.5rem;
-  background: var(--card-bg);
+  border: 0;
+  border-radius: 8px;
+  padding: 0.4rem 0.25rem 0.2rem;
+  background: transparent;
   color: var(--text);
 }
 
