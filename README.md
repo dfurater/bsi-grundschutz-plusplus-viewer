@@ -22,6 +22,7 @@ Clientseitige React/Vite-Webanwendung zur Suche und Navigation eines BSI Grundsc
 - Auswahl pro Control ueber Checkbox in Such- und Gruppenansicht
 - Suchansicht: optional "Alle auf Seite auswaehlen"
 - Export ueber Header-Button `CSV exportieren (n)`
+- Button ist bei `0` Auswahl deaktiviert und zeigt waehrend des Exports einen Busy-Status
 - Dateiname: `grundschutz-controls_<YYYY-MM-DD>_<count>.csv`
 
 Exportspalten:
@@ -32,6 +33,7 @@ Hinweise:
 - `links` exportiert nur `http/https`; unsichere Schemes werden verworfen.
 - CSV wird mit UTF-8 BOM und `CRLF` erzeugt, damit Excel-Import robust funktioniert.
 - Potenziell gefaehrliche Spreadsheet-Formeln (`=`, `+`, `-`, `@` am Feldanfang) werden neutralisiert.
+- Nach erfolgreichem Export wird die aktuelle Auswahl automatisch geleert.
 
 ## Entwicklung
 
