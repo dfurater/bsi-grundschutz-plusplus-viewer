@@ -6,6 +6,40 @@ Direkte Quellen:
 - [Bundesamt fuer Sicherheit in der Informationstechnik (BSI)](https://www.bsi.bund.de)
 - [BSI Grundschutz++ Katalog (GitHub/JSON)](https://github.com/BSI-Bund/Stand-der-Technik-Bibliothek/tree/main/Anwenderkataloge/Grundschutz%2B%2B)
 
+## Lokales Setup und Build
+
+### Voraussetzungen
+
+- Node.js `>= 20.19.0` (empfohlen: Node 20 LTS)
+- npm `>= 10`
+
+### Quickstart (Copy/Paste)
+
+```bash
+git clone https://github.com/dfurater/bsi-grundschutz-plusplus-viewer.git
+cd bsi-grundschutz-plusplus-viewer
+npm install
+npm run dev
+```
+
+Optional danach:
+
+```bash
+npm run build
+npm run preview
+```
+
+### Modus-Unterschiede
+
+- `npm run dev`: startet den Vite-Dev-Server mit HMR fuer lokale Entwicklung.
+- `npm run build`: erzeugt den Produktionsbuild (inkl. Datenaufbereitung) fuer Deployment.
+- `npm run preview`: serviert den bereits gebauten Produktionsstand lokal zur realistischen End-to-End-Pruefung.
+
+Vite schreibt den Produktionsbuild standardmaessig nach `dist/`; `npm run preview` serviert genau diesen Build lokal.
+
+Hinweis zu Abhaengigkeiten: Nach dem Klonen muss `npm install` ausgefuehrt werden, damit npm die Abhaengigkeiten aus
+`package.json` und `package-lock.json` aufloest und installiert.
+
 ## Features
 
 - Reines CSR, statisch deploybar
@@ -45,21 +79,10 @@ Hinweise:
 
 ## Entwicklung
 
-```bash
-npm install
-npm run dev
-```
+Preview-URL fuer `npm run preview`: `http://127.0.0.1:4173`
 
-## Build
-
-```bash
-npm run build
-npm run preview
-```
-
-Preview-URL: `http://127.0.0.1:4173`
-
-Wichtig: `dist/index.html` nicht direkt per `file://` oeffnen, sondern immer ueber den lokalen Preview-Server (`npm run preview`), da Worker/Fetch sonst fehlschlagen koennen.
+Wichtig: `dist/index.html` nicht direkt per `file://` oeffnen, sondern immer ueber `npm run preview`, da Worker/Fetch
+sonst fehlschlagen koennen.
 
 Die Build-Pipeline liest die Kataloge aus `Kataloge/`:
 
