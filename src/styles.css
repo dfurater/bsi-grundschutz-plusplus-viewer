@@ -430,6 +430,11 @@ summary:focus-visible {
   margin-top: 0;
 }
 
+.hero-stats {
+  color: var(--text-muted);
+  margin-top: 0.4rem;
+}
+
 .group-grid {
   margin-top: 0.8rem;
   display: grid;

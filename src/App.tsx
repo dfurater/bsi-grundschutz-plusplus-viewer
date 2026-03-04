@@ -693,6 +693,7 @@ export default function App() {
       {route.view === "home" ? (
         <GroupOverview
           meta={meta}
+          datasetId={selectedDatasetId}
           onOpenGroup={(groupId) => navigate(buildGroupHash(groupId))}
           onStartSearch={() => navigate(buildSearchHash(searchText, sort, filters))}
         />

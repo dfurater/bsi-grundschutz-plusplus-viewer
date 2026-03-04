@@ -2,11 +2,25 @@ import type { CatalogMeta, GroupNode } from "../types";
 
 interface GroupOverviewProps {
   meta: CatalogMeta | null;
+  datasetId: string;
   onOpenGroup: (groupId: string) => void;
   onStartSearch: () => void;
 }
 
-export function GroupOverview({ meta, onOpenGroup, onStartSearch }: GroupOverviewProps) {
+function heroIntroTextForDataset(datasetId: string) {
+  if (datasetId === "anwender") {
+    return "Der Grundschutz++ ist eine vom Bundesamt fuer Sicherheit in der Informationstechnik (BSI) entwickelte und frei verfuegbare Vorgehensweise, um ein ganzheitliches Informationssicherheits-Managementsystem (ISMS) in Institutionen aufzubauen und dauerhaft zu betreiben. Dieser Katalog enthaelt sowohl die Anforderungen zur Umsetzung der Grundschutz-Methodik als auch konkrete technisch-organisatorische Anforderungen zur Absicherung.";
+  }
+  if (datasetId === "kernel") {
+    return "Der BSI-Kernelkatalog buendelt grundlegende Sicherheitsanforderungen und Controls als belastbare Basis fuer die Absicherung von Systemen und Prozessen. Er bildet das technische und organisatorische Sicherheitsfundament, auf dem weiterfuehrende Anforderungen aufsetzen.";
+  }
+  if (datasetId === "methodik") {
+    return "Der Methodik-Katalog beschreibt die Vorgehensweise zur Planung, Umsetzung, Bewertung und kontinuierlichen Verbesserung der Informationssicherheit nach Grundschutz++. Er unterstuetzt Institutionen dabei, ISMS-Prozesse strukturiert, nachvollziehbar und pruefbar umzusetzen.";
+  }
+  return "Dieser Katalog stellt sicherheitsrelevante Anforderungen strukturiert und durchsuchbar bereit.";
+}
+
+export function GroupOverview({ meta, datasetId, onOpenGroup, onStartSearch }: GroupOverviewProps) {
   if (!meta) {
     return <section className="status-box">Katalogdaten werden geladen…</section>;
   }
@@ -21,8 +35,9 @@ export function GroupOverview({ meta, onOpenGroup, onStartSearch }: GroupOvervie
     <section className="dashboard-view">
       <article className="hero-card">
         <h1>{meta.title}</h1>
-        <p>
-          Durchsuchbarer CSR-Katalog mit {meta.stats.controlCount} Controls in {meta.stats.groupCount} Gruppen.
+        <p>{heroIntroTextForDataset(datasetId)}</p>
+        <p className="hero-stats">
+          Aktuell durchsuchbar: {meta.stats.controlCount} Controls in {meta.stats.groupCount} Gruppen.
         </p>
         <button className="primary" type="button" onClick={onStartSearch}>
           Zur Suche
