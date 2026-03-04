@@ -10,7 +10,9 @@ interface ResultListProps {
   error: string | null;
   onSelect: (item: SearchResultItem) => void;
   onToggleSelection: (item: SearchResultItem, selected: boolean) => void;
-  onToggleSelectPage: (items: SearchResultItem[], selected: boolean) => void;
+  onSelectAllControls: () => void;
+  selectingAllControls: boolean;
+  allControlsSelected: boolean;
 }
 
 function markMatches(text: string, query: string) {
@@ -35,7 +37,9 @@ export function ResultList({
   error,
   onSelect,
   onToggleSelection,
-  onToggleSelectPage
+  onSelectAllControls,
+  selectingAllControls,
+  allControlsSelected
 }: ResultListProps) {
   if (loading) {
     return <div className="status-box">Index wird abgefragt…</div>;
@@ -49,17 +53,14 @@ export function ResultList({
     return <div className="status-box">Keine Treffer. Filter lockern oder Suchbegriff anpassen.</div>;
   }
 
-  const selectedOnPageCount = items.filter((item) => selectedControlIds.has(item.id)).length;
-  const allOnPageSelected = selectedOnPageCount > 0 && selectedOnPageCount === items.length;
-
   return (
     <section className="result-list" aria-label="Suchergebnisse">
       <header>
         <h2>Ergebnisse</h2>
         <div className="result-list-header-meta">
           <span>{total} Treffer</span>
-          <button type="button" className="secondary compact" onClick={() => onToggleSelectPage(items, !allOnPageSelected)}>
-            {allOnPageSelected ? "Auswahl auf Seite aufheben" : "Alle auf Seite auswählen"}
+          <button type="button" className="secondary compact" onClick={onSelectAllControls} disabled={selectingAllControls}>
+            {selectingAllControls ? "Alles auswaehlen..." : allControlsSelected ? "Alles abwaehlen" : "Alles auswaehlen"}
           </button>
         </div>
       </header>

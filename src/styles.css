@@ -447,6 +447,12 @@ summary:focus-visible {
   margin-top: 0.4rem;
 }
 
+.hero-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .group-grid {
   margin-top: 0.8rem;
   display: grid;
@@ -902,6 +908,18 @@ summary:focus-visible {
 .group-page,
 .source-panel {
   padding: 1rem;
+}
+
+.section-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.section-heading-row h2 {
+  margin: 0;
 }
 
 .group-control-list {
