@@ -4,7 +4,7 @@ Clientseitige React/Vite-Webanwendung zur Suche und Navigation eines BSI Grundsc
 
 Direkte Quellen:
 - [Bundesamt fuer Sicherheit in der Informationstechnik (BSI)](https://www.bsi.bund.de)
-- [BSI Grundschutz++ Katalog (GitHub/JSON)](https://github.com/BSI-Bund/Stand-der-Technik-Bibliothek/blob/main/Kataloge/Grundschutz%2B%2B-catalog.json)
+- [BSI Grundschutz++ Katalog (GitHub/JSON)]([https://github.com/BSI-Bund/Stand-der-Technik-Bibliothek/blob/main/Kataloge/Grundschutz%2B%2B-catalog.json](https://github.com/BSI-Bund/Stand-der-Technik-Bibliothek/tree/main/Anwenderkataloge/Grundschutz%2B%2B))
 
 ## Features
 
