@@ -6,6 +6,8 @@ import { GroupPage } from "./components/GroupPage";
 import { ResultList } from "./components/ResultList";
 import { SearchBar } from "./components/SearchBar";
 import { SourcePanel } from "./components/SourcePanel";
+import { CONTROL_EXPORT_COLUMNS, extractControlExportRow } from "./lib/controlExport";
+import { downloadBlob, toCsv } from "./lib/csv";
 import { CatalogMetaSchema, CatalogRegistrySchema, ProfileAnalysisSchema } from "./lib/dataSchemas";
 import { fetchJsonWithValidation } from "./lib/fetchJsonSafe";
 import { SearchClient } from "./lib/searchClient";
@@ -156,6 +158,9 @@ export default function App() {
 
   const [groupControls, setGroupControls] = useState<SearchResultItem[]>([]);
   const [groupLoading, setGroupLoading] = useState(false);
+  const [selectedControlTopGroups, setSelectedControlTopGroups] = useState<Record<string, string>>({});
+  const [exportCsvMessage, setExportCsvMessage] = useState<string | null>(null);
+  const [exportCsvRunning, setExportCsvRunning] = useState(false);
 
   const [offline, setOffline] = useState(!navigator.onLine);
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
@@ -200,6 +205,8 @@ export default function App() {
     setGraphData(null);
     setGraphError(null);
     setGroupControls([]);
+    setSelectedControlTopGroups({});
+    setExportCsvMessage(null);
     setBootProgress(100);
     setBootStatusText("Fertig");
     setBootState("ready");
@@ -509,6 +516,8 @@ export default function App() {
       setBootStatusText("Fertig");
       setBootState("ready");
       setGraphData(null);
+      setSelectedControlTopGroups({});
+      setExportCsvMessage(null);
       navigate(buildSearchHash("", "relevance", defaultFilters()));
     } catch (error) {
       setBootState("error");
@@ -531,6 +540,113 @@ export default function App() {
       setBootErrorDetails(getErrorDetails(error));
     }
   }
+
+  function handleToggleControlSelection(item: SearchResultItem, selected: boolean) {
+    setSelectedControlTopGroups((prev) => {
+      if (selected) {
+        if (prev[item.id] === item.topGroupId) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [item.id]: item.topGroupId
+        };
+      }
+
+      if (!prev[item.id]) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[item.id];
+      return next;
+    });
+  }
+
+  function handleToggleSelectPage(items: SearchResultItem[], selected: boolean) {
+    setSelectedControlTopGroups((prev) => {
+      if (selected) {
+        const next = { ...prev };
+        for (const item of items) {
+          next[item.id] = item.topGroupId;
+        }
+        return next;
+      }
+
+      const next = { ...prev };
+      let changed = false;
+      for (const item of items) {
+        if (next[item.id]) {
+          delete next[item.id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }
+
+  async function handleExportCsv() {
+    if (!meta || exportCsvRunning) {
+      return;
+    }
+    const selectedEntries = Object.entries(selectedControlTopGroups);
+    if (selectedEntries.length === 0) {
+      return;
+    }
+
+    setExportCsvRunning(true);
+    setExportCsvMessage(null);
+    try {
+      const rows = [];
+      for (let index = 0; index < selectedEntries.length; index += 1) {
+        const [controlId, knownTopGroupId] = selectedEntries[index];
+        const resolvedTopGroupId = knownTopGroupId || (await resolveTopGroupId(controlId));
+        if (!resolvedTopGroupId) {
+          throw new Error(`Top-Gruppe fuer ${controlId} konnte nicht aufgeloest werden.`);
+        }
+
+        const detailPayload = await client.getControl(controlId, resolvedTopGroupId);
+        rows.push(
+          extractControlExportRow(detailPayload, {
+            sourceVersion: meta.version,
+            sourceLastModified: meta.lastModified
+          })
+        );
+
+        if (index > 0 && index % 25 === 0) {
+          await new Promise<void>((resolve) => {
+            setTimeout(resolve, 0);
+          });
+        }
+      }
+
+      const csvText = toCsv(rows, CONTROL_EXPORT_COLUMNS, {
+        delimiter: ",",
+        lineEnding: "\r\n",
+        withBom: true
+      });
+      const now = new Date().toISOString().slice(0, 10);
+      const filename = `grundschutz-controls_${now}_${rows.length}.csv`;
+      const csvBlob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
+      downloadBlob(filename, csvBlob);
+      setExportCsvMessage(`CSV erfolgreich exportiert (${rows.length} Controls).`);
+    } catch (error) {
+      setExportCsvMessage(getErrorMessage(error, "CSV-Export fehlgeschlagen."));
+    } finally {
+      setExportCsvRunning(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!exportCsvMessage) {
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      setExportCsvMessage(null);
+    }, 4800);
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [exportCsvMessage]);
 
   function handleSubmitSearch() {
     const nextSearch = sanitizeSearchText(searchText);
@@ -604,6 +720,8 @@ export default function App() {
 
   const selectedControlId =
     route.view === "search" ? route.controlId : route.view === "control" ? route.controlId : detail?.id ?? null;
+  const selectedControlIds = useMemo(() => new Set(Object.keys(selectedControlTopGroups)), [selectedControlTopGroups]);
+  const selectedControlCount = selectedControlIds.size;
 
   const currentGroup =
     route.view === "group" && meta ? meta.groups.find((group) => group.id === route.groupId) ?? null : null;
@@ -688,6 +806,10 @@ export default function App() {
         onGoHome={() => navigate("#/")}
         onGoSource={() => navigate("#/about/source")}
         onUpload={handleUpload}
+        selectedControlCount={selectedControlCount}
+        exportingCsv={exportCsvRunning}
+        exportMessage={exportCsvMessage}
+        onExportCsv={handleExportCsv}
       />
 
       {route.view === "home" ? (
@@ -708,9 +830,11 @@ export default function App() {
           group={currentGroup}
           subgroups={currentSubgroups}
           controls={groupControls}
+          selectedControlIds={selectedControlIds}
           loading={groupLoading}
           onOpenSubgroup={(groupId) => navigate(buildGroupHash(groupId))}
           onOpenControl={(item) => navigate(buildControlHash(item.id, item.topGroupId))}
+          onToggleControlSelection={handleToggleControlSelection}
         />
       ) : null}
 
@@ -731,9 +855,12 @@ export default function App() {
             total={searchResponse.total}
             query={searchText}
             selectedId={selectedControlId}
+            selectedControlIds={selectedControlIds}
             loading={searchLoading}
             error={searchError}
             onSelect={handleSelectResult}
+            onToggleSelection={handleToggleControlSelection}
+            onToggleSelectPage={handleToggleSelectPage}
           />
           <ControlDetailPanel
             detail={detail}

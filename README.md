@@ -15,6 +15,23 @@ Clientseitige React/Vite-Webanwendung zur Suche und Navigation eines BSI Grundsc
 - Offline-Basisunterstützung per Service Worker
 - Strikte JSON-Schema-Validierung und Security-Budgets (fail-closed)
 - Sichere externe Link-Behandlung (`http/https`-Whitelist)
+- CSV-Export fuer ausgewaehlte Controls (Excel-kompatibel, UTF-8 mit BOM)
+
+## CSV Export (Controls)
+
+- Auswahl pro Control ueber Checkbox in Such- und Gruppenansicht
+- Suchansicht: optional "Alle auf Seite auswaehlen"
+- Export ueber Header-Button `CSV exportieren (n)`
+- Dateiname: `grundschutz-controls_<YYYY-MM-DD>_<count>.csv`
+
+Exportspalten:
+`control_id`, `control_title`, `group_path`, `class`, `sec_level`, `effort_level`, `modalverb`,
+`handlungsworte`, `tags`, `statement`, `guidance`, `params`, `links`, `source_version`, `source_last_modified`.
+
+Hinweise:
+- `links` exportiert nur `http/https`; unsichere Schemes werden verworfen.
+- CSV wird mit UTF-8 BOM und `CRLF` erzeugt, damit Excel-Import robust funktioniert.
+- Potenziell gefaehrliche Spreadsheet-Formeln (`=`, `+`, `-`, `@` am Feldanfang) werden neutralisiert.
 
 ## Entwicklung
 
