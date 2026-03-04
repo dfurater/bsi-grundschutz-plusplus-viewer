@@ -12,6 +12,8 @@ const outDir = path.join(rootDir, "public", "data");
 const datasetsDir = path.join(outDir, "datasets");
 const legacyDetailsDir = path.join(outDir, "details");
 const packageJsonPath = path.join(rootDir, "package.json");
+const swTemplatePath = path.join(rootDir, "scripts", "sw.template.js");
+const swOutputPath = path.join(rootDir, "public", "sw.js");
 
 const catalogSources = [
   {
@@ -200,7 +202,11 @@ function parseProfileAnalysis(profile, datasetDescriptors, datasetDocsById) {
 }
 
 async function main() {
-  const [rawPackageJson, rawProfile] = await Promise.all([readFile(packageJsonPath, "utf8"), readFile(profilePath, "utf8")]);
+  const [rawPackageJson, rawProfile, rawSwTemplate] = await Promise.all([
+    readFile(packageJsonPath, "utf8"),
+    readFile(profilePath, "utf8"),
+    readFile(swTemplatePath, "utf8")
+  ]);
   const pkg = JSON.parse(rawPackageJson);
 
   await rm(datasetsDir, { recursive: true, force: true });
@@ -232,10 +238,15 @@ async function main() {
   const profileAnalysis = parseProfileAnalysis(JSON.parse(rawProfile), registry.datasets, datasetDocsById);
 
   const defaultDataset = datasetResults.find((result) => result.descriptor.id === registry.defaultDatasetId) ?? datasetResults[0];
+  const swVersion = defaultDataset
+    ? `${pkg.version}-${defaultDataset.descriptor.catalogFileSha256.slice(0, 12)}`
+    : `${pkg.version}-no-data`;
+  const renderedSw = rawSwTemplate.replace(/__CACHE_VERSION__/g, swVersion);
 
   const writeTasks = [];
   writeTasks.push(writeFile(path.join(outDir, "catalog-registry.json"), JSON.stringify(registry)));
   writeTasks.push(writeFile(path.join(outDir, "profile-links.json"), JSON.stringify(profileAnalysis)));
+  writeTasks.push(writeFile(swOutputPath, renderedSw));
 
   if (defaultDataset) {
     writeTasks.push(writeFile(path.join(outDir, "catalog-meta.json"), JSON.stringify(defaultDataset.metaPayload)));

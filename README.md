@@ -13,6 +13,8 @@ Clientseitige React/Vite-Webanwendung zur Suche und Navigation eines BSI Grundsc
 - Provenienz- und Versionsanzeige
 - Optionaler lokaler JSON-Upload (ohne Server)
 - Offline-Basisunterstützung per Service Worker
+- Strikte JSON-Schema-Validierung und Security-Budgets (fail-closed)
+- Sichere externe Link-Behandlung (`http/https`-Whitelist)
 
 ## Entwicklung
 
@@ -43,10 +45,21 @@ Die Build-Pipeline liest die Kataloge aus `Kataloge/`:
 
 ```bash
 npx playwright install chromium
+npm run test:unit
+npm run audit:prod
+npm run audit:dev
 npm run qa
 ```
 
-`npm run qa` führt Lighthouse (mit Budgets) und Axe-Tests aus.
+`npm run qa` führt Build, Unit-Tests, Release-Hygiene-Check, Lighthouse (mit Budgets) und Axe-Tests aus.
+
+## Security Header Check
+
+```bash
+SECURITY_HEADERS_URL="https://deine-preview-url" npm run check:headers
+```
+
+Ohne gesetzte URL wird der Check bewusst uebersprungen.
 
 Der Build-Step `npm run build:data` erzeugt aus `Grundschutz++-catalog.json` die statischen Datenassets:
 
@@ -61,3 +74,9 @@ Der Build-Step `npm run build:data` erzeugt aus `Grundschutz++-catalog.json` die
 ## Deployment
 
 Das Ergebnis in `dist/` kann auf beliebigem Static Hosting bereitgestellt werden (GitHub Pages, Netlify, Cloudflare Pages, S3 Static Website).
+
+Fuer Security-Header siehe:
+
+- `public/_headers`
+- `netlify.toml`
+- `docs/hosting-security-headers.md`

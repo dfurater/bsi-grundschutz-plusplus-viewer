@@ -1,4 +1,7 @@
 import type { SearchQuery } from "../types";
+import { safeDecodeURIComponent } from "./safeDecode";
+import { sanitizeFilterValues, sanitizeSearchText } from "./searchSafety";
+import { SECURITY_BUDGETS } from "./securityBudgets";
 
 export type ActiveFilters = SearchQuery["filters"];
 
@@ -55,31 +58,37 @@ export function parseHash(hash: string): AppRoute {
   if (path.startsWith("/search")) {
     const filters = defaultFilters();
     for (const [facetKey, key] of filterKeyMap) {
-      filters[facetKey] = params.getAll(key).filter(Boolean);
+      filters[facetKey] = sanitizeFilterValues(params.getAll(key));
     }
 
     const sort = (params.get("sort") as SearchQuery["sort"]) || "relevance";
     return {
       view: "search",
-      query: params.get("q") ?? "",
+      query: sanitizeSearchText(params.get("q")),
       sort: ["relevance", "id-asc", "title-asc"].includes(sort) ? sort : "relevance",
       filters,
-      controlId: params.get("control"),
-      controlTopGroupId: params.get("top")
+      controlId: sanitizeRouteToken(params.get("control")),
+      controlTopGroupId: sanitizeRouteToken(params.get("top"))
     };
   }
 
   if (path.startsWith("/group/")) {
-    const groupId = decodeURIComponent(path.replace("/group/", ""));
+    const groupId = safeDecodeURIComponent(path.replace("/group/", ""), "").trim();
+    if (!groupId) {
+      return { view: "home" };
+    }
     return { view: "group", groupId };
   }
 
   if (path.startsWith("/control/")) {
-    const controlId = decodeURIComponent(path.replace("/control/", ""));
+    const controlId = safeDecodeURIComponent(path.replace("/control/", ""), "").trim();
+    if (!controlId) {
+      return { view: "home" };
+    }
     return {
       view: "control",
       controlId,
-      topGroupId: params.get("top")
+      topGroupId: sanitizeRouteToken(params.get("top"))
     };
   }
 
@@ -98,8 +107,9 @@ export function buildSearchHash(
   controlTopGroupId?: string | null
 ) {
   const params = new URLSearchParams();
-  if (query.trim()) {
-    params.set("q", query.trim());
+  const safeQuery = sanitizeSearchText(query);
+  if (safeQuery) {
+    params.set("q", safeQuery);
   }
   if (sort !== "relevance") {
     params.set("sort", sort);
@@ -121,6 +131,18 @@ export function buildSearchHash(
   }
 
   return `#/search${params.toString() ? `?${params.toString()}` : ""}`;
+}
+
+function sanitizeRouteToken(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const safe = value
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .trim()
+    .slice(0, SECURITY_BUDGETS.maxShortTextChars);
+  return safe || null;
 }
 
 export function buildGroupHash(groupId: string) {

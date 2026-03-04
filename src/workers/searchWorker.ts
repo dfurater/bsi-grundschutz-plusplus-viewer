@@ -1,10 +1,20 @@
 /// <reference lib="webworker" />
 
+import {
+  CatalogIndexSchema,
+  DetailChunkSchema,
+  NormalizedCatalogSchema,
+  UploadCatalogSchema,
+  type CatalogIndexPayloadValidated
+} from "../lib/dataSchemas";
+import { fetchJsonWithValidation } from "../lib/fetchJsonSafe";
 import { normalizeCatalog } from "../lib/normalize-core.js";
+import { limitQueryTokens, sanitizeSearchText } from "../lib/searchSafety";
+import { SECURITY_BUDGETS } from "../lib/securityBudgets";
 import { makeSnippet, normalizeGerman, tokenize } from "../lib/text";
+import { assertByteBudget, parseJsonOrThrow, validateOrThrow } from "../lib/validation";
 import type {
-  CatalogIndexPayload,
-  CatalogMeta,
+  CatalogMeta as CatalogMetaType,
   ControlDetail,
   RelationGraphPayload,
   SearchDoc,
@@ -26,7 +36,7 @@ type IndexedDoc = SearchDoc & {
 };
 
 type WorkerRequest = {
-  type: "init" | "search" | "get-control" | "get-neighborhood" | "load-upload";
+  type: "init" | "search" | "get-control" | "get-neighborhood" | "load-upload" | "cancel";
   requestId: string;
   payload?: any;
 };
@@ -39,9 +49,16 @@ type WorkerResponse = {
   error?: string;
 };
 
+class RequestCancelledError extends Error {
+  constructor() {
+    super("Anfrage wurde abgebrochen.");
+    this.name = "RequestCancelledError";
+  }
+}
+
 let docs: IndexedDoc[] = [];
 let docsById = new Map<string, IndexedDoc>();
-let facetOptions: CatalogIndexPayload["facetOptions"] = {
+let facetOptions: CatalogIndexPayloadValidated["facetOptions"] = {
   topGroupId: [],
   secLevel: [],
   effortLevel: [],
@@ -54,28 +71,38 @@ let facetOptions: CatalogIndexPayload["facetOptions"] = {
 let detailBasePath = "./data/details";
 let detailChunks = new Map<string, Record<string, ControlDetail>>();
 let inlineDetails = new Map<string, ControlDetail>();
+const cancelledRequests = new Set<string>();
 
-function setIndexedDocs(inputDocs: SearchDoc[]) {
-  docs = toIndexedDocs(inputDocs);
-  docsById = new Map(docs.map((doc) => [doc.id, doc]));
+function assertRequestNotCancelled(requestId: string) {
+  if (cancelledRequests.has(requestId)) {
+    throw new RequestCancelledError();
+  }
 }
 
-async function fetchJson<T>(url: string, label: string): Promise<T> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`${label} konnte nicht geladen werden (HTTP ${response.status}). URL: ${url}`);
+async function checkpoint(
+  requestId: string,
+  startedAt: number,
+  context: string,
+  maxDurationMs: number = SECURITY_BUDGETS.searchTimeBudgetMs
+) {
+  assertRequestNotCancelled(requestId);
+  if (performance.now() - startedAt > maxDurationMs) {
+    throw new Error(`${context} hat das Zeitbudget von ${maxDurationMs}ms ueberschritten.`);
   }
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
+  assertRequestNotCancelled(requestId);
+}
 
-  const contentType = response.headers.get("content-type") || "";
-  const text = await response.text();
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    const snippet = text.slice(0, 120).replace(/\s+/g, " ");
+function setIndexedDocs(inputDocs: SearchDoc[]) {
+  if (inputDocs.length > SECURITY_BUDGETS.maxControlCount) {
     throw new Error(
-      `${label} ist kein JSON. URL: ${url}. content-type=${contentType || "unknown"}. Antwortbeginn: ${snippet}`
+      `Index enthaelt zu viele Controls (${inputDocs.length} > ${SECURITY_BUDGETS.maxControlCount}).`
     );
   }
+  docs = toIndexedDocs(inputDocs);
+  docsById = new Map(docs.map((doc) => [doc.id, doc]));
 }
 
 function toIndexedDocs(inputDocs: SearchDoc[]): IndexedDoc[] {
@@ -119,6 +146,37 @@ function includesAny(docValues: string[], filterValues: string[]) {
     return false;
   }
   return filterValues.some((value) => docValues.includes(value));
+}
+
+function clampFilterValues(values: unknown): string[] {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+  return values
+    .map((value) => String(value ?? "").trim().slice(0, SECURITY_BUDGETS.maxShortTextChars))
+    .filter(Boolean)
+    .slice(0, SECURITY_BUDGETS.maxArrayItems);
+}
+
+function normalizeSearchQuery(rawQuery: SearchQuery): SearchQuery {
+  const safeText = sanitizeSearchText(rawQuery?.text ?? "");
+  return {
+    text: safeText,
+    sort: rawQuery?.sort === "id-asc" || rawQuery?.sort === "title-asc" ? rawQuery.sort : "relevance",
+    filters: {
+      topGroupId: clampFilterValues(rawQuery?.filters?.topGroupId),
+      groupId: clampFilterValues(rawQuery?.filters?.groupId),
+      secLevel: clampFilterValues(rawQuery?.filters?.secLevel),
+      effortLevel: clampFilterValues(rawQuery?.filters?.effortLevel),
+      class: clampFilterValues(rawQuery?.filters?.class),
+      modalverbs: clampFilterValues(rawQuery?.filters?.modalverbs),
+      targetObjects: clampFilterValues(rawQuery?.filters?.targetObjects),
+      tags: clampFilterValues(rawQuery?.filters?.tags),
+      relationTypes: clampFilterValues(rawQuery?.filters?.relationTypes)
+    },
+    limit: Math.max(0, Math.min(rawQuery?.limit ?? 120, 1200)),
+    offset: Math.max(0, Math.min(rawQuery?.offset ?? 0, SECURITY_BUDGETS.maxControlCount))
+  };
 }
 
 function matchesFilters(doc: IndexedDoc, query: SearchQuery): boolean {
@@ -223,10 +281,22 @@ function countFacetValues(
     .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, "de"));
 }
 
-function buildSearchResponse(filteredDocs: IndexedDoc[], query: SearchQuery): SearchResponse {
+async function buildSearchResponse(query: SearchQuery, requestId: string): Promise<SearchResponse> {
   const startedAt = performance.now();
-  const queryNorm = normalizeGerman(query.text || "");
-  const queryTokens = tokenize(query.text || "");
+  const normalizedQuery = normalizeSearchQuery(query);
+  const queryNorm = normalizeGerman(normalizedQuery.text || "");
+  const queryTokens = limitQueryTokens(tokenize(normalizedQuery.text || ""));
+
+  const filteredDocs: IndexedDoc[] = [];
+  for (let i = 0; i < docs.length; i += 1) {
+    if (matchesFilters(docs[i], normalizedQuery)) {
+      filteredDocs.push(docs[i]);
+    }
+
+    if (i > 0 && i % SECURITY_BUDGETS.searchCheckpointInterval === 0) {
+      await checkpoint(requestId, startedAt, "Suche");
+    }
+  }
 
   let scored = filteredDocs.map((doc) => ({
     doc,
@@ -237,17 +307,17 @@ function buildSearchResponse(filteredDocs: IndexedDoc[], query: SearchQuery): Se
     scored = scored.filter((item) => item.score > 0);
   }
 
-  if (query.sort === "id-asc") {
+  if (normalizedQuery.sort === "id-asc") {
     scored.sort((a, b) => a.doc.id.localeCompare(b.doc.id, "de"));
-  } else if (query.sort === "title-asc") {
+  } else if (normalizedQuery.sort === "title-asc") {
     scored.sort((a, b) => a.doc.title.localeCompare(b.doc.title, "de"));
   } else {
     scored.sort((a, b) => b.score - a.score || a.doc.id.localeCompare(b.doc.id, "de"));
   }
 
   const total = scored.length;
-  const offset = query.offset ?? 0;
-  const limit = query.limit ?? 120;
+  const offset = normalizedQuery.offset ?? 0;
+  const limit = normalizedQuery.limit ?? 120;
   const page = scored.slice(offset, offset + limit);
 
   const items = page.map(({ doc, score }) => ({
@@ -266,15 +336,16 @@ function buildSearchResponse(filteredDocs: IndexedDoc[], query: SearchQuery): Se
     breadcrumbs: doc.breadcrumbs
   }));
 
+  const docsForFacets = scored.map((item) => item.doc);
   const facets = {
-    topGroupId: countFacetValues(scored.map((item) => item.doc), (doc) => doc.facets.topGroupId),
-    secLevel: countFacetValues(scored.map((item) => item.doc), (doc) => doc.facets.secLevel),
-    effortLevel: countFacetValues(scored.map((item) => item.doc), (doc) => doc.facets.effortLevel),
-    class: countFacetValues(scored.map((item) => item.doc), (doc) => doc.facets.class),
-    modalverbs: countFacetValues(scored.map((item) => item.doc), (doc) => doc.facets.modalverbs),
-    targetObjects: countFacetValues(scored.map((item) => item.doc), (doc) => doc.facets.targetObjects),
-    tags: countFacetValues(scored.map((item) => item.doc), (doc) => doc.facets.tags),
-    relationTypes: countFacetValues(scored.map((item) => item.doc), (doc) => doc.facets.relationTypes)
+    topGroupId: countFacetValues(docsForFacets, (doc) => doc.facets.topGroupId),
+    secLevel: countFacetValues(docsForFacets, (doc) => doc.facets.secLevel),
+    effortLevel: countFacetValues(docsForFacets, (doc) => doc.facets.effortLevel),
+    class: countFacetValues(docsForFacets, (doc) => doc.facets.class),
+    modalverbs: countFacetValues(docsForFacets, (doc) => doc.facets.modalverbs),
+    targetObjects: countFacetValues(docsForFacets, (doc) => doc.facets.targetObjects),
+    tags: countFacetValues(docsForFacets, (doc) => doc.facets.tags),
+    relationTypes: countFacetValues(docsForFacets, (doc) => doc.facets.relationTypes)
   };
 
   return {
@@ -290,10 +361,13 @@ async function loadChunk(topGroupId: string): Promise<Record<string, ControlDeta
     return detailChunks.get(topGroupId)!;
   }
 
-  const payload = await fetchJson<{ controls?: Record<string, ControlDetail> }>(
-    `${detailBasePath}/${encodeURIComponent(topGroupId)}.json`,
-    `Detail-Chunk fuer ${topGroupId}`
-  );
+  const payload = await fetchJsonWithValidation({
+    url: `${detailBasePath}/${encodeURIComponent(topGroupId)}.json`,
+    label: `Detail-Chunk fuer ${topGroupId}`,
+    schema: DetailChunkSchema,
+    maxBytes: SECURITY_BUDGETS.maxRemoteJsonBytes.detailChunk
+  });
+
   const controls = (payload.controls ?? {}) as Record<string, ControlDetail>;
   detailChunks.set(topGroupId, controls);
   for (const [id, detail] of Object.entries(controls)) {
@@ -320,11 +394,15 @@ async function getControlDetailById(controlId: string, topGroupId?: string | nul
   return controls[controlId] ?? null;
 }
 
-async function buildNeighborhoodGraph(controlId: string, hops: 1 | 2): Promise<RelationGraphPayload> {
+async function buildNeighborhoodGraph(controlId: string, hops: 1 | 2, requestId: string): Promise<RelationGraphPayload> {
+  const startedAt = performance.now();
   const clampedHops: 1 | 2 = hops === 2 ? 2 : 1;
   const maxNodes = clampedHops === 2 ? 120 : 80;
   const nodes = new Map<string, { id: string; title: string; topGroupId: string | null; depth: 0 | 1 | 2 }>();
-  const edges = new Map<string, { sourceControlId: string; targetControlId: string; relType: string; depth: 1 | 2; direction: "incoming" | "outgoing" }>();
+  const edges = new Map<
+    string,
+    { sourceControlId: string; targetControlId: string; relType: string; depth: 1 | 2; direction: "incoming" | "outgoing" }
+  >();
   const visited = new Set<string>();
 
   const rootDoc = docsById.get(controlId);
@@ -340,6 +418,7 @@ async function buildNeighborhoodGraph(controlId: string, hops: 1 | 2): Promise<R
     const nextFrontier: string[] = [];
 
     for (const currentId of frontier) {
+      assertRequestNotCancelled(requestId);
       if (visited.has(currentId)) {
         continue;
       }
@@ -405,6 +484,10 @@ async function buildNeighborhoodGraph(controlId: string, hops: 1 | 2): Promise<R
           }
         }
       }
+
+      if (visited.size % SECURITY_BUDGETS.searchCheckpointInterval === 0) {
+        await checkpoint(requestId, startedAt, "Graph-Berechnung");
+      }
     }
 
     frontier = Array.from(new Set(nextFrontier));
@@ -420,11 +503,23 @@ async function buildNeighborhoodGraph(controlId: string, hops: 1 | 2): Promise<R
 
 async function handleRequest(request: WorkerRequest): Promise<any> {
   if (request.type === "init") {
-    const indexUrl = request.payload?.indexUrl;
-    detailBasePath = request.payload?.detailBasePath ?? detailBasePath;
-    const payload = await fetchJson<CatalogIndexPayload>(indexUrl, "Indexdaten");
-    setIndexedDocs(payload.docs);
-    facetOptions = payload.facetOptions;
+    const indexUrl = String(request.payload?.indexUrl ?? "").trim();
+    const nextDetailBasePath = String(request.payload?.detailBasePath ?? "").trim();
+
+    if (!indexUrl) {
+      throw new Error("Index-URL fehlt.");
+    }
+
+    detailBasePath = nextDetailBasePath || detailBasePath;
+    const payload = await fetchJsonWithValidation({
+      url: indexUrl,
+      label: "Indexdaten",
+      schema: CatalogIndexSchema,
+      maxBytes: SECURITY_BUDGETS.maxRemoteJsonBytes.catalogIndex
+    });
+
+    setIndexedDocs(payload.docs as SearchDoc[]);
+    facetOptions = payload.facetOptions as CatalogIndexPayloadValidated["facetOptions"];
     detailChunks.clear();
     inlineDetails.clear();
 
@@ -435,15 +530,18 @@ async function handleRequest(request: WorkerRequest): Promise<any> {
   }
 
   if (request.type === "search") {
-    const query: SearchQuery = request.payload;
-    const filteredDocs = docs.filter((doc) => matchesFilters(doc, query));
-    return buildSearchResponse(filteredDocs, query);
+    const query = normalizeSearchQuery(request.payload as SearchQuery);
+    return buildSearchResponse(query, request.requestId);
   }
 
   if (request.type === "get-control") {
-    const controlId: string = request.payload?.id;
-    const topGroupId: string = request.payload?.topGroupId;
-    const detail = await getControlDetailById(controlId, topGroupId);
+    const controlId: string = String(request.payload?.id ?? "").trim();
+    const topGroupId: string = String(request.payload?.topGroupId ?? "").trim();
+    if (!controlId) {
+      throw new Error("Control-ID fehlt.");
+    }
+
+    const detail = await getControlDetailById(controlId, topGroupId || null);
     if (!detail) {
       throw new Error(`Control ${controlId} wurde nicht gefunden.`);
     }
@@ -452,39 +550,55 @@ async function handleRequest(request: WorkerRequest): Promise<any> {
   }
 
   if (request.type === "get-neighborhood") {
-    const controlId: string = request.payload?.id;
+    const controlId: string = String(request.payload?.id ?? "").trim();
     const hops = request.payload?.hops === 2 ? 2 : 1;
     if (!controlId) {
       throw new Error("Control-ID fehlt.");
     }
-    return buildNeighborhoodGraph(controlId, hops);
+    return buildNeighborhoodGraph(controlId, hops, request.requestId);
   }
 
   if (request.type === "load-upload") {
+    const startedAt = performance.now();
+    assertRequestNotCancelled(request.requestId);
     const rawText = String(request.payload?.rawText ?? "");
-    const normalized = normalizeCatalog(JSON.parse(rawText));
-    setIndexedDocs(normalized.docs);
-    facetOptions = computeFacetOptions(normalized.docs);
+    assertByteBudget(rawText, SECURITY_BUDGETS.maxUploadFileSizeBytes, "Upload-Datei");
+
+    const parsed = parseJsonOrThrow(rawText, "Upload-Datei");
+    const validatedInput = validateOrThrow(parsed, UploadCatalogSchema, "Upload-Katalogstruktur");
+
+    await checkpoint(request.requestId, startedAt, "Upload-Validierung", SECURITY_BUDGETS.uploadIngestionBudgetMs);
+    const normalized = normalizeCatalog(validatedInput);
+    await checkpoint(request.requestId, startedAt, "Upload-Normalisierung", SECURITY_BUDGETS.uploadIngestionBudgetMs);
+    const validatedNormalized = validateOrThrow(normalized, NormalizedCatalogSchema, "Upload-Kataloginhalt");
+
+    setIndexedDocs(validatedNormalized.docs as SearchDoc[]);
+    facetOptions = computeFacetOptions(validatedNormalized.docs as SearchDoc[]);
     detailChunks.clear();
     inlineDetails.clear();
 
-    for (const chunk of Object.values(normalized.detailsByTopGroup) as Array<{ controls: Record<string, ControlDetail> }>) {
+    let importedControls = 0;
+    for (const chunk of Object.values(validatedNormalized.detailsByTopGroup) as Array<{ controls: Record<string, ControlDetail> }>) {
       for (const [id, detail] of Object.entries(chunk.controls)) {
         inlineDetails.set(id, detail);
+        importedControls += 1;
+        if (importedControls % SECURITY_BUDGETS.searchCheckpointInterval === 0) {
+          await checkpoint(request.requestId, startedAt, "Upload-Indexierung", SECURITY_BUDGETS.uploadIngestionBudgetMs);
+        }
       }
     }
 
-    const meta: Partial<CatalogMeta> = {
-      ...normalized.meta,
-      stats: normalized.stats,
-      groups: normalized.groups,
-      groupTree: normalized.groupTree
-    };
+    const meta = {
+      ...validatedNormalized.meta,
+      stats: validatedNormalized.stats as CatalogMetaType["stats"],
+      groups: validatedNormalized.groups as CatalogMetaType["groups"],
+      groupTree: validatedNormalized.groupTree as CatalogMetaType["groupTree"]
+    } as Partial<CatalogMetaType>;
 
     return {
       facetOptions,
       meta,
-      stats: normalized.stats
+      stats: validatedNormalized.stats
     };
   }
 
@@ -493,6 +607,18 @@ async function handleRequest(request: WorkerRequest): Promise<any> {
 
 self.addEventListener("message", async (event: MessageEvent<WorkerRequest>) => {
   const request = event.data;
+
+  if (!request || !request.type || !request.requestId) {
+    return;
+  }
+
+  if (request.type === "cancel") {
+    cancelledRequests.add(request.requestId);
+    return;
+  }
+
+  cancelledRequests.delete(request.requestId);
+
   const response: WorkerResponse = {
     type: "response",
     requestId: request.requestId,
@@ -504,6 +630,8 @@ self.addEventListener("message", async (event: MessageEvent<WorkerRequest>) => {
   } catch (error) {
     response.ok = false;
     response.error = error instanceof Error ? error.message : "Unbekannter Worker-Fehler";
+  } finally {
+    cancelledRequests.delete(request.requestId);
   }
 
   self.postMessage(response);

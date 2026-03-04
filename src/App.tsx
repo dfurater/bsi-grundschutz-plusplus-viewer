@@ -6,6 +6,8 @@ import { GroupPage } from "./components/GroupPage";
 import { ResultList } from "./components/ResultList";
 import { SearchBar } from "./components/SearchBar";
 import { SourcePanel } from "./components/SourcePanel";
+import { CatalogMetaSchema, CatalogRegistrySchema, ProfileAnalysisSchema } from "./lib/dataSchemas";
+import { fetchJsonWithValidation } from "./lib/fetchJsonSafe";
 import { SearchClient } from "./lib/searchClient";
 import {
   buildControlHash,
@@ -15,6 +17,8 @@ import {
   parseHash,
   type AppRoute
 } from "./lib/routing";
+import { sanitizeSearchText } from "./lib/searchSafety";
+import { SECURITY_BUDGETS } from "./lib/securityBudgets";
 import type {
   CatalogMeta,
   CatalogRegistry,
@@ -26,6 +30,7 @@ import type {
   SearchResponse,
   SearchResultItem
 } from "./types";
+import { validateOrThrow } from "./lib/validation";
 
 const DEFAULT_SEARCH_RESPONSE: SearchResponse = {
   total: 0,
@@ -49,6 +54,17 @@ async function computeSha256(text: string) {
   return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function getErrorDetails(error: unknown): string {
+  if (error instanceof Error) {
+    return error.stack || error.message;
+  }
+  return String(error);
 }
 
 function mapRouteFilters(filters: ActiveFilters): SearchQuery["filters"] {
@@ -117,6 +133,7 @@ export default function App() {
   const [selectedDatasetId, setSelectedDatasetId] = useState<string>("anwender");
   const [bootState, setBootState] = useState<"loading" | "ready" | "error">("loading");
   const [bootError, setBootError] = useState<string | null>(null);
+  const [bootErrorDetails, setBootErrorDetails] = useState<string | null>(null);
   const [bootProgress, setBootProgress] = useState(0);
   const [bootStatusText, setBootStatusText] = useState("Index wird aufgebaut und geladen…");
 
@@ -151,6 +168,7 @@ export default function App() {
 
     setBootState("loading");
     setBootError(null);
+    setBootErrorDetails(null);
     setBootProgress(8);
     setBootStatusText("Datensatz wird vorbereitet…");
 
@@ -158,19 +176,19 @@ export default function App() {
     setBootProgress(24);
     setBootStatusText("Suchindex wird geladen…");
 
-    const metaResponse = await fetch(paths.metaUrl);
+    const metaPromise = fetchJsonWithValidation({
+      url: paths.metaUrl,
+      label: "Datensatz-Metadaten",
+      schema: CatalogMetaSchema,
+      maxBytes: SECURITY_BUDGETS.maxRemoteJsonBytes.catalogMeta
+    });
+
     setBootProgress(52);
     setBootStatusText("Metadaten werden gelesen…");
 
-    await initPromise;
+    const [, metaPayload] = (await Promise.all([initPromise, metaPromise])) as [unknown, CatalogMeta];
     setBootProgress(76);
     setBootStatusText("Suche wird initialisiert…");
-
-    if (!metaResponse.ok) {
-      throw new Error(`Datensatz-Metadaten konnten nicht geladen werden (HTTP ${metaResponse.status}).`);
-    }
-
-    const metaPayload: CatalogMeta = await metaResponse.json();
     setBootProgress(92);
     setBootStatusText("Oberflaeche wird aufgebaut…");
     setMeta(metaPayload);
@@ -218,25 +236,29 @@ export default function App() {
     async function boot() {
       try {
         setBootState("loading");
+        setBootError(null);
+        setBootErrorDetails(null);
         setBootProgress(4);
         setBootStatusText("Katalogverzeichnis wird geladen…");
-        const [registryResponse, profileResponse] = await Promise.all([
-          fetch(assetUrl("./data/catalog-registry.json")),
-          fetch(assetUrl("./data/profile-links.json"))
-        ]);
+        const [registryPayload, profilePayload] = (await Promise.all([
+          fetchJsonWithValidation({
+            url: assetUrl("./data/catalog-registry.json"),
+            label: "Katalog-Registry",
+            schema: CatalogRegistrySchema,
+            maxBytes: SECURITY_BUDGETS.maxRemoteJsonBytes.catalogRegistry
+          }),
+          fetchJsonWithValidation({
+            url: assetUrl("./data/profile-links.json"),
+            label: "Profilanalyse",
+            schema: ProfileAnalysisSchema,
+            maxBytes: SECURITY_BUDGETS.maxRemoteJsonBytes.profileLinks
+          })
+        ])) as [CatalogRegistry, ProfileAnalysis];
         setBootProgress(16);
         setBootStatusText("Datensatzbeziehungen werden geprueft…");
 
-        let registryPayload: CatalogRegistry | null = null;
-        if (registryResponse.ok) {
-          registryPayload = await registryResponse.json();
-        }
-
-        if (profileResponse.ok) {
-          const profilePayload: ProfileAnalysis = await profileResponse.json();
-          if (!cancelled) {
-            setProfileAnalysis(profilePayload);
-          }
+        if (!cancelled) {
+          setProfileAnalysis(profilePayload);
         }
 
         if (cancelled) {
@@ -257,7 +279,8 @@ export default function App() {
           return;
         }
         setBootState("error");
-        setBootError(error instanceof Error ? error.message : "Initialisierung fehlgeschlagen.");
+        setBootError(getErrorMessage(error, "Initialisierung fehlgeschlagen."));
+        setBootErrorDetails(getErrorDetails(error));
       }
     }
 
@@ -356,7 +379,7 @@ export default function App() {
 
     client
       .search({
-        text: route.query,
+        text: sanitizeSearchText(route.query),
         sort: route.sort,
         filters: mapRouteFilters(route.filters),
         limit: 400,
@@ -444,7 +467,15 @@ export default function App() {
 
   async function handleUpload(file: File) {
     try {
+      if (file.size > SECURITY_BUDGETS.maxUploadFileSizeBytes) {
+        throw new Error(
+          `Datei zu gross (${file.size} Bytes). Maximal erlaubt: ${SECURITY_BUDGETS.maxUploadFileSizeBytes} Bytes.`
+        );
+      }
+
       setBootState("loading");
+      setBootError(null);
+      setBootErrorDetails(null);
       setBootProgress(10);
       setBootStatusText("Lokale Datei wird gelesen…");
       const rawText = await file.text();
@@ -456,18 +487,22 @@ export default function App() {
       setBootStatusText("Lokaler Datensatz wird integriert…");
 
       const currentBuildInfo = meta?.buildInfo;
-      const nextMeta: CatalogMeta = {
-        ...(meta as CatalogMeta),
-        ...(uploadPayload.meta as CatalogMeta),
-        buildInfo: {
-          buildTimestamp: new Date().toISOString(),
-          appVersion: currentBuildInfo?.appVersion ?? "0.1.0",
-          indexVersion: currentBuildInfo?.indexVersion ?? "2",
-          catalogFileName: file.name,
-          catalogFileSha256: hash,
-          catalogFileSizeBytes: file.size
-        }
-      };
+      const nextMeta = validateOrThrow(
+        {
+          ...(meta as CatalogMeta),
+          ...(uploadPayload.meta as CatalogMeta),
+          buildInfo: {
+            buildTimestamp: new Date().toISOString(),
+            appVersion: currentBuildInfo?.appVersion ?? "0.1.0",
+            indexVersion: currentBuildInfo?.indexVersion ?? "2",
+            catalogFileName: file.name,
+            catalogFileSha256: hash,
+            catalogFileSizeBytes: file.size
+          }
+        },
+        CatalogMetaSchema,
+        "Upload-Metadaten"
+      ) as CatalogMeta;
 
       setMeta(nextMeta);
       setBootProgress(100);
@@ -477,7 +512,8 @@ export default function App() {
       navigate(buildSearchHash("", "relevance", defaultFilters()));
     } catch (error) {
       setBootState("error");
-      setBootError(error instanceof Error ? error.message : "Upload konnte nicht verarbeitet werden.");
+      setBootError(getErrorMessage(error, "Upload konnte nicht verarbeitet werden."));
+      setBootErrorDetails(getErrorDetails(error));
     }
   }
 
@@ -491,12 +527,15 @@ export default function App() {
       navigate("#/");
     } catch (error) {
       setBootState("error");
-      setBootError(error instanceof Error ? error.message : "Datensatzwechsel fehlgeschlagen.");
+      setBootError(getErrorMessage(error, "Datensatzwechsel fehlgeschlagen."));
+      setBootErrorDetails(getErrorDetails(error));
     }
   }
 
   function handleSubmitSearch() {
-    navigate(buildSearchHash(searchText, sort, filters, null, null));
+    const nextSearch = sanitizeSearchText(searchText);
+    setSearchText(nextSearch);
+    navigate(buildSearchHash(nextSearch, sort, filters, null, null));
   }
 
   function toggleFilter(key: keyof ActiveFilters, value: string) {
@@ -595,9 +634,7 @@ export default function App() {
         <section className="status-box loading-box">
           <h1>Index wird aufgebaut und geladen…</h1>
           <p>{bootStatusText}</p>
-          <div className="status-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
-            <div className="status-progress-bar" style={{ width: `${progress}%` }} />
-          </div>
+          <progress className="status-progress" value={progress} max={100} />
           <small>{progress}%</small>
         </section>
       </main>
@@ -605,7 +642,32 @@ export default function App() {
   }
 
   if (bootState === "error") {
-    return <main className="app-shell status-screen error">{bootError}</main>;
+    return (
+      <main className="app-shell status-screen error">
+        <section className="status-box error-box">
+          <h1>Initialisierung fehlgeschlagen</h1>
+          <p>{bootError}</p>
+          <textarea
+            readOnly
+            value={bootErrorDetails || bootError || "Kein Fehlerdetail verfuegbar."}
+            aria-label="Fehlerdetails"
+          />
+          <button
+            className="secondary"
+            type="button"
+            onClick={() =>
+              navigator.clipboard
+                .writeText(bootErrorDetails || bootError || "Kein Fehlerdetail verfuegbar.")
+                .catch(() => {
+                  // Clipboard support may be unavailable in hardened browser settings.
+                })
+            }
+          >
+            Fehlerdetails kopieren
+          </button>
+        </section>
+      </main>
+    );
   }
 
   return (
