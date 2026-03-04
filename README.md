@@ -24,7 +24,11 @@ Direkte Quellen:
 ## CSV Export (Controls)
 
 - Auswahl pro Control ueber Checkbox in Such- und Gruppenansicht
-- Suchansicht: optional "Alle auf Seite auswaehlen"
+- "Alles auswaehlen / Alles abwaehlen" ist auf allen Ebenen verfuegbar:
+  - `#/` (Startseite): alle Controls des aktiven Datensatzes
+  - `#/group/...`: alle Controls der aktuellen Gruppe
+  - `#/search...`: alle Treffer der aktuellen Suche (inkl. Filter)
+- Toggle-Verhalten: zweiter Klick auf denselben Button waehlt die jeweilige Menge wieder ab
 - Export ueber Header-Button `CSV exportieren (n)`
 - Button ist bei `0` Auswahl deaktiviert und zeigt waehrend des Exports einen Busy-Status
 - Dateiname: `grundschutz-controls_<YYYY-MM-DD>_<count>.csv`
