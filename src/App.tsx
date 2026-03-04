@@ -628,6 +628,7 @@ export default function App() {
       const filename = `grundschutz-controls_${now}_${rows.length}.csv`;
       const csvBlob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
       downloadBlob(filename, csvBlob);
+      setSelectedControlTopGroups({});
       setExportCsvMessage(`CSV erfolgreich exportiert (${rows.length} Controls).`);
     } catch (error) {
       setExportCsvMessage(getErrorMessage(error, "CSV-Export fehlgeschlagen."));
