@@ -22,9 +22,38 @@ if ("serviceWorker" in navigator) {
     });
   } else if (import.meta.env.PROD) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js").catch(() => {
-        // Offline support is best-effort for static hosting targets.
-      });
+      navigator.serviceWorker
+        .register("./sw.js")
+        .then((registration) => {
+          if (registration.waiting) {
+            registration.waiting.postMessage({ type: "SKIP_WAITING" });
+          }
+
+          registration.addEventListener("updatefound", () => {
+            const worker = registration.installing;
+            if (!worker) {
+              return;
+            }
+
+            worker.addEventListener("statechange", () => {
+              if (worker.state === "installed" && navigator.serviceWorker.controller) {
+                worker.postMessage({ type: "SKIP_WAITING" });
+              }
+            });
+          });
+
+          let refreshed = false;
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            if (refreshed) {
+              return;
+            }
+            refreshed = true;
+            window.location.reload();
+          });
+        })
+        .catch(() => {
+          // Offline support is best-effort for static hosting targets.
+        });
     });
   }
 }

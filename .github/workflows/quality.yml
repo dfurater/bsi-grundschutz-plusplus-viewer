@@ -9,6 +9,8 @@ jobs:
   qa:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      SECURITY_HEADERS_URL: ${{ vars.SECURITY_HEADERS_URL }}
 
     steps:
       - name: Checkout
@@ -26,5 +28,11 @@ jobs:
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps chromium
 
+      - name: Run Dependency Audit Policy
+        run: npm run audit:prod && npm run audit:dev
+
       - name: Run QA checks
         run: npm run qa
+
+      - name: Check Security Headers (if URL provided)
+        run: npm run check:headers

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { SECURITY_BUDGETS } from "../lib/securityBudgets";
 
 interface SearchBarProps {
   value: string;
@@ -198,6 +199,7 @@ export function SearchBar({
         <input
           type="search"
           value={value}
+          maxLength={SECURITY_BUDGETS.maxQueryChars}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") {

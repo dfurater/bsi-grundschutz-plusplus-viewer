@@ -1,4 +1,4 @@
-const CACHE_VERSION = "0.1.0-040df9181208";
+const CACHE_VERSION = "__CACHE_VERSION__";
 const CACHE_PREFIX = "grundschutzpp";
 const HTML_CACHE = `${CACHE_PREFIX}-html-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}-data-${CACHE_VERSION}`;

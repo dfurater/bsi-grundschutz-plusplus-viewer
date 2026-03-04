@@ -10,12 +10,14 @@ type WorkerMessage = {
 
 export class SearchClient {
   private worker: Worker;
+  private activeSearchRequestId: string | null = null;
   private pending = new Map<
     string,
     {
       resolve: (value: any) => void;
       reject: (error: Error) => void;
       timeoutId: number;
+      type: string;
     }
   >();
 
@@ -33,6 +35,9 @@ export class SearchClient {
         return;
       }
       this.pending.delete(message.requestId);
+      if (this.activeSearchRequestId === message.requestId) {
+        this.activeSearchRequestId = null;
+      }
       window.clearTimeout(pending.timeoutId);
       if (!message.ok) {
         pending.reject(new Error(message.error || "Worker request failed"));
@@ -57,29 +62,61 @@ export class SearchClient {
       pending.reject(error);
       this.pending.delete(requestId);
     }
+    this.activeSearchRequestId = null;
   }
 
-  private request<T>(type: string, payload?: any, timeoutMs = 15000): Promise<T> {
+  private request<T>(
+    type: string,
+    payload?: any,
+    timeoutMs = 15000,
+    options?: { cancelPreviousSearch?: boolean }
+  ): Promise<T> {
     const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     return new Promise<T>((resolve, reject) => {
+      if (type === "search" && options?.cancelPreviousSearch && this.activeSearchRequestId) {
+        this.cancelRequest(this.activeSearchRequestId);
+      }
+
       const timeoutId = window.setTimeout(() => {
         const stillPending = this.pending.get(requestId);
         if (!stillPending) {
           return;
         }
         this.pending.delete(requestId);
+        if (this.activeSearchRequestId === requestId) {
+          this.activeSearchRequestId = null;
+        }
         stillPending.reject(new Error(`Worker-Timeout bei '${type}' nach ${timeoutMs}ms.`));
       }, timeoutMs);
 
-      this.pending.set(requestId, { resolve, reject, timeoutId });
+      this.pending.set(requestId, { resolve, reject, timeoutId, type });
+      if (type === "search") {
+        this.activeSearchRequestId = requestId;
+      }
       try {
         this.worker.postMessage({ type, requestId, payload });
       } catch (error) {
         this.pending.delete(requestId);
+        if (this.activeSearchRequestId === requestId) {
+          this.activeSearchRequestId = null;
+        }
         window.clearTimeout(timeoutId);
         reject(error instanceof Error ? error : new Error("Worker-Request konnte nicht gesendet werden."));
       }
     });
+  }
+
+  private cancelRequest(requestId: string) {
+    const pending = this.pending.get(requestId);
+    if (pending) {
+      window.clearTimeout(pending.timeoutId);
+      pending.reject(new Error("Vorherige Anfrage wurde abgebrochen."));
+      this.pending.delete(requestId);
+    }
+    if (this.activeSearchRequestId === requestId) {
+      this.activeSearchRequestId = null;
+    }
+    this.worker.postMessage({ type: "cancel", requestId });
   }
 
   init(indexUrl: string, detailBasePath: string) {
@@ -94,7 +131,7 @@ export class SearchClient {
   }
 
   search(query: SearchQuery) {
-    return this.request<SearchResponse>("search", query, 10000);
+    return this.request<SearchResponse>("search", query, 10000, { cancelPreviousSearch: true });
   }
 
   getControl(id: string, topGroupId: string) {

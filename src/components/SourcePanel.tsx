@@ -1,4 +1,5 @@
 import type { CatalogMeta, CatalogRegistry, DatasetDescriptor, ProfileAnalysis } from "../types";
+import { safeExternalUrl } from "../lib/urlSafety";
 
 interface SourcePanelProps {
   meta: CatalogMeta | null;
@@ -33,6 +34,23 @@ function datasetMetaHref(datasetId: string | null) {
     return null;
   }
   return `./data/datasets/${encodeURIComponent(datasetId)}/catalog-meta.json`;
+}
+
+function renderExternalLink(rawValue: string | null) {
+  const safeUrl = safeExternalUrl(rawValue);
+  if (!safeUrl) {
+    return (
+      <span className="blocked-link" title={rawValue || "leer"}>
+        Unsicherer Link blockiert
+      </span>
+    );
+  }
+
+  return (
+    <a href={safeUrl} target="_blank" rel="noopener noreferrer">
+      {safeUrl}
+    </a>
+  );
 }
 
 export function SourcePanel({ meta, activeDataset, registry, profileAnalysis }: SourcePanelProps) {
@@ -104,11 +122,9 @@ export function SourcePanel({ meta, activeDataset, registry, profileAnalysis }: 
                 <strong>{item.resolvedDatasetLabel || item.href}</strong>
                 <div className="source-path-row">
                   {isHttpLink(item.resourceHref || item.href) ? (
-                    <a href={item.resourceHref || item.href} target="_blank" rel="noreferrer">
-                      {item.resourceHref || item.href}
-                    </a>
+                    renderExternalLink(item.resourceHref || item.href)
                   ) : datasetMetaHref(item.resolvedDatasetId) ? (
-                    <a href={datasetMetaHref(item.resolvedDatasetId)!} target="_blank" rel="noreferrer">
+                    <a href={datasetMetaHref(item.resolvedDatasetId)!} target="_blank" rel="noopener noreferrer">
                       {item.resourceHref || item.href}
                     </a>
                   ) : (
@@ -119,7 +135,7 @@ export function SourcePanel({ meta, activeDataset, registry, profileAnalysis }: 
                       className="source-inline-link"
                       href={datasetMetaHref(item.resolvedDatasetId)!}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                     >
                       Datensatz-Meta öffnen
                     </a>
@@ -144,7 +160,7 @@ export function SourcePanel({ meta, activeDataset, registry, profileAnalysis }: 
             <a
               href="https://github.com/BSI-Bund/Stand-der-Technik-Bibliothek/blob/main/README.md"
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
             >
               https://github.com/BSI-Bund/Stand-der-Technik-Bibliothek/blob/main/README.md
             </a>
@@ -155,9 +171,7 @@ export function SourcePanel({ meta, activeDataset, registry, profileAnalysis }: 
             <strong>{source.title || source.rel || "Quelle"}</strong>
             <div>
               {source.resolvedHref ? (
-                <a href={source.resolvedHref} target="_blank" rel="noreferrer">
-                  {source.resolvedHref}
-                </a>
+                renderExternalLink(source.resolvedHref)
               ) : (
                 <span>{source.href}</span>
               )}
