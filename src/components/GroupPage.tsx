@@ -99,7 +99,7 @@ export function GroupPage({
         <div className="section-heading-row">
           <h2>Controls</h2>
           <button className="secondary compact" type="button" onClick={onSelectAllControls} disabled={selectingAllControls}>
-            {selectingAllControls ? "Alles auswaehlen..." : allControlsSelected ? "Alles abwaehlen" : "Alles auswaehlen"}
+            {selectingAllControls ? "Alles auswählen..." : allControlsSelected ? "Alles abwählen" : "Alles auswählen"}
           </button>
         </div>
         {loading ? <p>Controls werden geladen…</p> : null}

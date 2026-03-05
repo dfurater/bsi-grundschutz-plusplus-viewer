@@ -152,7 +152,9 @@ export function FacetPanel({
               onClick={() => setCollapsed((prev) => ({ ...prev, [facetKey]: !isCollapsed }))}
             >
               <span>{FACET_LABELS[facetKey]}</span>
-              <strong>{isCollapsed ? "+" : "−"}</strong>
+              <span className="accordion-indicator" aria-hidden="true">
+                ▾
+              </span>
             </button>
 
             {!isCollapsed ? (

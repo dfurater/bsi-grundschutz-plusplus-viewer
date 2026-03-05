@@ -4,16 +4,8 @@ interface OverflowMenuProps {
   open: boolean;
   selectedControlCount: number;
   exportingCsv: boolean;
-  importBusy: boolean;
-  theme: "light" | "dark";
   onClose: () => void;
-  onGoSource: () => void;
-  onGoAbout: () => void;
-  onGoImpressum: () => void;
-  onGoDatenschutz: () => void;
-  onToggleTheme: () => void;
   onExportCsv: () => void;
-  onUpload: (file: File) => void;
 }
 
 /**
@@ -24,20 +16,10 @@ export function OverflowMenu({
   open,
   selectedControlCount,
   exportingCsv,
-  importBusy,
-  theme,
   onClose,
-  onGoSource,
-  onGoAbout,
-  onGoImpressum,
-  onGoDatenschutz,
-  onToggleTheme,
-  onExportCsv,
-  onUpload
+  onExportCsv
 }: OverflowMenuProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const nextThemeLabel = theme === "dark" ? "Hellmodus" : "Dunkelmodus";
 
   useEffect(() => {
     if (!open) {
@@ -82,32 +64,6 @@ export function OverflowMenu({
       {/* REQ: PD-08, A11y-02 */}
       <section role="menu" aria-label="Sekundäre Aktionen" className="overflow-menu">
         <div className="overflow-menu-group" role="presentation">
-          <p className="overflow-group-title">Info</p>
-          <button
-            type="button"
-            role="menuitem"
-            className="secondary"
-            onClick={() => {
-              onGoSource();
-              onClose();
-            }}
-          >
-            Quellen &amp; Version
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="secondary"
-            onClick={() => {
-              onGoAbout();
-              onClose();
-            }}
-          >
-            About
-          </button>
-        </div>
-
-        <div className="overflow-menu-group" role="presentation">
           <p className="overflow-group-title">Daten</p>
           {selectedControlCount > 0 ? (
             <button
@@ -125,69 +81,8 @@ export function OverflowMenu({
             </button>
           ) : null}
 
-          <button
-            type="button"
-            role="menuitem"
-            className="secondary"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importBusy}
-            title="JSON-Datei laden"
-          >
-            {importBusy ? "JSON wird geladen" : "JSON laden"}
-          </button>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            hidden
-            accept="application/json"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) {
-                onUpload(file);
-              }
-              event.currentTarget.value = "";
-              onClose();
-            }}
-          />
         </div>
 
-        <div className="overflow-menu-group" role="presentation">
-          <p className="overflow-group-title">Einstellungen</p>
-          <button
-            type="button"
-            role="menuitem"
-            className="secondary"
-            onClick={() => {
-              onToggleTheme();
-              onClose();
-            }}
-          >
-            {nextThemeLabel}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="secondary"
-            onClick={() => {
-              onGoImpressum();
-              onClose();
-            }}
-          >
-            Impressum
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="secondary"
-            onClick={() => {
-              onGoDatenschutz();
-              onClose();
-            }}
-          >
-            Datenschutz
-          </button>
-        </div>
       </section>
     </div>
   );

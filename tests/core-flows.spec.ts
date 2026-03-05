@@ -57,9 +57,9 @@ test.describe("Kernflows", () => {
     /* REQ: DoD-05, PD-06, RESP-01 */
     const cases = [
       { width: 375, expectWide: false, expectFilterButton: true, expectDatasetInline: false },
-      { width: 768, expectWide: false, expectFilterButton: true, expectDatasetInline: true },
-      { width: 1024, expectWide: false, expectFilterButton: true, expectDatasetInline: true },
-      { width: 1280, expectWide: true, expectFilterButton: false, expectDatasetInline: true }
+      { width: 768, expectWide: false, expectFilterButton: true, expectDatasetInline: false },
+      { width: 1024, expectWide: false, expectFilterButton: true, expectDatasetInline: false },
+      { width: 1280, expectWide: true, expectFilterButton: false, expectDatasetInline: false }
     ] as const;
 
     for (const entry of cases) {
@@ -96,7 +96,7 @@ test.describe("Kernflows", () => {
     await expect(page.getByRole("dialog", { name: "Suche" }).getByRole("searchbox", { name: "Suche" })).toHaveValue("");
   });
 
-  test("Theme-Toggle liegt im Overflow und wechselt Theme", async ({ page }) => {
+  test("Theme-Toggle liegt im Header rechts und wechselt Theme", async ({ page }) => {
     await page.goto("/#/search?q=KONF");
 
     const themeRoot = page.locator("html");
@@ -104,16 +104,14 @@ test.describe("Kernflows", () => {
     const nextTheme = initialTheme === "dark" ? "light" : "dark";
     const toggleLabel = initialTheme === "dark" ? "Hellmodus" : "Dunkelmodus";
     const nextToggleLabel = nextTheme === "dark" ? "Hellmodus" : "Dunkelmodus";
+    const themeToggle = page.locator(".app-bar-end .theme-toggle-button");
 
-    await expect(page.locator(".app-bar-end .theme-toggle-button")).toHaveCount(0);
-    await page.getByRole("button", { name: "Weitere Aktionen" }).click();
-    const toggle = page.getByRole("menuitem", { name: toggleLabel });
-    await expect(toggle).toBeVisible();
-    await toggle.click();
+    await expect(themeToggle).toHaveCount(1);
+    await expect(themeToggle).toHaveAttribute("aria-label", toggleLabel);
+    await themeToggle.click();
 
     await expect(themeRoot).toHaveAttribute("data-theme", nextTheme);
-    await page.getByRole("button", { name: "Weitere Aktionen" }).click();
-    await expect(page.getByRole("menuitem", { name: nextToggleLabel })).toBeVisible();
+    await expect(themeToggle).toHaveAttribute("aria-label", nextToggleLabel);
   });
 
   test("Debounce aktualisiert Suchzustand", async ({ page }) => {

@@ -844,7 +844,7 @@ export default function App() {
         setExportCsvMessage(`${items.length} Controls aus der CSV-Auswahl entfernt.`);
       }
     } catch (error) {
-      setExportCsvMessage(getErrorMessage(error, "Alles auswaehlen fehlgeschlagen."));
+      setExportCsvMessage(getErrorMessage(error, "Alles auswählen fehlgeschlagen."));
     } finally {
       setSelectAllRunningScope(null);
     }
@@ -882,7 +882,7 @@ export default function App() {
         setExportCsvMessage(`${items.length} Gruppen-Controls aus der CSV-Auswahl entfernt.`);
       }
     } catch (error) {
-      setExportCsvMessage(getErrorMessage(error, "Alles auswaehlen in Gruppe fehlgeschlagen."));
+      setExportCsvMessage(getErrorMessage(error, "Alles auswählen in Gruppe fehlgeschlagen."));
     } finally {
       setSelectAllRunningScope(null);
     }
@@ -909,7 +909,7 @@ export default function App() {
         setExportCsvMessage(`${items.length} Suchtreffer aus der CSV-Auswahl entfernt.`);
       }
     } catch (error) {
-      setExportCsvMessage(getErrorMessage(error, "Alles auswaehlen in Suche fehlgeschlagen."));
+      setExportCsvMessage(getErrorMessage(error, "Alles auswählen in Suche fehlgeschlagen."));
     } finally {
       setSelectAllRunningScope(null);
     }
@@ -1173,7 +1173,7 @@ export default function App() {
             <small>{progress}%</small>
           </div>
         </section>
-        <AppFooter />
+        <AppFooter importBusy={importBusy} onUpload={handleUpload} />
       </main>
     );
   }
@@ -1205,7 +1205,7 @@ export default function App() {
             </button>
           </div>
         </section>
-        <AppFooter />
+        <AppFooter importBusy={importBusy} onUpload={handleUpload} />
       </main>
     );
   }
@@ -1221,25 +1221,13 @@ export default function App() {
         isTabletUp={isTabletUp}
         isShrunk={headerShrunk}
         searchOverlayOpen={searchOverlayOpen}
-        datasets={datasetOptions}
-        selectedDatasetId={selectedDatasetId}
-        overflowOpen={isTabletUp ? overflowOpen : drawerOpen}
-        onDatasetChange={handleDatasetChange}
+        theme={theme}
         onOpenSearchOverlay={() => {
           setSearchOverlayOpen(true);
           setOverflowOpen(false);
           setDrawerOpen(false);
         }}
-        onToggleOverflow={() => {
-          setSearchOverlayOpen(false);
-          if (isTabletUp) {
-            setOverflowOpen((prev) => !prev);
-            setDrawerOpen(false);
-            return;
-          }
-          setDrawerOpen((prev) => !prev);
-          setOverflowOpen(false);
-        }}
+        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onGoHome={() => navigate("#/")}
         onGoBack={() => {
           if (window.history.length > 1) {
@@ -1255,16 +1243,8 @@ export default function App() {
         open={isTabletUp && overflowOpen}
         selectedControlCount={selectedControlCount}
         exportingCsv={exportCsvRunning}
-        importBusy={importBusy}
-        theme={theme}
         onClose={() => setOverflowOpen(false)}
-        onGoSource={() => navigate("#/about/source")}
-        onGoAbout={() => navigate("#/about")}
-        onGoImpressum={() => navigate("#/impressum")}
-        onGoDatenschutz={() => navigate("#/datenschutz")}
-        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onExportCsv={handleExportCsv}
-        onUpload={handleUpload}
       />
 
       <AppDrawer
@@ -1273,17 +1253,9 @@ export default function App() {
         selectedDatasetId={selectedDatasetId}
         selectedControlCount={selectedControlCount}
         exportingCsv={exportCsvRunning}
-        importBusy={importBusy}
-        theme={theme}
         onClose={() => setDrawerOpen(false)}
         onDatasetChange={handleDatasetChange}
-        onGoSource={() => navigate("#/about/source")}
-        onGoAbout={() => navigate("#/about")}
-        onGoImpressum={() => navigate("#/impressum")}
-        onGoDatenschutz={() => navigate("#/datenschutz")}
-        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onExportCsv={handleExportCsv}
-        onUpload={handleUpload}
       />
 
       <SearchOverlay
@@ -1302,6 +1274,10 @@ export default function App() {
           <GroupOverview
             meta={meta}
             datasetId={selectedDatasetId}
+            datasets={datasetOptions}
+            selectedDatasetId={selectedDatasetId}
+            isTabletUp={isTabletUp}
+            onDatasetChange={handleDatasetChange}
             onOpenGroup={(groupId) => navigate(buildGroupHash(groupId))}
             onStartSearch={() => navigate(buildSearchHash(searchText, sort, filters))}
             onSelectAllControls={handleSelectAllHomeControls}
@@ -1398,6 +1374,7 @@ export default function App() {
                 onBreadcrumbGroupClick={handleBreadcrumbGroupClick}
                 onBreadcrumbControlClick={handleBreadcrumbControlClick}
                 onBackToResults={showBackToResults ? handleBackToResults : null}
+                expandAllByDefault
               />
             ) : null}
           </section>
@@ -1421,6 +1398,7 @@ export default function App() {
               onBreadcrumbGroupClick={handleBreadcrumbGroupClick}
               onBreadcrumbControlClick={handleBreadcrumbControlClick}
               onBackToResults={showBackToResults ? handleBackToResults : null}
+              expandAllByDefault
             />
           </section>
         ) : null}
@@ -1478,11 +1456,12 @@ export default function App() {
             onBreadcrumbGroupClick={handleBreadcrumbGroupClick}
             onBreadcrumbControlClick={handleBreadcrumbControlClick}
             onBackToResults={showBackToResults ? handleBackToResults : null}
+            expandAllByDefault
           />
         </FilterSheet>
       ) : null}
 
-      <AppFooter />
+      <AppFooter importBusy={importBusy} onUpload={handleUpload} />
     </main>
   );
 }

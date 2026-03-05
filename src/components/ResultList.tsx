@@ -85,7 +85,7 @@ export function ResultList({
         <div className="result-list-header-meta">
           <span>{total} Treffer</span>
           <button type="button" className="secondary compact" onClick={onSelectAllControls} disabled={selectingAllControls}>
-            {selectingAllControls ? "Alles auswaehlen..." : allControlsSelected ? "Alles abwaehlen" : "Alles auswaehlen"}
+            {selectingAllControls ? "Alles auswählen..." : allControlsSelected ? "Alles abwählen" : "Alles auswählen"}
           </button>
         </div>
       </header>

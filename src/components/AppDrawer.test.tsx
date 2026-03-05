@@ -11,25 +11,21 @@ describe("AppDrawer", () => {
         selectedDatasetId="anwender"
         selectedControlCount={0}
         exportingCsv={false}
-        importBusy={false}
-        theme="light"
         onClose={vi.fn()}
         onDatasetChange={vi.fn()}
-        onGoSource={vi.fn()}
-        onGoAbout={vi.fn()}
-        onGoImpressum={vi.fn()}
-        onGoDatenschutz={vi.fn()}
-        onToggleTheme={vi.fn()}
         onExportCsv={vi.fn()}
-        onUpload={vi.fn()}
       />
     );
 
     expect(html).toContain('role="dialog"');
     expect(html).toContain("Datensatz auswählen");
-    expect(html).toContain("Dunkelmodus");
-    expect(html).toContain("Impressum");
-    expect(html).toContain("Datenschutz");
+    expect(html).not.toContain("Info");
+    expect(html).not.toContain("Quellen &amp; Version");
+    expect(html).not.toContain("About");
+    expect(html).not.toContain("Dunkelmodus");
+    expect(html).not.toContain("Impressum");
+    expect(html).not.toContain("Datenschutz");
     expect(html).not.toContain("CSV exportieren");
+    expect(html).not.toContain("JSON laden");
   });
 });

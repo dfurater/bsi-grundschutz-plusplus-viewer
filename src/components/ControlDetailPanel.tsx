@@ -18,6 +18,7 @@ interface ControlDetailPanelProps {
   onBreadcrumbGroupClick: (groupId: string) => void;
   onBreadcrumbControlClick: (controlId: string) => void;
   onBackToResults?: (() => void) | null;
+  expandAllByDefault?: boolean;
 }
 
 const EXPANDED_SECTIONS = {
@@ -103,9 +104,27 @@ export function ControlDetailPanel({
   onPropertyFilterClick,
   onBreadcrumbGroupClick,
   onBreadcrumbControlClick,
-  onBackToResults
+  onBackToResults,
+  expandAllByDefault = false
 }: ControlDetailPanelProps) {
-  const [sections, setSections] = useState(EXPANDED_SECTIONS);
+  const [sections, setSections] = useState(() => ({
+    guidance: expandAllByDefault,
+    params: expandAllByDefault,
+    relations: expandAllByDefault,
+    properties: expandAllByDefault
+  }));
+
+  useEffect(() => {
+    if (!expandAllByDefault || !detail?.id) {
+      return;
+    }
+    setSections({
+      guidance: true,
+      params: true,
+      relations: true,
+      properties: true
+    });
+  }, [detail?.id, expandAllByDefault]);
 
   const toggleSection = (key: keyof typeof sections) => {
     setSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -242,7 +261,9 @@ export function ControlDetailPanel({
           onClick={() => toggleSection("guidance")}
         >
           <span>Guidance</span>
-          <strong aria-hidden="true">{sections.guidance ? "−" : "+"}</strong>
+          <span className="accordion-indicator" aria-hidden="true">
+            ▾
+          </span>
         </button>
         {sections.guidance ? (
           <div>
@@ -259,7 +280,9 @@ export function ControlDetailPanel({
           onClick={() => toggleSection("params")}
         >
           <span>Parameter</span>
-          <strong aria-hidden="true">{sections.params ? "−" : "+"}</strong>
+          <span className="accordion-indicator" aria-hidden="true">
+            ▾
+          </span>
         </button>
         {sections.params ? (
           detail.params.length > 0 ? (
@@ -284,7 +307,9 @@ export function ControlDetailPanel({
           onClick={() => toggleSection("relations")}
         >
           <span>Relationen</span>
-          <strong aria-hidden="true">{sections.relations ? "−" : "+"}</strong>
+          <span className="accordion-indicator" aria-hidden="true">
+            ▾
+          </span>
         </button>
 
         {sections.relations ? (
@@ -352,7 +377,9 @@ export function ControlDetailPanel({
           onClick={() => toggleSection("properties")}
         >
           <span>Eigenschaften</span>
-          <strong aria-hidden="true">{sections.properties ? "−" : "+"}</strong>
+          <span className="accordion-indicator" aria-hidden="true">
+            ▾
+          </span>
         </button>
         {sections.properties ? (
           <ul>
