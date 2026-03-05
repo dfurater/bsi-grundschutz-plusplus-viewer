@@ -125,6 +125,35 @@ Der Build-Step `npm run build:data` erzeugt aus `Grundschutz++-catalog.json` die
 
 Das Ergebnis in `dist/` kann auf beliebigem Static Hosting bereitgestellt werden (GitHub Pages, Netlify, Cloudflare Pages, S3 Static Website).
 
+### GitHub Pages (empfohlen via GitHub Actions)
+
+Die App verwendet Hash-Routing und ist damit ohne Server-Rewrites auf GitHub Pages lauffaehig.
+
+1. In GitHub unter `Settings -> Pages` bei **Build and deployment** die Option **GitHub Actions** aktivieren.
+2. Auf `main` pushen (oder den Workflow manuell starten).
+3. Der Workflow `.github/workflows/deploy-pages.yml` baut und deployed automatisch nach GitHub Pages.
+
+Wichtige Base-Path-Regel:
+- Projektseite (`https://<user>.github.io/<repo>/`): `VITE_BASE_PATH=/<repo>/`
+- User/Org-Seite oder Custom Domain (`https://<user>.github.io/` oder eigene Domain): `VITE_BASE_PATH=/`
+
+Der GitHub-Pages-Workflow setzt automatisch:
+
+```bash
+VITE_BASE_PATH=/${{ github.event.repository.name }}/
+```
+
+Lokaler Test mit GitHub-Pages-Base-Path:
+
+```bash
+VITE_BASE_PATH=/bsi-grundschutz-plusplus-viewer/ npm run build
+npm run preview
+```
+
+Hinweis zu Security-Headern auf GitHub Pages:
+- GitHub Pages wertet `public/_headers` und `netlify.toml` nicht als Response-Header-Policy aus.
+- Fuer strikt erzwungene CSP/weitere Security-Header ist ein vorgeschalteter Proxy/CDN oder ein Host mit Header-Support (z. B. Netlify/Cloudflare) erforderlich.
+
 Fuer Security-Header siehe:
 
 - `public/_headers`
