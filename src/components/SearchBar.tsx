@@ -22,6 +22,7 @@ interface SearchBarProps {
   onDatasetChange: (datasetId: string) => void;
   onToggleTheme: () => void;
   onGoHome: () => void;
+  onGoAbout: () => void;
   onGoSource: () => void;
   onUpload: (file: File) => void;
   selectedControlCount: number;
@@ -44,6 +45,7 @@ export function SearchBar({
   onDatasetChange,
   onToggleTheme,
   onGoHome,
+  onGoAbout,
   onGoSource,
   onUpload,
   selectedControlCount,
@@ -178,6 +180,9 @@ export function SearchBar({
           </select>
           <button className="secondary" onClick={onGoSource} type="button">
             Quellen & Version
+          </button>
+          <button className="secondary" onClick={onGoAbout} type="button">
+            About
           </button>
           <button
             className="secondary"
