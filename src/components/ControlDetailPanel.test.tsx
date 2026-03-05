@@ -59,7 +59,36 @@ describe("ControlDetailPanel", () => {
 
     expect(html).toContain("Zur Ergebnisliste");
     expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain("▾");
+    expect(html).not.toContain("▸");
     expect(html).toContain("Guidance");
     expect(html).toContain("Relationen");
+  });
+
+  it("öffnet alle Accordions initial wenn expandAllByDefault aktiv ist", () => {
+    const html = renderToStaticMarkup(
+      <ControlDetailPanel
+        detail={createDetail()}
+        loading={false}
+        error={null}
+        graphData={null}
+        graphLoading={false}
+        graphError={null}
+        graphHops={1}
+        graphFilter="all"
+        onGraphHopsChange={vi.fn()}
+        onGraphFilterChange={vi.fn()}
+        onRelationClick={vi.fn()}
+        onPropertyFilterClick={vi.fn()}
+        onBreadcrumbGroupClick={vi.fn()}
+        onBreadcrumbControlClick={vi.fn()}
+        onBackToResults={vi.fn()}
+        expandAllByDefault
+      />
+    );
+
+    expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain("▾");
+    expect(html).not.toContain("▸");
   });
 });
