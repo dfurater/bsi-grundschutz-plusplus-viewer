@@ -3,9 +3,6 @@ interface AppHeaderProps {
   isShrunk: boolean;
   searchOverlayOpen: boolean;
   theme: "light" | "dark";
-  datasets: Array<{ id: string; label: string }>;
-  selectedDatasetId: string;
-  onDatasetChange: (datasetId: string) => void;
   onOpenSearchOverlay: () => void;
   onToggleTheme: () => void;
   onGoHome: () => void;
@@ -22,9 +19,6 @@ export function AppHeader({
   isShrunk,
   searchOverlayOpen,
   theme,
-  datasets,
-  selectedDatasetId,
-  onDatasetChange,
   onOpenSearchOverlay,
   onToggleTheme,
   onGoHome,
@@ -32,8 +26,6 @@ export function AppHeader({
   showBack
 }: AppHeaderProps) {
   const nextThemeLabel = theme === "dark" ? "Hellmodus" : "Dunkelmodus";
-  const selectedDatasetLabel = datasets.find((dataset) => dataset.id === selectedDatasetId)?.label ?? "Katalog";
-  const datasetSelectWidthCh = Math.max(selectedDatasetLabel.length + 3, 12);
 
   return (
     <header className={`app-header-shell ${isShrunk ? "is-shrunk" : ""}`}>
@@ -59,6 +51,44 @@ export function AppHeader({
               />
             </svg>
           </button>
+          <button
+            type="button"
+            className={isTabletUp ? "search-trigger-field" : "icon-button"}
+            aria-label="Suche öffnen"
+            aria-haspopup="dialog"
+            aria-expanded={searchOverlayOpen}
+            onClick={onOpenSearchOverlay}
+          >
+            {isTabletUp ? (
+              <>
+                <span className="search-trigger-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18">
+                    <path
+                      d="M10.5 3.5a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm9.2 13.8-3.2-3.2"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </span>
+                <span className="search-trigger-text">Katalog durchsuchen</span>
+              </>
+            ) : (
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path
+                  d="M10.5 3.5a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm9.2 13.8-3.2-3.2"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            )}
+          </button>
+        </div>
+
+        <div className="app-bar-end">
           <button
             type="button"
             className="icon-button app-theme-button theme-toggle-button"
@@ -91,68 +121,6 @@ export function AppHeader({
               </svg>
             )}
           </button>
-
-          {isTabletUp ? (
-            <button
-              type="button"
-              className="search-trigger-field"
-              aria-label="Suche öffnen"
-              aria-haspopup="dialog"
-              aria-expanded={searchOverlayOpen}
-              onClick={onOpenSearchOverlay}
-            >
-              <span className="search-trigger-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="18" height="18">
-                  <path
-                    d="M10.5 3.5a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm9.2 13.8-3.2-3.2"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
-              <span className="search-trigger-text">Katalog durchsuchen</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="icon-button"
-              aria-label="Suche öffnen"
-              aria-haspopup="dialog"
-              aria-expanded={searchOverlayOpen}
-              onClick={onOpenSearchOverlay}
-            >
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                <path
-                  d="M10.5 3.5a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm9.2 13.8-3.2-3.2"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-          )}
-        </div>
-
-        <div className="app-bar-end">
-          {isTabletUp ? (
-            <select
-              className="dataset-select"
-              aria-label="Datensatz auswählen"
-              value={selectedDatasetId}
-              style={{ width: `${datasetSelectWidthCh}ch`, minWidth: `${datasetSelectWidthCh}ch` }}
-              onChange={(event) => onDatasetChange(event.target.value)}
-            >
-              {datasets.map((dataset) => (
-                <option key={dataset.id} value={dataset.id}>
-                  {dataset.label}
-                </option>
-              ))}
-            </select>
-          ) : null}
-
         </div>
       </div>
     </header>

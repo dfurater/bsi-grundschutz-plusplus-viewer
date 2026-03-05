@@ -21,6 +21,13 @@ interface ControlDetailPanelProps {
   expandAllByDefault?: boolean;
 }
 
+const EXPANDED_SECTIONS = {
+  guidance: true,
+  params: true,
+  relations: true,
+  properties: true
+};
+
 function renderRelation(
   relation: RelationEdge,
   direction: "incoming" | "outgoing",
@@ -122,6 +129,12 @@ export function ControlDetailPanel({
   const toggleSection = (key: keyof typeof sections) => {
     setSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
+
+  useEffect(() => {
+    if (detail) {
+      setSections(EXPANDED_SECTIONS);
+    }
+  }, [detail?.id]);
 
   if (loading) {
     return <section className="detail-panel status-box">Control wird geladen…</section>;
