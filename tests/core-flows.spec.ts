@@ -79,6 +79,9 @@ test.describe("Kernflows", () => {
 
     const overlayDialog = page.getByRole("dialog", { name: "Suche" });
     const searchInput = overlayDialog.getByRole("searchbox", { name: "Suche" });
+    await searchInput.click();
+    await searchInput.type("a");
+    await expect(searchInput).toBeFocused();
     await searchInput.fill("KONF.12.4");
     await searchInput.press("Enter");
 
