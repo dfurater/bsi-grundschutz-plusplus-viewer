@@ -153,26 +153,23 @@ test.describe("Kernflows", () => {
     await expect(page).not.toHaveURL(/control=/);
   });
 
-  test("CSV Export ist im Overflow konditional sichtbar", async ({ page }) => {
+  test("CSV Export ist im Header konditional sichtbar", async ({ page }) => {
     await page.goto("/#/search?q=KONF");
 
-    await page.getByRole("button", { name: "Weitere Aktionen" }).click();
-    await expect(page.getByRole("menuitem", { name: /CSV exportieren/ })).toHaveCount(0);
-    await page.keyboard.press("Escape");
+    await expect(page.getByRole("button", { name: /Export CSV/ })).toHaveCount(0);
 
     await page.getByRole("checkbox", { name: "Für CSV auswählen" }).first().check();
-
-    await page.getByRole("button", { name: "Weitere Aktionen" }).click();
-    await expect(page.getByRole("menuitem", { name: /CSV exportieren \(1\)/ })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Export CSV (1)" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Export CSV (1)" })).toBeEnabled();
   });
 
-  test("Mobile: Datensatz ist im Overflow-Drawer statt Header", async ({ page }) => {
+  test("Mobile: kein Overflow-Trigger, CSV-Export bleibt über Header erreichbar", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 900 });
     await page.goto("/#/search?q=KONF");
 
     await expect(page.getByLabel("Datensatz auswählen")).toHaveCount(0);
-    await page.getByRole("button", { name: "Weitere Aktionen" }).click();
-    await expect(page.getByRole("dialog", { name: "Weitere Aktionen" })).toBeVisible();
-    await expect(page.getByRole("dialog", { name: "Weitere Aktionen" }).getByLabel("Datensatz auswählen")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Weitere Aktionen" })).toHaveCount(0);
+    await page.getByRole("checkbox", { name: "Für CSV auswählen" }).first().check();
+    await expect(page.getByRole("button", { name: "Export CSV (1)" })).toBeVisible();
   });
 });
