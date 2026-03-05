@@ -6,10 +6,6 @@ interface OverflowMenuProps {
   exportingCsv: boolean;
   importBusy: boolean;
   onClose: () => void;
-  onGoSource: () => void;
-  onGoAbout: () => void;
-  onGoImpressum?: () => void;
-  onGoDatenschutz?: () => void;
   onExportCsv: () => void;
   onUpload: (file: File) => void;
 }
@@ -24,8 +20,6 @@ export function OverflowMenu({
   exportingCsv,
   importBusy,
   onClose,
-  onGoSource,
-  onGoAbout,
   onExportCsv,
   onUpload
 }: OverflowMenuProps) {
@@ -74,32 +68,6 @@ export function OverflowMenu({
     <div className="overflow-menu-wrap" ref={rootRef}>
       {/* REQ: PD-08, A11y-02 */}
       <section role="menu" aria-label="Sekundäre Aktionen" className="overflow-menu">
-        <div className="overflow-menu-group" role="presentation">
-          <p className="overflow-group-title">Info</p>
-          <button
-            type="button"
-            role="menuitem"
-            className="secondary"
-            onClick={() => {
-              onGoSource();
-              onClose();
-            }}
-          >
-            Quellen &amp; Version
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="secondary"
-            onClick={() => {
-              onGoAbout();
-              onClose();
-            }}
-          >
-            About
-          </button>
-        </div>
-
         <div className="overflow-menu-group" role="presentation">
           <p className="overflow-group-title">Daten</p>
           {selectedControlCount > 0 ? (

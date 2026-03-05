@@ -14,8 +14,6 @@ describe("AppDrawer", () => {
         importBusy={false}
         onClose={vi.fn()}
         onDatasetChange={vi.fn()}
-        onGoSource={vi.fn()}
-        onGoAbout={vi.fn()}
         onExportCsv={vi.fn()}
         onUpload={vi.fn()}
       />
@@ -23,6 +21,9 @@ describe("AppDrawer", () => {
 
     expect(html).toContain('role="dialog"');
     expect(html).toContain("Datensatz auswählen");
+    expect(html).not.toContain("Info");
+    expect(html).not.toContain("Quellen &amp; Version");
+    expect(html).not.toContain("About");
     expect(html).not.toContain("Dunkelmodus");
     expect(html).not.toContain("Impressum");
     expect(html).not.toContain("Datenschutz");
