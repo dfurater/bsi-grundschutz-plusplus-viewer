@@ -9,13 +9,13 @@ interface GroupOverviewProps {
 
 function heroIntroTextForDataset(datasetId: string) {
   if (datasetId === "anwender") {
-    return "Der Grundschutz++ ist eine vom Bundesamt fuer Sicherheit in der Informationstechnik (BSI) entwickelte und frei verfuegbare Vorgehensweise, um ein ganzheitliches Informationssicherheits-Managementsystem (ISMS) in Institutionen aufzubauen und dauerhaft zu betreiben. Dieser Katalog enthaelt sowohl die Anforderungen zur Umsetzung der Grundschutz-Methodik als auch konkrete technisch-organisatorische Anforderungen zur Absicherung.";
+    return "Der Grundschutz++ ist eine vom Bundesamt für Sicherheit in der Informationstechnik (BSI) entwickelte und frei verfügbare Vorgehensweise, um ein ganzheitliches Informationssicherheits-Managementsystem (ISMS) in Institutionen aufzubauen und dauerhaft zu betreiben. Dieser Katalog enthält sowohl die Anforderungen zur Umsetzung der Grundschutz-Methodik als auch konkrete technisch-organisatorische Anforderungen zur Absicherung.";
   }
   if (datasetId === "kernel") {
-    return "Der BSI-Kernelkatalog buendelt grundlegende Sicherheitsanforderungen und Controls als belastbare Basis fuer die Absicherung von Systemen und Prozessen. Er bildet das technische und organisatorische Sicherheitsfundament, auf dem weiterfuehrende Anforderungen aufsetzen.";
+    return "Der BSI-Kernelkatalog bündelt grundlegende Sicherheitsanforderungen und Controls als belastbare Basis für die Absicherung von Systemen und Prozessen. Er bildet das technische und organisatorische Sicherheitsfundament, auf dem weiterführende Anforderungen aufsetzen.";
   }
   if (datasetId === "methodik") {
-    return "Der Methodik-Katalog beschreibt die Vorgehensweise zur Planung, Umsetzung, Bewertung und kontinuierlichen Verbesserung der Informationssicherheit nach Grundschutz++. Er unterstuetzt Institutionen dabei, ISMS-Prozesse strukturiert, nachvollziehbar und pruefbar umzusetzen.";
+    return "Der Methodik-Katalog beschreibt die Vorgehensweise zur Planung, Umsetzung, Bewertung und kontinuierlichen Verbesserung der Informationssicherheit nach Grundschutz++. Er unterstützt Institutionen dabei, ISMS-Prozesse strukturiert, nachvollziehbar und prüfbar umzusetzen.";
   }
   return "Dieser Katalog stellt sicherheitsrelevante Anforderungen strukturiert und durchsuchbar bereit.";
 }

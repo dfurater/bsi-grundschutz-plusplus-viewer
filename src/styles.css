@@ -458,6 +458,9 @@ summary:focus-visible {
 }
 
 .group-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   text-align: left;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -466,6 +469,7 @@ summary:focus-visible {
   padding: 0.8rem;
   cursor: pointer;
   min-height: 100px;
+  gap: 0.15rem;
 }
 
 .group-tile strong,
@@ -481,7 +485,8 @@ summary:focus-visible {
 }
 
 .group-tile em {
-  margin-top: 0.35rem;
+  margin-top: auto;
+  padding-top: 0.35rem;
   color: var(--text-muted);
   font-style: normal;
   font-size: 0.86rem;

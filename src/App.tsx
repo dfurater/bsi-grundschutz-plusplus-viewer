@@ -198,7 +198,7 @@ export default function App() {
     setBootProgress(76);
     setBootStatusText("Suche wird initialisiert…");
     setBootProgress(92);
-    setBootStatusText("Oberflaeche wird aufgebaut…");
+    setBootStatusText("Oberfläche wird aufgebaut…");
     setMeta(metaPayload);
     setSelectedDatasetId(datasetId);
     setSearchResponse(DEFAULT_SEARCH_RESPONSE);
@@ -265,7 +265,7 @@ export default function App() {
           })
         ])) as [CatalogRegistry, ProfileAnalysis];
         setBootProgress(16);
-        setBootStatusText("Datensatzbeziehungen werden geprueft…");
+        setBootStatusText("Datensatzbeziehungen werden geprüft…");
 
         if (!cancelled) {
           setProfileAnalysis(profilePayload);
@@ -331,7 +331,7 @@ export default function App() {
     try {
       const resolvedTopGroupId = topGroupId ?? (await resolveTopGroupId(controlId));
       if (!resolvedTopGroupId) {
-        throw new Error(`Top-Gruppe fuer ${controlId} konnte nicht bestimmt werden.`);
+        throw new Error(`Top-Gruppe für ${controlId} konnte nicht bestimmt werden.`);
       }
 
       const payload = await client.getControl(controlId, resolvedTopGroupId);
@@ -604,7 +604,7 @@ export default function App() {
         const [controlId, knownTopGroupId] = selectedEntries[index];
         const resolvedTopGroupId = knownTopGroupId || (await resolveTopGroupId(controlId));
         if (!resolvedTopGroupId) {
-          throw new Error(`Top-Gruppe fuer ${controlId} konnte nicht aufgeloest werden.`);
+          throw new Error(`Top-Gruppe für ${controlId} konnte nicht aufgelöst werden.`);
         }
 
         const detailPayload = await client.getControl(controlId, resolvedTopGroupId);
@@ -776,7 +776,7 @@ export default function App() {
             <p>{bootError}</p>
             <textarea
               readOnly
-              value={bootErrorDetails || bootError || "Kein Fehlerdetail verfuegbar."}
+              value={bootErrorDetails || bootError || "Kein Fehlerdetail verfügbar."}
               aria-label="Fehlerdetails"
             />
             <button
@@ -784,7 +784,7 @@ export default function App() {
               type="button"
               onClick={() =>
                 navigator.clipboard
-                  .writeText(bootErrorDetails || bootError || "Kein Fehlerdetail verfuegbar.")
+                  .writeText(bootErrorDetails || bootError || "Kein Fehlerdetail verfügbar.")
                   .catch(() => {
                     // Clipboard support may be unavailable in hardened browser settings.
                   })

@@ -35,10 +35,11 @@ Die Inhalte werden ueber Platzhalter in `src/legal/placeholders.ts` gepflegt:
 - `{{OPERATOR_ADDRESS_LINE1}}`
 - `{{OPERATOR_ADDRESS_LINE2}}`
 - `{{OPERATOR_EMAIL}}`
-- `{{HOSTING_PROVIDER_NAME}}`
-- `{{HOSTING_PROVIDER_CONTACT}}`
-- `{{PROJECT_REPO_URL}}`
-- `{{LAST_UPDATED_DATE}}`
+
+Hosting-/Projekt-/Stand-Angaben sind direkt in den Rechtsseiten gepflegt:
+
+- `src/components/DatenschutzPage.tsx`
+- `src/components/ImpressumPage.tsx`
 
 Wichtige Datenschutzinhalte in der vorhandenen Erklaerung:
 

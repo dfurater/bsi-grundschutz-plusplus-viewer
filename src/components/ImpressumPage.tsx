@@ -1,4 +1,5 @@
 import { LEGAL_PLACEHOLDERS, isPlaceholderValue } from "../legal/placeholders";
+const LEGAL_LAST_UPDATED = "05.03.2026";
 
 function renderContactEmail(email: string) {
   if (!email) {
@@ -16,9 +17,20 @@ export function ImpressumPage() {
   return (
     <section className="legal-page" aria-labelledby="impressum-title">
       <h1 id="impressum-title">Impressum</h1>
+      <p>
+        Angaben gemäß Paragraf 18 Abs. 1 Medienstaatsvertrag (MStV) sowie - soweit einschlägig - Paragraf 5
+        Digitale-Dienste-Gesetz (DDG)
+      </p>
 
       <h2>Anbieter</h2>
-      <p>{LEGAL_PLACEHOLDERS.operatorName}</p>
+      <p>
+        <strong>Name:</strong>
+        <br />
+        {LEGAL_PLACEHOLDERS.operatorName}
+      </p>
+      <p>
+        <strong>Anschrift (ladungsfähig):</strong>
+      </p>
       <address>
         {LEGAL_PLACEHOLDERS.operatorAddressLine1}
         <br />
@@ -27,21 +39,12 @@ export function ImpressumPage() {
 
       <h2>Kontakt</h2>
       <p>
-        E-Mail: {renderContactEmail(LEGAL_PLACEHOLDERS.operatorEmail)}
+        <strong>E-Mail:</strong>
+        <br />
+        {renderContactEmail(LEGAL_PLACEHOLDERS.operatorEmail)}
       </p>
 
-      <h2>Projektbezug</h2>
-      <p>
-        Diese Website stellt einen fachlichen, oeffentlich erreichbaren Viewer fuer den Grundschutz++-Katalog bereit.
-      </p>
-      <p>
-        Projekt-Repository:{" "}
-        <a href={LEGAL_PLACEHOLDERS.projectRepoUrl} target="_blank" rel="noopener noreferrer">
-          {LEGAL_PLACEHOLDERS.projectRepoUrl}
-        </a>
-      </p>
-
-      <p className="legal-last-updated">Stand: {LEGAL_PLACEHOLDERS.lastUpdatedDate}</p>
+      <p className="legal-last-updated">Stand: {LEGAL_LAST_UPDATED}</p>
     </section>
   );
 }
