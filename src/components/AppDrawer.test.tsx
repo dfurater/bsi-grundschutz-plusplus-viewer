@@ -12,12 +12,10 @@ describe("AppDrawer", () => {
         selectedControlCount={0}
         exportingCsv={false}
         importBusy={false}
-        theme="light"
         onClose={vi.fn()}
         onDatasetChange={vi.fn()}
         onGoSource={vi.fn()}
         onGoAbout={vi.fn()}
-        onToggleTheme={vi.fn()}
         onExportCsv={vi.fn()}
         onUpload={vi.fn()}
       />
@@ -25,7 +23,7 @@ describe("AppDrawer", () => {
 
     expect(html).toContain('role="dialog"');
     expect(html).toContain("Datensatz auswählen");
-    expect(html).toContain("Dunkelmodus");
+    expect(html).not.toContain("Dunkelmodus");
     expect(html).not.toContain("Impressum");
     expect(html).not.toContain("Datenschutz");
     expect(html).not.toContain("CSV exportieren");
