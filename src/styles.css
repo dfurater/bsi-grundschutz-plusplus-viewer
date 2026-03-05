@@ -1378,6 +1378,10 @@ summary:focus-visible {
   padding: 1rem;
 }
 
+.group-page {
+  background: var(--hero-bg);
+}
+
 .about-page h1 {
   margin-top: 0;
   margin-bottom: 0.75rem;
