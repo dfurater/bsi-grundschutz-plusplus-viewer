@@ -5,10 +5,8 @@ interface AppHeaderProps {
   theme: "light" | "dark";
   datasets: Array<{ id: string; label: string }>;
   selectedDatasetId: string;
-  overflowOpen: boolean;
   onDatasetChange: (datasetId: string) => void;
   onOpenSearchOverlay: () => void;
-  onToggleOverflow: () => void;
   onToggleTheme: () => void;
   onGoHome: () => void;
   onGoBack: () => void;
@@ -26,10 +24,8 @@ export function AppHeader({
   theme,
   datasets,
   selectedDatasetId,
-  overflowOpen,
   onDatasetChange,
   onOpenSearchOverlay,
-  onToggleOverflow,
   onToggleTheme,
   onGoHome,
   onGoBack,
@@ -157,16 +153,6 @@ export function AppHeader({
             </select>
           ) : null}
 
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Weitere Aktionen"
-            aria-haspopup={isTabletUp ? "menu" : "dialog"}
-            aria-expanded={overflowOpen}
-            onClick={onToggleOverflow}
-          >
-            ⋯
-          </button>
         </div>
       </div>
     </header>

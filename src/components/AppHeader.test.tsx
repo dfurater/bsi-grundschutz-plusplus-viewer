@@ -12,10 +12,8 @@ describe("AppHeader", () => {
         theme="light"
         datasets={[{ id: "anwender", label: "Anwender" }]}
         selectedDatasetId="anwender"
-        overflowOpen={false}
         onDatasetChange={vi.fn()}
         onOpenSearchOverlay={vi.fn()}
-        onToggleOverflow={vi.fn()}
         onToggleTheme={vi.fn()}
         onGoHome={vi.fn()}
         onGoBack={vi.fn()}
@@ -26,7 +24,7 @@ describe("AppHeader", () => {
     expect(html).toContain("Suche öffnen");
     expect(html).toContain("Katalog durchsuchen");
     expect(html).toContain("Datensatz auswählen");
-    expect(html).toContain('aria-haspopup="menu"');
+    expect(html).not.toContain("Weitere Aktionen");
     expect(html).toContain("Zur Startseite");
     expect(html).not.toContain("Grundschutz++");
     expect(html).not.toContain("<h1");
@@ -43,10 +41,8 @@ describe("AppHeader", () => {
         theme="dark"
         datasets={[{ id: "anwender", label: "Anwender" }]}
         selectedDatasetId="anwender"
-        overflowOpen
         onDatasetChange={vi.fn()}
         onOpenSearchOverlay={vi.fn()}
-        onToggleOverflow={vi.fn()}
         onToggleTheme={vi.fn()}
         onGoHome={vi.fn()}
         onGoBack={vi.fn()}
@@ -56,7 +52,7 @@ describe("AppHeader", () => {
 
     expect(html).toContain("Suche öffnen");
     expect(html).not.toContain("Katalog durchsuchen");
-    expect(html).toContain('aria-haspopup="dialog"');
+    expect(html).not.toContain("Weitere Aktionen");
     expect(html).not.toContain("Datensatz auswählen");
     expect(html).toContain("Hellmodus");
   });

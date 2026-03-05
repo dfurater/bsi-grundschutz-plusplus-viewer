@@ -4,10 +4,8 @@ interface OverflowMenuProps {
   open: boolean;
   selectedControlCount: number;
   exportingCsv: boolean;
-  importBusy: boolean;
   onClose: () => void;
   onExportCsv: () => void;
-  onUpload: (file: File) => void;
 }
 
 /**
@@ -18,13 +16,10 @@ export function OverflowMenu({
   open,
   selectedControlCount,
   exportingCsv,
-  importBusy,
   onClose,
-  onExportCsv,
-  onUpload
+  onExportCsv
 }: OverflowMenuProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -86,31 +81,6 @@ export function OverflowMenu({
             </button>
           ) : null}
 
-          <button
-            type="button"
-            role="menuitem"
-            className="secondary"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importBusy}
-            title="JSON-Datei laden"
-          >
-            {importBusy ? "JSON wird geladen" : "JSON laden"}
-          </button>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            hidden
-            accept="application/json"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) {
-                onUpload(file);
-              }
-              event.currentTarget.value = "";
-              onClose();
-            }}
-          />
         </div>
 
       </section>
