@@ -65,9 +65,9 @@ export function GroupOverview({
         <div className="group-grid">
           {topGroups.map((group) => (
             <button key={group.id} type="button" className="group-tile" onClick={() => onOpenGroup(group.id)}>
-              <strong>{group.id}</strong>
-              <span>{group.title}</span>
-              <em>{countByTopGroup.get(group.id) ?? 0} Untergruppen</em>
+              <strong className="group-tile-id">{group.id}</strong>
+              <span className="group-tile-title">{group.title}</span>
+              <em className="group-tile-meta">{countByTopGroup.get(group.id) ?? 0} Untergruppen</em>
             </button>
           ))}
         </div>

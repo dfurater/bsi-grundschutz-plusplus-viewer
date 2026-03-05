@@ -77,8 +77,8 @@ export function GroupPage({
           <div className="group-grid">
             {subgroups.map((subgroup) => (
               <button key={subgroup.id} type="button" className="group-tile" onClick={() => onOpenSubgroup(subgroup.id)}>
-                <strong>{subgroup.id}</strong>
-                <span>{subgroup.title}</span>
+                <strong className="group-tile-id">{subgroup.id}</strong>
+                <span className="group-tile-title">{subgroup.title}</span>
               </button>
             ))}
           </div>
