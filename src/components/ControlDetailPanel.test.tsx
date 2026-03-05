@@ -36,7 +36,7 @@ function createDetail(): ControlDetail {
 }
 
 describe("ControlDetailPanel", () => {
-  it("rendert Back-to-results und collapsed Accordions", () => {
+  it("rendert Back-to-results und expanded Accordions", () => {
     const html = renderToStaticMarkup(
       <ControlDetailPanel
         detail={createDetail()}
@@ -58,7 +58,8 @@ describe("ControlDetailPanel", () => {
     );
 
     expect(html).toContain("Zur Ergebnisliste");
-    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain('aria-hidden="true">−</strong>');
     expect(html).toContain("Guidance");
     expect(html).toContain("Relationen");
   });
