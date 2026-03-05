@@ -28,9 +28,9 @@ test.describe("Kernflows", () => {
     /* REQ: DoD-05, PD-06, RESP-01 */
     const cases = [
       { width: 375, expectWide: false, expectFilterButton: true, expectDatasetInline: false },
-      { width: 768, expectWide: false, expectFilterButton: true, expectDatasetInline: true },
-      { width: 1024, expectWide: false, expectFilterButton: true, expectDatasetInline: true },
-      { width: 1280, expectWide: true, expectFilterButton: false, expectDatasetInline: true }
+      { width: 768, expectWide: false, expectFilterButton: true, expectDatasetInline: false },
+      { width: 1024, expectWide: false, expectFilterButton: true, expectDatasetInline: false },
+      { width: 1280, expectWide: true, expectFilterButton: false, expectDatasetInline: false }
     ] as const;
 
     for (const entry of cases) {
@@ -60,7 +60,7 @@ test.describe("Kernflows", () => {
     await expect(searchInput).toHaveValue("");
   });
 
-  test("Theme-Toggle liegt im Header zwischen Home und Suche und wechselt Theme", async ({ page }) => {
+  test("Theme-Toggle liegt im Header rechts und wechselt Theme", async ({ page }) => {
     await page.goto("/#/search?q=KONF");
 
     const themeRoot = page.locator("html");
@@ -68,7 +68,7 @@ test.describe("Kernflows", () => {
     const nextTheme = initialTheme === "dark" ? "light" : "dark";
     const toggleLabel = initialTheme === "dark" ? "Hellmodus" : "Dunkelmodus";
     const nextToggleLabel = nextTheme === "dark" ? "Hellmodus" : "Dunkelmodus";
-    const themeToggle = page.locator(".app-bar-start .theme-toggle-button");
+    const themeToggle = page.locator(".app-bar-end .theme-toggle-button");
 
     await expect(themeToggle).toHaveCount(1);
     await expect(themeToggle).toHaveAttribute("aria-label", toggleLabel);

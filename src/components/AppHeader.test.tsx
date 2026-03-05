@@ -3,16 +3,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { AppHeader } from "./AppHeader";
 
 describe("AppHeader", () => {
-  it("rendert einzeilige Primary-Actions mit Theme-Button zwischen Home und Suche", () => {
+  it("rendert einzeilige Primary-Actions mit Suche links und Theme-Button rechts", () => {
     const html = renderToStaticMarkup(
       <AppHeader
         isTabletUp
         isShrunk={false}
         searchOverlayOpen={false}
         theme="light"
-        datasets={[{ id: "anwender", label: "Anwender" }]}
-        selectedDatasetId="anwender"
-        onDatasetChange={vi.fn()}
         onOpenSearchOverlay={vi.fn()}
         onToggleTheme={vi.fn()}
         onGoHome={vi.fn()}
@@ -23,25 +20,23 @@ describe("AppHeader", () => {
 
     expect(html).toContain("Suche öffnen");
     expect(html).toContain("Katalog durchsuchen");
-    expect(html).toContain("Datensatz auswählen");
+    expect(html).not.toContain("Datensatz auswählen");
     expect(html).not.toContain("Weitere Aktionen");
     expect(html).toContain("Zur Startseite");
     expect(html).not.toContain("Grundschutz++");
     expect(html).not.toContain("<h1");
     expect(html).toContain("Dunkelmodus");
     expect(html).toContain("theme-toggle-button");
+    expect(html).toContain("app-bar-end");
   });
 
-  it("blendet Datensatz-Auswahl unter 768px im Header aus", () => {
+  it("rendert unter 768px Suche als Icon und Theme weiterhin im Header", () => {
     const html = renderToStaticMarkup(
       <AppHeader
         isTabletUp={false}
         isShrunk={false}
         searchOverlayOpen={false}
         theme="dark"
-        datasets={[{ id: "anwender", label: "Anwender" }]}
-        selectedDatasetId="anwender"
-        onDatasetChange={vi.fn()}
         onOpenSearchOverlay={vi.fn()}
         onToggleTheme={vi.fn()}
         onGoHome={vi.fn()}
