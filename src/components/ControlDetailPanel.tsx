@@ -182,7 +182,7 @@ export function ControlDetailPanel({
 
       {/* REQ: US-06, 4.4.3 */}
       {onBackToResults ? (
-        <button type="button" className="secondary" onClick={onBackToResults}>
+        <button type="button" className="secondary detail-back-button" onClick={onBackToResults}>
           Zur Ergebnisliste
         </button>
       ) : null}

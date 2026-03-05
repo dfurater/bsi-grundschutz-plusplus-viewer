@@ -1181,6 +1181,10 @@ summary:focus-visible {
   color: var(--text-muted);
 }
 
+.detail-back-button {
+  margin-top: 0.75rem;
+}
+
 .breadcrumb {
   margin: 0.8rem 0;
   font-size: 0.9rem;
