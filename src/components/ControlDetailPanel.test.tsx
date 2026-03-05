@@ -36,7 +36,7 @@ function createDetail(): ControlDetail {
 }
 
 describe("ControlDetailPanel", () => {
-  it("rendert Back-to-results und collapsed Accordions", () => {
+  it("rendert Back-to-results und expanded Accordions", () => {
     const html = renderToStaticMarkup(
       <ControlDetailPanel
         detail={createDetail()}

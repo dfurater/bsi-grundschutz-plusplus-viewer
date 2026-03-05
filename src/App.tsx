@@ -1222,9 +1222,6 @@ export default function App() {
         isShrunk={headerShrunk}
         searchOverlayOpen={searchOverlayOpen}
         theme={theme}
-        datasets={datasetOptions}
-        selectedDatasetId={selectedDatasetId}
-        onDatasetChange={handleDatasetChange}
         onOpenSearchOverlay={() => {
           setSearchOverlayOpen(true);
           setOverflowOpen(false);
@@ -1277,6 +1274,10 @@ export default function App() {
           <GroupOverview
             meta={meta}
             datasetId={selectedDatasetId}
+            datasets={datasetOptions}
+            selectedDatasetId={selectedDatasetId}
+            isTabletUp={isTabletUp}
+            onDatasetChange={handleDatasetChange}
             onOpenGroup={(groupId) => navigate(buildGroupHash(groupId))}
             onStartSearch={() => navigate(buildSearchHash(searchText, sort, filters))}
             onSelectAllControls={handleSelectAllHomeControls}

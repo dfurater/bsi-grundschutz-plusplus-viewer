@@ -1,5 +1,24 @@
 import { expect, test } from "@playwright/test";
 
+function normalizeIds(ids: string[]) {
+  return ids.map((value) => value.trim()).filter(Boolean);
+}
+
+function isLexicographicallySorted(ids: string[], direction: "asc" | "desc") {
+  for (let index = 1; index < ids.length; index += 1) {
+    const prev = ids[index - 1];
+    const current = ids[index];
+    const compare = prev.localeCompare(current, "de");
+    if (direction === "asc" && compare > 0) {
+      return false;
+    }
+    if (direction === "desc" && compare < 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
 test.describe("Kernflows", () => {
   test("Sort-Dropdown sitzt im Filterpanel und wirkt auf Reihenfolge", async ({ page }) => {
     /* REQ: User Request Sort-Umzug Sidebar */
@@ -15,22 +34,32 @@ test.describe("Kernflows", () => {
     await sidebarSort.selectOption("id");
     await expect(page).toHaveURL(/sort=id-asc/);
 
-    const firstAsc = await page.locator(".result-card .result-topline strong").first().innerText();
+    const resultIdLocator = page.locator(".result-card .result-topline strong");
+    await expect.poll(async () => resultIdLocator.count()).toBeGreaterThan(1);
+    await expect
+      .poll(async () => {
+        const ids = normalizeIds(await resultIdLocator.allInnerTexts()).slice(0, 12);
+        return isLexicographicallySorted(ids, "asc");
+      })
+      .toBe(true);
 
     await page.getByRole("button", { name: "Sortierung absteigend" }).first().click();
     await expect(page).toHaveURL(/sort=id-desc/);
-
-    const firstDesc = await page.locator(".result-card .result-topline strong").first().innerText();
-    expect(firstAsc).not.toBe(firstDesc);
+    await expect
+      .poll(async () => {
+        const ids = normalizeIds(await resultIdLocator.allInnerTexts()).slice(0, 12);
+        return isLexicographicallySorted(ids, "desc");
+      })
+      .toBe(true);
   });
 
   test("Responsive Breakpoints 375/768/1024/1280", async ({ page }) => {
     /* REQ: DoD-05, PD-06, RESP-01 */
     const cases = [
       { width: 375, expectWide: false, expectFilterButton: true, expectDatasetInline: false },
-      { width: 768, expectWide: false, expectFilterButton: true, expectDatasetInline: true },
-      { width: 1024, expectWide: false, expectFilterButton: true, expectDatasetInline: true },
-      { width: 1280, expectWide: true, expectFilterButton: false, expectDatasetInline: true }
+      { width: 768, expectWide: false, expectFilterButton: true, expectDatasetInline: false },
+      { width: 1024, expectWide: false, expectFilterButton: true, expectDatasetInline: false },
+      { width: 1280, expectWide: true, expectFilterButton: false, expectDatasetInline: false }
     ] as const;
 
     for (const entry of cases) {
@@ -48,19 +77,26 @@ test.describe("Kernflows", () => {
     await page.goto("/#/search");
     await page.getByRole("button", { name: "Suche öffnen" }).click();
 
-    const searchInput = page.getByRole("searchbox", { name: "Suche" }).first();
+    const overlayDialog = page.getByRole("dialog", { name: "Suche" });
+    const searchInput = overlayDialog.getByRole("searchbox", { name: "Suche" });
+    await searchInput.click();
+    await searchInput.type("a");
+    await expect(searchInput).toBeFocused();
     await searchInput.fill("KONF.12.4");
     await searchInput.press("Enter");
 
     await expect(page).toHaveURL(/q=KONF\.12\.4/);
 
     await page.getByRole("button", { name: "Suche öffnen" }).click();
-    await page.getByRole("button", { name: "Suche leeren" }).first().click();
+    await overlayDialog.getByRole("button", { name: "Suche leeren" }).click();
     await expect(page).not.toHaveURL(/q=KONF\.12\.4/);
-    await expect(searchInput).toHaveValue("");
+    await expect(overlayDialog).toBeHidden();
+
+    await page.getByRole("button", { name: "Suche öffnen" }).click();
+    await expect(page.getByRole("dialog", { name: "Suche" }).getByRole("searchbox", { name: "Suche" })).toHaveValue("");
   });
 
-  test("Theme-Toggle liegt im Header zwischen Home und Suche und wechselt Theme", async ({ page }) => {
+  test("Theme-Toggle liegt im Header rechts und wechselt Theme", async ({ page }) => {
     await page.goto("/#/search?q=KONF");
 
     const themeRoot = page.locator("html");
@@ -68,7 +104,7 @@ test.describe("Kernflows", () => {
     const nextTheme = initialTheme === "dark" ? "light" : "dark";
     const toggleLabel = initialTheme === "dark" ? "Hellmodus" : "Dunkelmodus";
     const nextToggleLabel = nextTheme === "dark" ? "Hellmodus" : "Dunkelmodus";
-    const themeToggle = page.locator(".app-bar-start .theme-toggle-button");
+    const themeToggle = page.locator(".app-bar-end .theme-toggle-button");
 
     await expect(themeToggle).toHaveCount(1);
     await expect(themeToggle).toHaveAttribute("aria-label", toggleLabel);
