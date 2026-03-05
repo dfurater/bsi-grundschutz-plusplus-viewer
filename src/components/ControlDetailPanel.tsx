@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ControlDetail, RelationEdge, RelationGraphPayload } from "../types";
 import { RelationGraphLite } from "./RelationGraphLite";
 
@@ -19,6 +19,13 @@ interface ControlDetailPanelProps {
   onBreadcrumbControlClick: (controlId: string) => void;
   onBackToResults?: (() => void) | null;
 }
+
+const EXPANDED_SECTIONS = {
+  guidance: true,
+  params: true,
+  relations: true,
+  properties: true
+};
 
 function renderRelation(
   relation: RelationEdge,
@@ -98,16 +105,17 @@ export function ControlDetailPanel({
   onBreadcrumbControlClick,
   onBackToResults
 }: ControlDetailPanelProps) {
-  const [sections, setSections] = useState({
-    guidance: false,
-    params: false,
-    relations: false,
-    properties: false
-  });
+  const [sections, setSections] = useState(EXPANDED_SECTIONS);
 
   const toggleSection = (key: keyof typeof sections) => {
     setSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
+
+  useEffect(() => {
+    if (detail) {
+      setSections(EXPANDED_SECTIONS);
+    }
+  }, [detail?.id]);
 
   if (loading) {
     return <section className="detail-panel status-box">Control wird geladen…</section>;
@@ -233,7 +241,8 @@ export function ControlDetailPanel({
           aria-expanded={sections.guidance}
           onClick={() => toggleSection("guidance")}
         >
-          Guidance
+          <span>Guidance</span>
+          <strong aria-hidden="true">{sections.guidance ? "−" : "+"}</strong>
         </button>
         {sections.guidance ? (
           <div>
@@ -249,7 +258,8 @@ export function ControlDetailPanel({
           aria-expanded={sections.params}
           onClick={() => toggleSection("params")}
         >
-          Parameter
+          <span>Parameter</span>
+          <strong aria-hidden="true">{sections.params ? "−" : "+"}</strong>
         </button>
         {sections.params ? (
           detail.params.length > 0 ? (
@@ -273,7 +283,8 @@ export function ControlDetailPanel({
           aria-expanded={sections.relations}
           onClick={() => toggleSection("relations")}
         >
-          Relationen
+          <span>Relationen</span>
+          <strong aria-hidden="true">{sections.relations ? "−" : "+"}</strong>
         </button>
 
         {sections.relations ? (
@@ -340,7 +351,8 @@ export function ControlDetailPanel({
           aria-expanded={sections.properties}
           onClick={() => toggleSection("properties")}
         >
-          Eigenschaften
+          <span>Eigenschaften</span>
+          <strong aria-hidden="true">{sections.properties ? "−" : "+"}</strong>
         </button>
         {sections.properties ? (
           <ul>

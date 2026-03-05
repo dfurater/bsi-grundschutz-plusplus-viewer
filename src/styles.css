@@ -1162,6 +1162,9 @@ summary:focus-visible {
 
 .accordion-toggle {
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   border: 0;
   background: transparent;
   color: var(--text);
@@ -1169,6 +1172,11 @@ summary:focus-visible {
   padding: 0.22rem 0;
   font-weight: 600;
   cursor: pointer;
+}
+
+.accordion-toggle strong {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .part-block p {
