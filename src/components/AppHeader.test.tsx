@@ -22,9 +22,11 @@ describe("AppHeader", () => {
     );
 
     expect(html).toContain("Suche öffnen");
+    expect(html).toContain("Katalog durchsuchen");
     expect(html).toContain("Datensatz auswählen");
     expect(html).toContain('aria-haspopup="menu"');
-    expect(html).toContain("Grundschutz++");
+    expect(html).toContain("Zur Startseite");
+    expect(html).not.toContain("Grundschutz++");
     expect(html).not.toContain("<h1");
     expect(html).not.toContain("Dunkelmodus");
     expect(html).not.toContain("Hellmodus");
@@ -49,6 +51,7 @@ describe("AppHeader", () => {
     );
 
     expect(html).toContain("Suche öffnen");
+    expect(html).not.toContain("Katalog durchsuchen");
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).not.toContain("Datensatz auswählen");
     expect(html).not.toContain("Nachtmodus");

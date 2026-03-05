@@ -9,8 +9,8 @@ interface OverflowMenuProps {
   onClose: () => void;
   onGoSource: () => void;
   onGoAbout: () => void;
-  onGoImpressum: () => void;
-  onGoDatenschutz: () => void;
+  onGoImpressum?: () => void;
+  onGoDatenschutz?: () => void;
   onToggleTheme: () => void;
   onExportCsv: () => void;
   onUpload: (file: File) => void;
@@ -29,8 +29,6 @@ export function OverflowMenu({
   onClose,
   onGoSource,
   onGoAbout,
-  onGoImpressum,
-  onGoDatenschutz,
   onToggleTheme,
   onExportCsv,
   onUpload
@@ -164,28 +162,6 @@ export function OverflowMenu({
             }}
           >
             {nextThemeLabel}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="secondary"
-            onClick={() => {
-              onGoImpressum();
-              onClose();
-            }}
-          >
-            Impressum
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="secondary"
-            onClick={() => {
-              onGoDatenschutz();
-              onClose();
-            }}
-          >
-            Datenschutz
           </button>
         </div>
       </section>

@@ -13,8 +13,8 @@ interface AppDrawerProps {
   onDatasetChange: (datasetId: string) => void;
   onGoSource: () => void;
   onGoAbout: () => void;
-  onGoImpressum: () => void;
-  onGoDatenschutz: () => void;
+  onGoImpressum?: () => void;
+  onGoDatenschutz?: () => void;
   onToggleTheme: () => void;
   onExportCsv: () => void;
   onUpload: (file: File) => void;
@@ -36,8 +36,6 @@ export function AppDrawer({
   onDatasetChange,
   onGoSource,
   onGoAbout,
-  onGoImpressum,
-  onGoDatenschutz,
   onToggleTheme,
   onExportCsv,
   onUpload
@@ -163,26 +161,6 @@ export function AppDrawer({
             }}
           >
             {nextThemeLabel}
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              onGoImpressum();
-              onClose();
-            }}
-          >
-            Impressum
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              onGoDatenschutz();
-              onClose();
-            }}
-          >
-            Datenschutz
           </button>
         </section>
       </aside>
