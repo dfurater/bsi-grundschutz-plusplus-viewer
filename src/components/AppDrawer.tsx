@@ -7,11 +7,9 @@ interface AppDrawerProps {
   selectedDatasetId: string;
   selectedControlCount: number;
   exportingCsv: boolean;
-  importBusy: boolean;
   onClose: () => void;
   onDatasetChange: (datasetId: string) => void;
   onExportCsv: () => void;
-  onUpload: (file: File) => void;
 }
 
 /**
@@ -24,14 +22,11 @@ export function AppDrawer({
   selectedDatasetId,
   selectedControlCount,
   exportingCsv,
-  importBusy,
   onClose,
   onDatasetChange,
-  onExportCsv,
-  onUpload
+  onExportCsv
 }: AppDrawerProps) {
   const drawerRef = useRef<HTMLDivElement | null>(null);
-  const fileRef = useRef<HTMLInputElement | null>(null);
 
   useFocusTrap(drawerRef, open, onClose);
 
@@ -89,30 +84,6 @@ export function AppDrawer({
             </button>
           ) : null}
 
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => fileRef.current?.click()}
-            disabled={importBusy}
-            title="JSON-Datei laden"
-          >
-            {importBusy ? "JSON wird geladen" : "JSON laden"}
-          </button>
-
-          <input
-            ref={fileRef}
-            type="file"
-            hidden
-            accept="application/json"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) {
-                onUpload(file);
-              }
-              event.currentTarget.value = "";
-              onClose();
-            }}
-          />
         </section>
 
       </aside>

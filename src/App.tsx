@@ -1173,7 +1173,7 @@ export default function App() {
             <small>{progress}%</small>
           </div>
         </section>
-        <AppFooter />
+        <AppFooter importBusy={importBusy} onUpload={handleUpload} />
       </main>
     );
   }
@@ -1205,7 +1205,7 @@ export default function App() {
             </button>
           </div>
         </section>
-        <AppFooter />
+        <AppFooter importBusy={importBusy} onUpload={handleUpload} />
       </main>
     );
   }
@@ -1224,22 +1224,11 @@ export default function App() {
         theme={theme}
         datasets={datasetOptions}
         selectedDatasetId={selectedDatasetId}
-        overflowOpen={isTabletUp ? overflowOpen : drawerOpen}
         onDatasetChange={handleDatasetChange}
         onOpenSearchOverlay={() => {
           setSearchOverlayOpen(true);
           setOverflowOpen(false);
           setDrawerOpen(false);
-        }}
-        onToggleOverflow={() => {
-          setSearchOverlayOpen(false);
-          if (isTabletUp) {
-            setOverflowOpen((prev) => !prev);
-            setDrawerOpen(false);
-            return;
-          }
-          setDrawerOpen((prev) => !prev);
-          setOverflowOpen(false);
         }}
         onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onGoHome={() => navigate("#/")}
@@ -1257,10 +1246,8 @@ export default function App() {
         open={isTabletUp && overflowOpen}
         selectedControlCount={selectedControlCount}
         exportingCsv={exportCsvRunning}
-        importBusy={importBusy}
         onClose={() => setOverflowOpen(false)}
         onExportCsv={handleExportCsv}
-        onUpload={handleUpload}
       />
 
       <AppDrawer
@@ -1269,11 +1256,9 @@ export default function App() {
         selectedDatasetId={selectedDatasetId}
         selectedControlCount={selectedControlCount}
         exportingCsv={exportCsvRunning}
-        importBusy={importBusy}
         onClose={() => setDrawerOpen(false)}
         onDatasetChange={handleDatasetChange}
         onExportCsv={handleExportCsv}
-        onUpload={handleUpload}
       />
 
       <SearchOverlay
@@ -1475,7 +1460,7 @@ export default function App() {
         </FilterSheet>
       ) : null}
 
-      <AppFooter />
+      <AppFooter importBusy={importBusy} onUpload={handleUpload} />
     </main>
   );
 }

@@ -11,11 +11,9 @@ describe("AppDrawer", () => {
         selectedDatasetId="anwender"
         selectedControlCount={0}
         exportingCsv={false}
-        importBusy={false}
         onClose={vi.fn()}
         onDatasetChange={vi.fn()}
         onExportCsv={vi.fn()}
-        onUpload={vi.fn()}
       />
     );
 
@@ -28,5 +26,6 @@ describe("AppDrawer", () => {
     expect(html).not.toContain("Impressum");
     expect(html).not.toContain("Datenschutz");
     expect(html).not.toContain("CSV exportieren");
+    expect(html).not.toContain("JSON laden");
   });
 });

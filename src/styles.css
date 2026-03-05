@@ -165,7 +165,12 @@ summary:focus-visible {
 
 .app-bar-end {
   margin-left: auto;
+  justify-content: flex-end;
   flex-wrap: nowrap;
+}
+
+.app-bar-end .dataset-select {
+  margin-left: auto;
 }
 
 .icon-button {
@@ -1470,6 +1475,10 @@ summary:focus-visible {
   background: var(--panel);
   box-shadow: var(--shadow);
   padding: 0.7rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
 }
 
 .app-footer-links {
@@ -1477,6 +1486,7 @@ summary:focus-visible {
   gap: 1rem;
   align-items: center;
   flex-wrap: wrap;
+  flex: 1 1 auto;
 }
 
 .app-footer-links a {
@@ -1484,6 +1494,26 @@ summary:focus-visible {
   text-decoration: underline;
   text-underline-offset: 0.14rem;
   text-decoration-thickness: 0.08rem;
+}
+
+.app-footer-link-button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--link);
+  font: inherit;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.14rem;
+  text-decoration-thickness: 0.08rem;
+}
+
+.app-footer-link-button:disabled {
+  color: var(--link);
+  opacity: 1;
+  cursor: default;
 }
 
 .section-heading-row {
