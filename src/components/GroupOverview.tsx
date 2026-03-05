@@ -55,7 +55,7 @@ export function GroupOverview({
             Zur Suche
           </button>
           <button className="secondary" type="button" onClick={onSelectAllControls} disabled={selectingAllControls}>
-            {selectingAllControls ? "Alles auswaehlen..." : allControlsSelected ? "Alles abwaehlen (CSV)" : "Alles auswaehlen (CSV)"}
+            {selectingAllControls ? "Alles auswählen..." : allControlsSelected ? "Alles abwählen (CSV)" : "Alles auswählen (CSV)"}
           </button>
         </div>
       </article>
