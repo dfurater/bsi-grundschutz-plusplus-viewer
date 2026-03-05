@@ -6,6 +6,7 @@ import { GroupPage } from "./components/GroupPage";
 import { ResultList } from "./components/ResultList";
 import { SearchBar } from "./components/SearchBar";
 import { SourcePanel } from "./components/SourcePanel";
+import { AboutPage } from "./components/AboutPage";
 import { ImpressumPage } from "./components/ImpressumPage";
 import { DatenschutzPage } from "./components/DatenschutzPage";
 import { AppFooter } from "./components/AppFooter";
@@ -950,6 +951,7 @@ export default function App() {
         onDatasetChange={handleDatasetChange}
         onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onGoHome={() => navigate("#/")}
+        onGoAbout={() => navigate("#/about")}
         onGoSource={() => navigate("#/about/source")}
         onUpload={handleUpload}
         selectedControlCount={selectedControlCount}
@@ -973,6 +975,8 @@ export default function App() {
       {route.view === "source" ? (
         <SourcePanel meta={meta} activeDataset={activeDataset} registry={registry} profileAnalysis={profileAnalysis} />
       ) : null}
+
+      {route.view === "about" ? <AboutPage meta={meta} activeDataset={activeDataset} /> : null}
 
       {route.view === "group" ? (
         <GroupPage

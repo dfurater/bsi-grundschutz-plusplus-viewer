@@ -29,4 +29,9 @@ describe("parseHash hardening", () => {
     expect(parseHash("#/impressum")).toEqual({ view: "impressum" });
     expect(parseHash("#/datenschutz")).toEqual({ view: "datenschutz" });
   });
+
+  it("parst About-Routen", () => {
+    expect(parseHash("#/about")).toEqual({ view: "about" });
+    expect(parseHash("#/about/source")).toEqual({ view: "source" });
+  });
 });

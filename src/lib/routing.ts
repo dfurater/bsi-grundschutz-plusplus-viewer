@@ -31,6 +31,7 @@ export type AppRoute =
   | SearchRouteState
   | { view: "group"; groupId: string }
   | { view: "control"; controlId: string; topGroupId: string | null }
+  | { view: "about" }
   | { view: "source" }
   | { view: "impressum" }
   | { view: "datenschutz" };
@@ -96,6 +97,10 @@ export function parseHash(hash: string): AppRoute {
 
   if (path === "/about/source") {
     return { view: "source" };
+  }
+
+  if (path === "/about") {
+    return { view: "about" };
   }
 
   if (path === "/impressum") {
