@@ -1,17 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { OverflowMenu } from "./OverflowMenu";
+import { AppDrawer } from "./AppDrawer";
 
-describe("OverflowMenu", () => {
-  it("zeigt gruppierte Aktionen und versteckt CSV bei leerer Auswahl", () => {
+describe("AppDrawer", () => {
+  it("rendert mobile Overflow-Aktionen inkl. Datensatz-Select", () => {
     const html = renderToStaticMarkup(
-      <OverflowMenu
+      <AppDrawer
         open
+        datasets={[{ id: "anwender", label: "Anwender" }]}
+        selectedDatasetId="anwender"
         selectedControlCount={0}
         exportingCsv={false}
         importBusy={false}
         theme="light"
         onClose={vi.fn()}
+        onDatasetChange={vi.fn()}
         onGoSource={vi.fn()}
         onGoAbout={vi.fn()}
         onGoImpressum={vi.fn()}
@@ -22,14 +25,11 @@ describe("OverflowMenu", () => {
       />
     );
 
-    expect(html).toContain("Info");
-    expect(html).toContain("Daten");
-    expect(html).toContain("Einstellungen");
-    expect(html).not.toContain("CSV exportieren");
-    expect(html).toContain("JSON laden");
+    expect(html).toContain('role="dialog"');
+    expect(html).toContain("Datensatz auswählen");
     expect(html).toContain("Dunkelmodus");
     expect(html).toContain("Impressum");
     expect(html).toContain("Datenschutz");
-    expect(html).not.toContain("Nachtmodus");
+    expect(html).not.toContain("CSV exportieren");
   });
 });

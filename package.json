@@ -11,7 +11,7 @@
     "dev": "npm run build:data && vite",
     "clean:release-artifacts": "node scripts/clean-release-artifacts.mjs",
     "build:data": "node scripts/build-catalog.mjs",
-    "build": "npm run clean:release-artifacts && npm run build:data && tsc -b && vite build",
+    "build": "npm run clean:release-artifacts && npm run build:data && tsc -b && node scripts/check-legal-placeholders.mjs && vite build",
     "preview": "vite preview --strictPort --host 127.0.0.1 --port 4173",
     "test:unit": "vitest run",
     "check:release-hygiene": "npm run clean:release-artifacts && node scripts/check-release-hygiene.mjs",

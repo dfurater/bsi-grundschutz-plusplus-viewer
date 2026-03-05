@@ -3,35 +3,54 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { AppHeader } from "./AppHeader";
 
 describe("AppHeader", () => {
-  it("rendert Datensatz-Select und Overflow-Trigger", () => {
+  it("rendert einzeilige Primary-Actions ohne Theme-Button", () => {
     const html = renderToStaticMarkup(
       <AppHeader
-        isDesktop
+        isTabletUp
         isShrunk={false}
-        searchValue=""
-        theme="light"
+        searchOverlayOpen={false}
         datasets={[{ id: "anwender", label: "Anwender" }]}
         selectedDatasetId="anwender"
         overflowOpen={false}
-        drawerOpen={false}
-        onSearchChange={vi.fn()}
-        onSearchSubmit={vi.fn()}
-        onSearchClear={vi.fn()}
         onDatasetChange={vi.fn()}
-        onToggleTheme={vi.fn()}
         onOpenSearchOverlay={vi.fn()}
         onToggleOverflow={vi.fn()}
-        onToggleDrawer={vi.fn()}
         onGoHome={vi.fn()}
         onGoBack={vi.fn()}
         showBack
       />
     );
 
+    expect(html).toContain("Suche öffnen");
     expect(html).toContain("Datensatz auswählen");
-    expect(html).toContain("aria-label=\"Dunkelmodus\"");
     expect(html).toContain('aria-haspopup="menu"');
     expect(html).toContain("Grundschutz++");
+    expect(html).not.toContain("<h1");
+    expect(html).not.toContain("Dunkelmodus");
+    expect(html).not.toContain("Hellmodus");
+  });
+
+  it("blendet Datensatz-Auswahl unter 768px im Header aus", () => {
+    const html = renderToStaticMarkup(
+      <AppHeader
+        isTabletUp={false}
+        isShrunk={false}
+        searchOverlayOpen={false}
+        datasets={[{ id: "anwender", label: "Anwender" }]}
+        selectedDatasetId="anwender"
+        overflowOpen
+        onDatasetChange={vi.fn()}
+        onOpenSearchOverlay={vi.fn()}
+        onToggleOverflow={vi.fn()}
+        onGoHome={vi.fn()}
+        onGoBack={vi.fn()}
+        showBack={false}
+      />
+    );
+
+    expect(html).toContain("Suche öffnen");
+    expect(html).toContain('aria-haspopup="dialog"');
+    expect(html).not.toContain("Datensatz auswählen");
     expect(html).not.toContain("Nachtmodus");
   });
 });

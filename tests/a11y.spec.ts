@@ -17,4 +17,17 @@ test.describe("A11y smoke", () => {
       expect(violations, JSON.stringify(violations, null, 2)).toHaveLength(0);
     });
   }
+
+  test("hat keine kritischen AXE-Verstosse mit offenem Search Overlay", async ({ page }) => {
+    await page.goto("/#/search?q=KONF");
+    await page.getByRole("button", { name: "Suche öffnen" }).click();
+    await expect(page.getByRole("dialog", { name: "Suche" })).toBeVisible();
+
+    const results = await new AxeBuilder({ page }).analyze();
+    const violations = results.violations.filter((violation) => {
+      return ["critical", "serious"].includes(violation.impact ?? "");
+    });
+
+    expect(violations, JSON.stringify(violations, null, 2)).toHaveLength(0);
+  });
 });

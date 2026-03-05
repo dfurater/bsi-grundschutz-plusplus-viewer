@@ -17,6 +17,7 @@ describe("SearchOverlay", () => {
 
     expect(html).toContain('role="dialog"');
     expect(html).toContain("aria-modal=\"true\"");
+    expect(html).toContain("ID oder Begriff suchen");
     expect(html).toContain("Suche leeren");
   });
 });

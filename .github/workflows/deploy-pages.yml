@@ -37,6 +37,10 @@ jobs:
       - name: Build static site for GitHub Pages
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_OPERATOR_NAME: ${{ secrets.VITE_OPERATOR_NAME }}
+          VITE_OPERATOR_ADDRESS_LINE1: ${{ secrets.VITE_OPERATOR_ADDRESS_LINE1 }}
+          VITE_OPERATOR_ADDRESS_LINE2: ${{ secrets.VITE_OPERATOR_ADDRESS_LINE2 }}
+          VITE_OPERATOR_EMAIL: ${{ secrets.VITE_OPERATOR_EMAIL }}
         run: npm run build
 
       - name: Ensure no Jekyll processing

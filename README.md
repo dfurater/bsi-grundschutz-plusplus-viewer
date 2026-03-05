@@ -19,6 +19,8 @@ Direkte Quellen:
 git clone https://github.com/dfurater/bsi-grundschutz-plusplus-viewer.git
 cd bsi-grundschutz-plusplus-viewer
 npm install
+cp .env.example .env.local
+# .env.local mit eigenen Betreiberdaten befuellen
 npm run dev
 ```
 
@@ -65,14 +67,26 @@ Die App enthaelt zwei oeffentlich erreichbare Rechtsseiten:
 
 Die Links sind global im Footer sichtbar und damit auf allen Routen in maximal zwei Klicks erreichbar.
 
-### Platzhalter befuellen
+### Betreiberdaten konfigurieren
 
-Die Inhalte werden ueber Platzhalter in `src/legal/placeholders.ts` gepflegt:
+Die Inhalte der Rechtsseiten werden zur Build-Zeit aus Vite-Umgebungsvariablen gelesen:
 
-- `{{OPERATOR_NAME}}`
-- `{{OPERATOR_ADDRESS_LINE1}}`
-- `{{OPERATOR_ADDRESS_LINE2}}`
-- `{{OPERATOR_EMAIL}}`
+- `VITE_OPERATOR_NAME`
+- `VITE_OPERATOR_ADDRESS_LINE1`
+- `VITE_OPERATOR_ADDRESS_LINE2`
+- `VITE_OPERATOR_EMAIL`
+
+Empfohlener Ablauf lokal:
+
+```bash
+cp .env.example .env.local
+```
+
+Dann `.env.local` mit echten Werten befuellen (Datei ist per `.gitignore` von Git ausgeschlossen).
+
+Wichtig:
+- `npm run build` bricht absichtlich ab, wenn eine der `VITE_OPERATOR_*`-Variablen fehlt/leer ist oder noch `{{...}}` enthaelt.
+- So wird verhindert, dass ein Deployment mit nicht ersetzten Betreiberdaten passiert.
 
 Hosting-/Projekt-/Stand-Angaben sind direkt in den Rechtsseiten gepflegt:
 
@@ -191,8 +205,13 @@ Das Ergebnis in `dist/` kann auf beliebigem Static Hosting bereitgestellt werden
 Die App verwendet Hash-Routing und ist damit ohne Server-Rewrites auf GitHub Pages lauffaehig.
 
 1. In GitHub unter `Settings -> Pages` bei **Build and deployment** die Option **GitHub Actions** aktivieren.
-2. Auf `main` pushen (oder den Workflow manuell starten).
-3. Der Workflow `.github/workflows/deploy-pages.yml` baut und deployed automatisch nach GitHub Pages.
+2. In `Settings -> Secrets and variables -> Actions` folgende Repository-Secrets setzen:
+   - `VITE_OPERATOR_NAME`
+   - `VITE_OPERATOR_ADDRESS_LINE1`
+   - `VITE_OPERATOR_ADDRESS_LINE2`
+   - `VITE_OPERATOR_EMAIL`
+3. Auf `main` pushen (oder den Workflow manuell starten).
+4. Der Workflow `.github/workflows/deploy-pages.yml` baut und deployed automatisch nach GitHub Pages.
 
 Wichtige Base-Path-Regel:
 - Projektseite (`https://<user>.github.io/<repo>/`): `VITE_BASE_PATH=/<repo>/`

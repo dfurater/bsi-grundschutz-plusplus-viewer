@@ -11,6 +11,10 @@ jobs:
     timeout-minutes: 20
     env:
       SECURITY_HEADERS_URL: ${{ vars.SECURITY_HEADERS_URL }}
+      VITE_OPERATOR_NAME: Max Mustermann
+      VITE_OPERATOR_ADDRESS_LINE1: Musterstrasse 1
+      VITE_OPERATOR_ADDRESS_LINE2: 10115 Berlin
+      VITE_OPERATOR_EMAIL: max.mustermann@example.invalid
 
     steps:
       - name: Checkout

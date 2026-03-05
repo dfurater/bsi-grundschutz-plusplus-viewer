@@ -8,18 +8,20 @@ interface AppDrawerProps {
   selectedControlCount: number;
   exportingCsv: boolean;
   importBusy: boolean;
+  theme: "light" | "dark";
   onClose: () => void;
-  onGoHome: () => void;
-  onOpenSearchOverlay: () => void;
   onDatasetChange: (datasetId: string) => void;
   onGoSource: () => void;
   onGoAbout: () => void;
+  onGoImpressum: () => void;
+  onGoDatenschutz: () => void;
+  onToggleTheme: () => void;
   onExportCsv: () => void;
   onUpload: (file: File) => void;
 }
 
 /**
- * Mobile/tablet navigation drawer with secondary actions.
+ * Mobile overflow drawer with grouped secondary actions.
  * REQ: PD-08, RESP-01, US-10, K-02
  */
 export function AppDrawer({
@@ -29,17 +31,20 @@ export function AppDrawer({
   selectedControlCount,
   exportingCsv,
   importBusy,
+  theme,
   onClose,
-  onGoHome,
-  onOpenSearchOverlay,
   onDatasetChange,
   onGoSource,
   onGoAbout,
+  onGoImpressum,
+  onGoDatenschutz,
+  onToggleTheme,
   onExportCsv,
   onUpload
 }: AppDrawerProps) {
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const nextThemeLabel = theme === "dark" ? "Hellmodus" : "Dunkelmodus";
 
   useFocusTrap(drawerRef, open, onClose);
 
@@ -55,64 +60,71 @@ export function AppDrawer({
         className="app-drawer"
         role="dialog"
         aria-modal="true"
-        aria-label="Navigation und Aktionen"
+        aria-label="Weitere Aktionen"
         tabIndex={-1}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="drawer-header">
-          <h2>Menü</h2>
+          <h2>Weitere Aktionen</h2>
           <button type="button" className="icon-button" aria-label="Menü schließen" onClick={onClose}>
             ✕
           </button>
         </div>
 
-        <nav className="drawer-nav" aria-label="Navigation">
+        <section className="drawer-group" aria-label="Info">
+          <h3>Info</h3>
           <button
             type="button"
             className="secondary"
             onClick={() => {
-              onGoHome();
+              onGoSource();
               onClose();
             }}
           >
-            Start
+            Quellen &amp; Version
           </button>
           <button
             type="button"
             className="secondary"
             onClick={() => {
-              onOpenSearchOverlay();
+              onGoAbout();
               onClose();
             }}
           >
-            Suche
+            About
           </button>
-        </nav>
+        </section>
 
-        <label className="drawer-field">
-          Datensatz
-          <select value={selectedDatasetId} aria-label="Datensatz auswählen" onChange={(event) => onDatasetChange(event.target.value)}>
-            {datasets.map((dataset) => (
-              <option key={dataset.id} value={dataset.id}>
-                {dataset.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <section className="drawer-group" aria-label="Daten">
+          <h3>Daten</h3>
+          <label className="drawer-field">
+            Datensatz
+            <select
+              value={selectedDatasetId}
+              aria-label="Datensatz auswählen"
+              onChange={(event) => onDatasetChange(event.target.value)}
+            >
+              {datasets.map((dataset) => (
+                <option key={dataset.id} value={dataset.id}>
+                  {dataset.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <div className="drawer-actions">
-          <button
-            type="button"
-            className="secondary"
-            onClick={onExportCsv}
-            disabled={selectedControlCount === 0 || exportingCsv}
-          >
-            {exportingCsv
-              ? "CSV wird erstellt"
-              : selectedControlCount > 0
-                ? `CSV exportieren (${selectedControlCount})`
-                : "CSV exportieren"}
-          </button>
+          {selectedControlCount > 0 ? (
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                onExportCsv();
+                onClose();
+              }}
+              disabled={exportingCsv}
+            >
+              {exportingCsv ? "CSV wird erstellt" : `CSV exportieren (${selectedControlCount})`}
+            </button>
+          ) : null}
 
           <button
             type="button"
@@ -138,28 +150,41 @@ export function AppDrawer({
               onClose();
             }}
           />
+        </section>
 
+        <section className="drawer-group" aria-label="Einstellungen">
+          <h3>Einstellungen</h3>
           <button
             type="button"
             className="secondary"
             onClick={() => {
-              onGoSource();
+              onToggleTheme();
               onClose();
             }}
           >
-            Quellen &amp; Version
+            {nextThemeLabel}
           </button>
           <button
             type="button"
             className="secondary"
             onClick={() => {
-              onGoAbout();
+              onGoImpressum();
               onClose();
             }}
           >
-            About
+            Impressum
           </button>
-        </div>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              onGoDatenschutz();
+              onClose();
+            }}
+          >
+            Datenschutz
+          </button>
+        </section>
       </aside>
     </div>
   );

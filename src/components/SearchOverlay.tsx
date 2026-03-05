@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useFocusTrap } from "../hooks/useFocusTrap";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 
 interface SearchOverlayProps {
   open: boolean;
@@ -11,7 +12,7 @@ interface SearchOverlayProps {
 }
 
 /**
- * Fullscreen search overlay for tablet/mobile with initial focus and trap.
+ * Responsive search overlay (centered dialog on tablet/desktop, fullscreen on mobile).
  * REQ: PD-05, US-04, A11y-03, RESP-03
  */
 export function SearchOverlay({
@@ -24,6 +25,7 @@ export function SearchOverlay({
 }: SearchOverlayProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const isMobile = useMediaQuery("(max-width: 767px)");
 
   useFocusTrap(dialogRef, open, onClose);
 
@@ -53,7 +55,7 @@ export function SearchOverlay({
         role="dialog"
         aria-modal="true"
         aria-label="Suche"
-        className="search-overlay"
+        className={`search-overlay ${isMobile ? "is-mobile" : "is-desktop"}`}
         tabIndex={-1}
         onMouseDown={(event) => event.stopPropagation()}
       >
@@ -70,7 +72,7 @@ export function SearchOverlay({
               ref={inputRef}
               type="search"
               value={value}
-              placeholder="Suche"
+              placeholder="ID oder Begriff suchen"
               aria-label="Suche"
               onChange={(event) => onChange(event.target.value)}
               onKeyDown={(event) => {

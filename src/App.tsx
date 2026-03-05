@@ -172,7 +172,7 @@ function getDatasetPaths(datasetId: string | null, withRegistry: boolean) {
 
 export default function App() {
   const client = useMemo(() => new SearchClient(), []);
-  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const isTabletUp = useMediaQuery("(min-width: 768px)");
   const isWideDesktop = useMediaQuery("(min-width: 1280px)");
   const [route, setRoute] = useState<AppRoute>(() => parseHash(window.location.hash));
   const [meta, setMeta] = useState<CatalogMeta | null>(null);
@@ -336,6 +336,8 @@ export default function App() {
     const onHash = () => {
       setRoute(parseHash(window.location.hash));
       setOverflowOpen(false);
+      setDrawerOpen(false);
+      setSearchOverlayOpen(false);
       setFilterSheetOpen(false);
     };
     window.addEventListener("hashchange", onHash);
@@ -343,6 +345,32 @@ export default function App() {
       window.removeEventListener("hashchange", onHash);
     };
   }, []);
+
+  useEffect(() => {
+    if (isTabletUp) {
+      setDrawerOpen(false);
+      return;
+    }
+    setOverflowOpen(false);
+  }, [isTabletUp]);
+
+  useEffect(() => {
+    const detailSheetOpen = route.view === "search" && !isWideDesktop && Boolean(route.controlId);
+    const shouldLockScroll = searchOverlayOpen || drawerOpen || filterSheetOpen || detailSheetOpen;
+    if (!shouldLockScroll) {
+      return;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [drawerOpen, filterSheetOpen, isWideDesktop, route.view, route.view === "search" ? route.controlId : null, searchOverlayOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -963,6 +991,7 @@ export default function App() {
     setSearchInputDirty(false);
     navigate(buildSearchHash(nextSearch, sort, filters, null, null));
     setSearchOverlayOpen(false);
+    setOverflowOpen(false);
     setDrawerOpen(false);
   }
 
@@ -1189,25 +1218,25 @@ export default function App() {
       </a>
 
       <AppHeader
-        isDesktop={isDesktop}
+        isTabletUp={isTabletUp}
         isShrunk={headerShrunk}
-        searchValue={searchText}
-        theme={theme}
+        searchOverlayOpen={searchOverlayOpen}
         datasets={datasetOptions}
         selectedDatasetId={selectedDatasetId}
-        overflowOpen={overflowOpen}
-        drawerOpen={drawerOpen}
-        onSearchChange={handleSearchTextChange}
-        onSearchSubmit={handleSubmitSearch}
-        onSearchClear={handleClearSearch}
+        overflowOpen={isTabletUp ? overflowOpen : drawerOpen}
         onDatasetChange={handleDatasetChange}
-        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
-        onOpenSearchOverlay={() => setSearchOverlayOpen(true)}
-        onToggleOverflow={() => {
-          setOverflowOpen((prev) => !prev);
+        onOpenSearchOverlay={() => {
+          setSearchOverlayOpen(true);
+          setOverflowOpen(false);
           setDrawerOpen(false);
         }}
-        onToggleDrawer={() => {
+        onToggleOverflow={() => {
+          setSearchOverlayOpen(false);
+          if (isTabletUp) {
+            setOverflowOpen((prev) => !prev);
+            setDrawerOpen(false);
+            return;
+          }
           setDrawerOpen((prev) => !prev);
           setOverflowOpen(false);
         }}
@@ -1223,36 +1252,42 @@ export default function App() {
       />
 
       <OverflowMenu
-        open={overflowOpen}
+        open={isTabletUp && overflowOpen}
         selectedControlCount={selectedControlCount}
         exportingCsv={exportCsvRunning}
         importBusy={importBusy}
+        theme={theme}
         onClose={() => setOverflowOpen(false)}
         onGoSource={() => navigate("#/about/source")}
         onGoAbout={() => navigate("#/about")}
+        onGoImpressum={() => navigate("#/impressum")}
+        onGoDatenschutz={() => navigate("#/datenschutz")}
+        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onExportCsv={handleExportCsv}
         onUpload={handleUpload}
       />
 
       <AppDrawer
-        open={drawerOpen}
+        open={!isTabletUp && drawerOpen}
         datasets={datasetOptions}
         selectedDatasetId={selectedDatasetId}
         selectedControlCount={selectedControlCount}
         exportingCsv={exportCsvRunning}
         importBusy={importBusy}
+        theme={theme}
         onClose={() => setDrawerOpen(false)}
-        onGoHome={() => navigate("#/")}
-        onOpenSearchOverlay={() => setSearchOverlayOpen(true)}
         onDatasetChange={handleDatasetChange}
         onGoSource={() => navigate("#/about/source")}
         onGoAbout={() => navigate("#/about")}
+        onGoImpressum={() => navigate("#/impressum")}
+        onGoDatenschutz={() => navigate("#/datenschutz")}
+        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onExportCsv={handleExportCsv}
         onUpload={handleUpload}
       />
 
       <SearchOverlay
-        open={searchOverlayOpen && !isDesktop}
+        open={searchOverlayOpen}
         value={searchText}
         onChange={handleSearchTextChange}
         onClear={handleClearSearch}

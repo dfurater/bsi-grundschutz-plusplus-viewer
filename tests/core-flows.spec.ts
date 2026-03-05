@@ -6,7 +6,7 @@ test.describe("Kernflows", () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/#/search?q=KONF");
 
-    await expect(page.locator(".app-header-shell .search-row select")).toHaveCount(0);
+    await expect(page.locator(".app-header-shell .search-row")).toHaveCount(0);
 
     const sidebarSort = page.locator(".facet-panel .facet-sort-block select");
     await expect(sidebarSort).toBeVisible();
@@ -27,24 +27,26 @@ test.describe("Kernflows", () => {
   test("Responsive Breakpoints 375/768/1024/1280", async ({ page }) => {
     /* REQ: DoD-05, PD-06, RESP-01 */
     const cases = [
-      { width: 375, expectSearchRow: false, expectWide: false, expectFilterButton: true },
-      { width: 768, expectSearchRow: false, expectWide: false, expectFilterButton: true },
-      { width: 1024, expectSearchRow: true, expectWide: false, expectFilterButton: true },
-      { width: 1280, expectSearchRow: true, expectWide: true, expectFilterButton: false }
+      { width: 375, expectWide: false, expectFilterButton: true, expectDatasetInline: false },
+      { width: 768, expectWide: false, expectFilterButton: true, expectDatasetInline: true },
+      { width: 1024, expectWide: false, expectFilterButton: true, expectDatasetInline: true },
+      { width: 1280, expectWide: true, expectFilterButton: false, expectDatasetInline: true }
     ] as const;
 
     for (const entry of cases) {
       await page.setViewportSize({ width: entry.width, height: 900 });
       await page.goto("/#/search?q=KONF");
 
-      await expect(page.locator(".search-row")).toHaveCount(entry.expectSearchRow ? 1 : 0);
+      await expect(page.locator(".search-row")).toHaveCount(0);
       await expect(page.locator(".search-layout.wide")).toHaveCount(entry.expectWide ? 1 : 0);
       await expect(page.getByRole("button", { name: "Filter" })).toHaveCount(entry.expectFilterButton ? 1 : 0);
+      await expect(page.getByLabel("Datensatz auswählen")).toHaveCount(entry.expectDatasetInline ? 1 : 0);
     }
   });
 
-  test("Suche per Enter und Clear", async ({ page }) => {
+  test("Suche per Overlay Enter und Clear", async ({ page }) => {
     await page.goto("/#/search");
+    await page.getByRole("button", { name: "Suche öffnen" }).click();
 
     const searchInput = page.getByRole("searchbox", { name: "Suche" }).first();
     await searchInput.fill("KONF.12.4");
@@ -52,11 +54,13 @@ test.describe("Kernflows", () => {
 
     await expect(page).toHaveURL(/q=KONF\.12\.4/);
 
+    await page.getByRole("button", { name: "Suche öffnen" }).click();
     await page.getByRole("button", { name: "Suche leeren" }).first().click();
+    await expect(page).not.toHaveURL(/q=KONF\.12\.4/);
     await expect(searchInput).toHaveValue("");
   });
 
-  test("Theme-Toggle als Icon im Header und klickbarer Theme-Wechsel", async ({ page }) => {
+  test("Theme-Toggle liegt im Overflow und wechselt Theme", async ({ page }) => {
     await page.goto("/#/search?q=KONF");
 
     const themeRoot = page.locator("html");
@@ -65,24 +69,34 @@ test.describe("Kernflows", () => {
     const toggleLabel = initialTheme === "dark" ? "Hellmodus" : "Dunkelmodus";
     const nextToggleLabel = nextTheme === "dark" ? "Hellmodus" : "Dunkelmodus";
 
-    const toggle = page.getByRole("button", { name: toggleLabel });
-    await expect(page.locator(".app-bar-end .theme-toggle-button")).toHaveCount(1);
+    await expect(page.locator(".app-bar-end .theme-toggle-button")).toHaveCount(0);
+    await page.getByRole("button", { name: "Weitere Aktionen" }).click();
+    const toggle = page.getByRole("menuitem", { name: toggleLabel });
     await expect(toggle).toBeVisible();
     await toggle.click();
 
     await expect(themeRoot).toHaveAttribute("data-theme", nextTheme);
-    await expect(page.getByRole("button", { name: nextToggleLabel })).toBeVisible();
-
     await page.getByRole("button", { name: "Weitere Aktionen" }).click();
-    await expect(page.getByRole("menuitem", { name: /Nachtmodus|Tagmodus/ })).toHaveCount(0);
+    await expect(page.getByRole("menuitem", { name: nextToggleLabel })).toBeVisible();
   });
 
   test("Debounce aktualisiert Suchzustand", async ({ page }) => {
     await page.goto("/#/search");
+    await page.getByRole("button", { name: "Suche öffnen" }).click();
     const searchInput = page.getByRole("searchbox", { name: "Suche" }).first();
     await searchInput.fill("abc");
     await page.waitForTimeout(360);
     await expect(page).toHaveURL(/q=abc/);
+  });
+
+  test("Search Overlay schliesst per ESC und gibt Fokus zurueck", async ({ page }) => {
+    await page.goto("/#/search");
+    const trigger = page.getByRole("button", { name: "Suche öffnen" });
+    await trigger.click();
+    await expect(page.getByRole("dialog", { name: "Suche" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog", { name: "Suche" })).toBeHidden();
+    await expect(trigger).toBeFocused();
   });
 
   test("Filter als Sheet unter 1024", async ({ page }) => {
@@ -105,16 +119,26 @@ test.describe("Kernflows", () => {
     await expect(page).not.toHaveURL(/control=/);
   });
 
-  test("CSV Export disabled/enabled im Overflow", async ({ page }) => {
+  test("CSV Export ist im Overflow konditional sichtbar", async ({ page }) => {
     await page.goto("/#/search?q=KONF");
 
     await page.getByRole("button", { name: "Weitere Aktionen" }).click();
-    await expect(page.getByRole("menuitem", { name: "CSV exportieren" })).toBeDisabled();
+    await expect(page.getByRole("menuitem", { name: /CSV exportieren/ })).toHaveCount(0);
     await page.keyboard.press("Escape");
 
     await page.getByRole("checkbox", { name: "Für CSV auswählen" }).first().check();
 
     await page.getByRole("button", { name: "Weitere Aktionen" }).click();
     await expect(page.getByRole("menuitem", { name: /CSV exportieren \(1\)/ })).toBeEnabled();
+  });
+
+  test("Mobile: Datensatz ist im Overflow-Drawer statt Header", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 900 });
+    await page.goto("/#/search?q=KONF");
+
+    await expect(page.getByLabel("Datensatz auswählen")).toHaveCount(0);
+    await page.getByRole("button", { name: "Weitere Aktionen" }).click();
+    await expect(page.getByRole("dialog", { name: "Weitere Aktionen" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Weitere Aktionen" }).getByLabel("Datensatz auswählen")).toBeVisible();
   });
 });
