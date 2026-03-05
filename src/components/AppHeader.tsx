@@ -3,7 +3,10 @@ interface AppHeaderProps {
   isShrunk: boolean;
   searchOverlayOpen: boolean;
   theme: "light" | "dark";
+  selectedControlCount: number;
+  exportingCsv: boolean;
   onOpenSearchOverlay: () => void;
+  onExportCsv: () => void;
   onToggleTheme: () => void;
   onGoHome: () => void;
   onGoBack: () => void;
@@ -19,7 +22,10 @@ export function AppHeader({
   isShrunk,
   searchOverlayOpen,
   theme,
+  selectedControlCount,
+  exportingCsv,
   onOpenSearchOverlay,
+  onExportCsv,
   onToggleTheme,
   onGoHome,
   onGoBack,
@@ -89,6 +95,17 @@ export function AppHeader({
         </div>
 
         <div className="app-bar-end">
+          {selectedControlCount > 0 ? (
+            <button
+              type="button"
+              className="secondary"
+              onClick={onExportCsv}
+              disabled={exportingCsv}
+              title="Ausgewählte Controls als CSV herunterladen"
+            >
+              {exportingCsv ? "CSV wird erstellt" : `Export CSV (${selectedControlCount})`}
+            </button>
+          ) : null}
           <button
             type="button"
             className="icon-button app-theme-button theme-toggle-button"

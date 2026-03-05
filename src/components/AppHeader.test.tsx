@@ -10,7 +10,10 @@ describe("AppHeader", () => {
         isShrunk={false}
         searchOverlayOpen={false}
         theme="light"
+        selectedControlCount={0}
+        exportingCsv={false}
         onOpenSearchOverlay={vi.fn()}
+        onExportCsv={vi.fn()}
         onToggleTheme={vi.fn()}
         onGoHome={vi.fn()}
         onGoBack={vi.fn()}
@@ -26,6 +29,7 @@ describe("AppHeader", () => {
     expect(html).not.toContain("Grundschutz++");
     expect(html).not.toContain("<h1");
     expect(html).toContain("Dunkelmodus");
+    expect(html).not.toContain("Export CSV");
     expect(html).toContain("theme-toggle-button");
     expect(html).toContain("app-bar-end");
   });
@@ -37,7 +41,10 @@ describe("AppHeader", () => {
         isShrunk={false}
         searchOverlayOpen={false}
         theme="dark"
+        selectedControlCount={0}
+        exportingCsv={false}
         onOpenSearchOverlay={vi.fn()}
+        onExportCsv={vi.fn()}
         onToggleTheme={vi.fn()}
         onGoHome={vi.fn()}
         onGoBack={vi.fn()}
@@ -50,5 +57,26 @@ describe("AppHeader", () => {
     expect(html).not.toContain("Weitere Aktionen");
     expect(html).not.toContain("Datensatz auswählen");
     expect(html).toContain("Hellmodus");
+  });
+
+  it("zeigt Export CSV sobald Controls ausgewählt sind", () => {
+    const html = renderToStaticMarkup(
+      <AppHeader
+        isTabletUp
+        isShrunk={false}
+        searchOverlayOpen={false}
+        theme="light"
+        selectedControlCount={3}
+        exportingCsv={false}
+        onOpenSearchOverlay={vi.fn()}
+        onExportCsv={vi.fn()}
+        onToggleTheme={vi.fn()}
+        onGoHome={vi.fn()}
+        onGoBack={vi.fn()}
+        showBack={false}
+      />
+    );
+
+    expect(html).toContain("Export CSV (3)");
   });
 });
