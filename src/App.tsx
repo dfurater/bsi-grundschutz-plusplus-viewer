@@ -1222,11 +1222,14 @@ export default function App() {
         isShrunk={headerShrunk}
         searchOverlayOpen={searchOverlayOpen}
         theme={theme}
+        selectedControlCount={selectedControlCount}
+        exportingCsv={exportCsvRunning}
         onOpenSearchOverlay={() => {
           setSearchOverlayOpen(true);
           setOverflowOpen(false);
           setDrawerOpen(false);
         }}
+        onExportCsv={handleExportCsv}
         onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onGoHome={() => navigate("#/")}
         onGoBack={() => {
