@@ -1,15 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AppDrawer } from "./components/AppDrawer";
+import { AppHeader } from "./components/AppHeader";
 import { ControlDetailPanel } from "./components/ControlDetailPanel";
 import { FacetPanel, type ActiveFilters } from "./components/FacetPanel";
+import { FilterSheet } from "./components/FilterSheet";
 import { GroupOverview } from "./components/GroupOverview";
 import { GroupPage } from "./components/GroupPage";
+import { OverflowMenu } from "./components/OverflowMenu";
 import { ResultList } from "./components/ResultList";
-import { SearchBar } from "./components/SearchBar";
+import { SearchOverlay } from "./components/SearchOverlay";
 import { SourcePanel } from "./components/SourcePanel";
+import { StatusToast } from "./components/StatusToast";
 import { AboutPage } from "./components/AboutPage";
 import { ImpressumPage } from "./components/ImpressumPage";
 import { DatenschutzPage } from "./components/DatenschutzPage";
 import { AppFooter } from "./components/AppFooter";
+import { useDebouncedValue } from "./hooks/useDebouncedValue";
+import { useMediaQuery } from "./hooks/useMediaQuery";
 import { CONTROL_EXPORT_COLUMNS, extractControlExportRow } from "./lib/controlExport";
 import { downloadBlob, toCsv } from "./lib/csv";
 import { CatalogMetaSchema, CatalogRegistrySchema, ProfileAnalysisSchema } from "./lib/dataSchemas";
@@ -53,6 +60,39 @@ const DEFAULT_SEARCH_RESPONSE: SearchResponse = {
   },
   elapsedMs: 0
 };
+
+type SortBase = "relevance" | "id" | "title" | "effort";
+const BACK_TO_RESULTS_TTL_MS = 30 * 60 * 1000;
+
+function getSortBase(sort: SearchQuery["sort"]): SortBase {
+  if (sort.startsWith("id-")) {
+    return "id";
+  }
+  if (sort.startsWith("title-")) {
+    return "title";
+  }
+  if (sort.startsWith("effort-")) {
+    return "effort";
+  }
+  return "relevance";
+}
+
+function getSortDirection(sort: SearchQuery["sort"]): "asc" | "desc" {
+  return sort.endsWith("-desc") ? "desc" : "asc";
+}
+
+function toSortValue(base: SortBase, direction: "asc" | "desc"): SearchQuery["sort"] {
+  if (base === "id") {
+    return direction === "asc" ? "id-asc" : "id-desc";
+  }
+  if (base === "title") {
+    return direction === "asc" ? "title-asc" : "title-desc";
+  }
+  if (base === "effort") {
+    return direction === "asc" ? "effort-asc" : "effort-desc";
+  }
+  return "relevance";
+}
 
 async function computeSha256(text: string) {
   const encoded = new TextEncoder().encode(text);
@@ -132,6 +172,8 @@ function getDatasetPaths(datasetId: string | null, withRegistry: boolean) {
 
 export default function App() {
   const client = useMemo(() => new SearchClient(), []);
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const isWideDesktop = useMediaQuery("(min-width: 1280px)");
   const [route, setRoute] = useState<AppRoute>(() => parseHash(window.location.hash));
   const [meta, setMeta] = useState<CatalogMeta | null>(null);
   const [registry, setRegistry] = useState<CatalogRegistry | null>(null);
@@ -144,7 +186,9 @@ export default function App() {
   const [bootStatusText, setBootStatusText] = useState("Index wird aufgebaut und geladen…");
 
   const [searchText, setSearchText] = useState("");
+  const [searchInputDirty, setSearchInputDirty] = useState(false);
   const [sort, setSort] = useState<SearchQuery["sort"]>("relevance");
+  const [effortSortEnabled, setEffortSortEnabled] = useState(true);
   const [filters, setFilters] = useState<ActiveFilters>(defaultFilters());
 
   const [searchResponse, setSearchResponse] = useState<SearchResponse>(DEFAULT_SEARCH_RESPONSE);
@@ -169,8 +213,34 @@ export default function App() {
 
   const [offline, setOffline] = useState(!navigator.onLine);
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
+  const [headerShrunk, setHeaderShrunk] = useState(false);
+  const [overflowOpen, setOverflowOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastTone, setToastTone] = useState<"info" | "success" | "error">("info");
+  const [importBusy, setImportBusy] = useState(false);
+
+  const debouncedSearchText = useDebouncedValue(searchText, 300);
   const requestCounter = useRef(0);
   const graphRequestCounter = useRef(0);
+  const previousOffline = useRef(offline);
+  const lastSearchStateRef = useRef<{
+    query: string;
+    sort: SearchQuery["sort"];
+    filters: ActiveFilters;
+    timestamp: number;
+  } | null>(null);
+
+  function replaceHash(hash: string) {
+    const normalized = hash.replace(/^#/, "#");
+    if (window.location.hash === normalized) {
+      return;
+    }
+    history.replaceState(null, "", `${window.location.pathname}${window.location.search}${normalized}`);
+    setRoute(parseHash(window.location.hash));
+  }
 
   async function initializeDataset(datasetId: string, registryOverride: CatalogRegistry | null) {
     const withRegistry = Boolean(registryOverride?.datasets?.length);
@@ -196,12 +266,16 @@ export default function App() {
     setBootProgress(52);
     setBootStatusText("Metadaten werden gelesen…");
 
-    const [, metaPayload] = (await Promise.all([initPromise, metaPromise])) as [unknown, CatalogMeta];
+    const [initPayload, metaPayload] = (await Promise.all([initPromise, metaPromise])) as [
+      { facetOptions: { effortLevel?: unknown[] } },
+      CatalogMeta
+    ];
     setBootProgress(76);
     setBootStatusText("Suche wird initialisiert…");
     setBootProgress(92);
     setBootStatusText("Oberfläche wird aufgebaut…");
     setMeta(metaPayload);
+    setEffortSortEnabled(Array.isArray(initPayload?.facetOptions?.effortLevel) && initPayload.facetOptions.effortLevel.length > 0);
     setSelectedDatasetId(datasetId);
     setSearchResponse(DEFAULT_SEARCH_RESPONSE);
     setSearchError(null);
@@ -228,7 +302,54 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
-    const onHash = () => setRoute(parseHash(window.location.hash));
+    let scheduled = false;
+    function onScroll() {
+      if (scheduled) {
+        return;
+      }
+      scheduled = true;
+      window.requestAnimationFrame(() => {
+        /* REQ: PD-07, RESP-02, PERF-03 */
+        setHeaderShrunk(window.scrollY > 24);
+        scheduled = false;
+      });
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (previousOffline.current === offline) {
+      return;
+    }
+    previousOffline.current = offline;
+    /* REQ: PD-09, PERF-04 */
+    setToastTone(offline ? "error" : "success");
+    setToastMessage(offline ? "Offline-Modus aktiv." : "Verbindung wiederhergestellt.");
+  }, [offline]);
+
+  useEffect(() => {
+    if (!toastMessage) {
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      setToastMessage(null);
+    }, 3200);
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [toastMessage]);
+
+  useEffect(() => {
+    const onHash = () => {
+      setRoute(parseHash(window.location.hash));
+      setOverflowOpen(false);
+      setFilterSheetOpen(false);
+    };
     const onOnline = () => setOffline(false);
     const onOffline = () => setOffline(true);
 
@@ -309,10 +430,78 @@ export default function App() {
       return;
     }
 
+    lastSearchStateRef.current = {
+      query: route.query,
+      sort: route.sort,
+      filters: mapRouteFilters(route.filters),
+      timestamp: Date.now()
+    };
     setSearchText(route.query);
+    setSearchInputDirty(false);
     setSort(route.sort);
     setFilters(route.filters);
   }, [route]);
+
+  useEffect(() => {
+    if (bootState !== "ready") {
+      return;
+    }
+    if (!searchInputDirty) {
+      return;
+    }
+
+    /* REQ: Clarification Pack §5 (Debounce immer aktiv, Enter bypass) */
+    const safeQuery = sanitizeSearchText(debouncedSearchText);
+
+    if (route.view === "search") {
+      if (route.query === safeQuery && !route.controlId) {
+        return;
+      }
+      replaceHash(buildSearchHash(safeQuery, sort, filters, null, null));
+      return;
+    }
+
+    if (!safeQuery) {
+      return;
+    }
+
+    navigate(buildSearchHash(safeQuery, sort, filters, null, null));
+  }, [
+    bootState,
+    debouncedSearchText,
+    filters,
+    route.view,
+    searchInputDirty,
+    sort,
+    route.view === "search" ? route.query : "",
+    route.view === "search" ? route.controlId : null
+  ]);
+
+  useEffect(() => {
+    if (effortSortEnabled) {
+      return;
+    }
+    if (getSortBase(sort) !== "effort") {
+      return;
+    }
+
+    const fallbackSort: SearchQuery["sort"] = "relevance";
+    setSort(fallbackSort);
+
+    if (route.view === "search") {
+      navigate(buildSearchHash(searchText, fallbackSort, filters, route.controlId, route.controlTopGroupId));
+    } else {
+      navigate(buildSearchHash(searchText, fallbackSort, filters, null, null));
+    }
+  }, [
+    effortSortEnabled,
+    filters,
+    route.view,
+    searchText,
+    sort,
+    route.view === "search" ? route.controlId : null,
+    route.view === "search" ? route.controlTopGroupId : null
+  ]);
 
   async function resolveTopGroupId(controlId: string): Promise<string | null> {
     const response = await client.search({
@@ -479,6 +668,7 @@ export default function App() {
   }, [detail?.id, graphHops]);
 
   async function handleUpload(file: File) {
+    setImportBusy(true);
     try {
       if (file.size > SECURITY_BUDGETS.maxUploadFileSizeBytes) {
         throw new Error(
@@ -526,10 +716,16 @@ export default function App() {
       setExportCsvMessage(null);
       setSelectAllRunningScope(null);
       navigate(buildSearchHash("", "relevance", defaultFilters()));
+      setToastTone("success");
+      setToastMessage("JSON erfolgreich geladen.");
     } catch (error) {
       setBootState("error");
       setBootError(getErrorMessage(error, "Upload konnte nicht verarbeitet werden."));
       setBootErrorDetails(getErrorDetails(error));
+      setToastTone("error");
+      setToastMessage("JSON-Import fehlgeschlagen.");
+    } finally {
+      setImportBusy(false);
     }
   }
 
@@ -757,8 +953,12 @@ export default function App() {
       downloadBlob(filename, csvBlob);
       setSelectedControlTopGroups({});
       setExportCsvMessage(`CSV erfolgreich exportiert (${rows.length} Controls).`);
+      setToastTone("success");
+      setToastMessage(`CSV erfolgreich exportiert (${rows.length}).`);
     } catch (error) {
       setExportCsvMessage(getErrorMessage(error, "CSV-Export fehlgeschlagen."));
+      setToastTone("error");
+      setToastMessage("CSV-Export fehlgeschlagen.");
     } finally {
       setExportCsvRunning(false);
     }
@@ -776,10 +976,26 @@ export default function App() {
     };
   }, [exportCsvMessage]);
 
-  function handleSubmitSearch() {
-    const nextSearch = sanitizeSearchText(searchText);
+  function handleSubmitSearch(valueOverride?: string) {
+    /* REQ: US-02, PD-04 */
+    const nextSearch = sanitizeSearchText(typeof valueOverride === "string" ? valueOverride : searchText);
     setSearchText(nextSearch);
+    setSearchInputDirty(false);
     navigate(buildSearchHash(nextSearch, sort, filters, null, null));
+    setSearchOverlayOpen(false);
+    setDrawerOpen(false);
+  }
+
+  function handleClearSearch() {
+    setSearchText("");
+    setSearchInputDirty(false);
+    const nextFilters = route.view === "search" ? filters : defaultFilters();
+    navigate(buildSearchHash("", sort, nextFilters, null, null));
+  }
+
+  function handleSearchTextChange(nextValue: string) {
+    setSearchInputDirty(true);
+    setSearchText(nextValue);
   }
 
   function toggleFilter(key: keyof ActiveFilters, value: string) {
@@ -789,6 +1005,24 @@ export default function App() {
     };
     setFilters(nextFilters);
     navigate(buildSearchHash(searchText, sort, nextFilters, null, null));
+  }
+
+  function handleSortBaseChange(base: SortBase) {
+    if (base === "effort" && !effortSortEnabled) {
+      return;
+    }
+    const nextSort = base === "relevance" ? "relevance" : toSortValue(base, "asc");
+    handleSortChange(nextSort);
+  }
+
+  function handleSortDirectionToggle() {
+    const base = getSortBase(sort);
+    if (base === "relevance") {
+      return;
+    }
+    const currentDirection = getSortDirection(sort);
+    const nextSort = toSortValue(base, currentDirection === "asc" ? "desc" : "asc");
+    handleSortChange(nextSort);
   }
 
   function handleSortChange(nextSort: SearchQuery["sort"]) {
@@ -818,6 +1052,7 @@ export default function App() {
     setFilters(nextFilters);
     setSort(baseSort);
     setSearchText(baseText);
+    setSearchInputDirty(false);
     navigate(buildSearchHash(baseText, baseSort, nextFilters, null, null));
   }
 
@@ -846,6 +1081,40 @@ export default function App() {
     handleRelationClick(controlId);
   }
 
+  function getRecentSearchState() {
+    const last = lastSearchStateRef.current;
+    if (!last) {
+      return null;
+    }
+    if (Date.now() - last.timestamp > BACK_TO_RESULTS_TTL_MS) {
+      return null;
+    }
+    return last;
+  }
+
+  function handleBackToResults() {
+    if (route.view === "search") {
+      navigate(buildSearchHash(searchText, sort, filters, null, null));
+      return;
+    }
+
+    const fallbackState = getRecentSearchState();
+    if (fallbackState) {
+      setSearchText(fallbackState.query);
+      setSort(fallbackState.sort);
+      setFilters(fallbackState.filters);
+      setSearchInputDirty(false);
+      navigate(buildSearchHash(fallbackState.query, fallbackState.sort, fallbackState.filters, null, null));
+      return;
+    }
+
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      navigate("#/");
+    }
+  }
+
   const selectedControlId =
     route.view === "search" ? route.controlId : route.view === "control" ? route.controlId : detail?.id ?? null;
   const selectedControlIds = useMemo(() => new Set(Object.keys(selectedControlTopGroups)), [selectedControlTopGroups]);
@@ -864,14 +1133,6 @@ export default function App() {
 
   const activeDataset: DatasetDescriptor | null =
     registry?.datasets?.find((dataset) => dataset.id === selectedDatasetId) ?? null;
-  const activeDatasetInfo = {
-    label: activeDataset?.label ?? meta?.title ?? "Katalog",
-    version: activeDataset?.version ?? meta?.version ?? null,
-    lastModified: activeDataset?.lastModified ?? meta?.lastModified ?? null,
-    oscalVersion: activeDataset?.oscalVersion ?? meta?.oscalVersion ?? null,
-    controls: activeDataset?.stats.controlCount ?? meta?.stats.controlCount ?? 0,
-    groups: activeDataset?.stats.groupCount ?? meta?.stats.groupCount ?? 0
-  };
 
   const isLegalRoute = route.view === "impressum" || route.view === "datenschutz";
   const homeAllControlsSelected = Boolean(
@@ -885,6 +1146,11 @@ export default function App() {
       searchResponse.items.length > 0 &&
       searchResponse.items.every((item) => selectedControlIds.has(item.id))
   );
+  const hasActiveFilters = Object.values(filters).some((entries) => entries.length > 0);
+  const sortBase = getSortBase(sort);
+  const sortDirection = getSortDirection(sort);
+  const hasRecentSearchState = Boolean(getRecentSearchState());
+  const showBackToResults = route.view === "search" ? Boolean(route.controlId) : route.view === "control" && hasRecentSearchState;
 
   if (bootState === "loading" && !meta && !isLegalRoute) {
     const progress = Math.min(100, Math.max(4, Math.round(bootProgress)));
@@ -937,89 +1203,254 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <SearchBar
-        value={searchText}
-        sort={sort}
-        offline={offline}
-        theme={theme}
+      {/* REQ: A11y-03 */}
+      <a className="skip-link" href="#main-content">
+        Zum Inhalt springen
+      </a>
+
+      <AppHeader
+        isDesktop={isDesktop}
+        isShrunk={headerShrunk}
+        searchValue={searchText}
         datasets={datasetOptions}
         selectedDatasetId={selectedDatasetId}
-        activeDatasetInfo={activeDatasetInfo}
-        onChange={setSearchText}
-        onSubmit={handleSubmitSearch}
-        onSortChange={handleSortChange}
+        overflowOpen={overflowOpen}
+        drawerOpen={drawerOpen}
+        onSearchChange={handleSearchTextChange}
+        onSearchSubmit={handleSubmitSearch}
+        onSearchClear={handleClearSearch}
         onDatasetChange={handleDatasetChange}
-        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
+        onOpenSearchOverlay={() => setSearchOverlayOpen(true)}
+        onToggleOverflow={() => {
+          setOverflowOpen((prev) => !prev);
+          setDrawerOpen(false);
+        }}
+        onToggleDrawer={() => {
+          setDrawerOpen((prev) => !prev);
+          setOverflowOpen(false);
+        }}
         onGoHome={() => navigate("#/")}
-        onGoAbout={() => navigate("#/about")}
-        onGoSource={() => navigate("#/about/source")}
-        onUpload={handleUpload}
-        selectedControlCount={selectedControlCount}
-        exportingCsv={exportCsvRunning}
-        exportMessage={exportCsvMessage}
-        onExportCsv={handleExportCsv}
+        onGoBack={() => {
+          if (window.history.length > 1) {
+            window.history.back();
+            return;
+          }
+          navigate("#/");
+        }}
+        showBack={route.view !== "home"}
       />
 
-      {route.view === "home" ? (
-        <GroupOverview
-          meta={meta}
-          datasetId={selectedDatasetId}
-          onOpenGroup={(groupId) => navigate(buildGroupHash(groupId))}
-          onStartSearch={() => navigate(buildSearchHash(searchText, sort, filters))}
-          onSelectAllControls={handleSelectAllHomeControls}
-          selectingAllControls={selectAllRunningScope === "home"}
-          allControlsSelected={homeAllControlsSelected}
-        />
-      ) : null}
+      <OverflowMenu
+        open={overflowOpen}
+        offline={offline}
+        theme={theme}
+        selectedControlCount={selectedControlCount}
+        exportingCsv={exportCsvRunning}
+        importBusy={importBusy}
+        onClose={() => setOverflowOpen(false)}
+        onGoSource={() => navigate("#/about/source")}
+        onGoAbout={() => navigate("#/about")}
+        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
+        onExportCsv={handleExportCsv}
+        onUpload={handleUpload}
+      />
 
-      {route.view === "source" ? (
-        <SourcePanel meta={meta} activeDataset={activeDataset} registry={registry} profileAnalysis={profileAnalysis} />
-      ) : null}
+      <AppDrawer
+        open={drawerOpen}
+        datasets={datasetOptions}
+        selectedDatasetId={selectedDatasetId}
+        selectedControlCount={selectedControlCount}
+        exportingCsv={exportCsvRunning}
+        importBusy={importBusy}
+        offline={offline}
+        theme={theme}
+        onClose={() => setDrawerOpen(false)}
+        onGoHome={() => navigate("#/")}
+        onOpenSearchOverlay={() => setSearchOverlayOpen(true)}
+        onDatasetChange={handleDatasetChange}
+        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
+        onGoSource={() => navigate("#/about/source")}
+        onGoAbout={() => navigate("#/about")}
+        onExportCsv={handleExportCsv}
+        onUpload={handleUpload}
+      />
 
-      {route.view === "about" ? <AboutPage meta={meta} activeDataset={activeDataset} /> : null}
+      <SearchOverlay
+        open={searchOverlayOpen && !isDesktop}
+        value={searchText}
+        onChange={handleSearchTextChange}
+        onClear={handleClearSearch}
+        onSubmit={handleSubmitSearch}
+        onClose={() => setSearchOverlayOpen(false)}
+      />
 
-      {route.view === "group" ? (
-        <GroupPage
-          group={currentGroup}
-          subgroups={currentSubgroups}
-          controls={groupControls}
-          selectedControlIds={selectedControlIds}
-          loading={groupLoading}
-          selectingAllControls={selectAllRunningScope === "group"}
-          allControlsSelected={groupAllControlsSelected}
-          onOpenSubgroup={(groupId) => navigate(buildGroupHash(groupId))}
-          onOpenControl={(item) => navigate(buildControlHash(item.id, item.topGroupId))}
-          onToggleControlSelection={handleToggleControlSelection}
-          onSelectAllControls={handleSelectAllGroupControls}
-        />
-      ) : null}
+      <StatusToast message={toastMessage ?? exportCsvMessage} tone={toastMessage ? toastTone : "info"} />
+
+      <div id="main-content" className="app-main-content">
+        {route.view === "home" ? (
+          <GroupOverview
+            meta={meta}
+            datasetId={selectedDatasetId}
+            onOpenGroup={(groupId) => navigate(buildGroupHash(groupId))}
+            onStartSearch={() => navigate(buildSearchHash(searchText, sort, filters))}
+            onSelectAllControls={handleSelectAllHomeControls}
+            selectingAllControls={selectAllRunningScope === "home"}
+            allControlsSelected={homeAllControlsSelected}
+          />
+        ) : null}
+
+        {route.view === "source" ? (
+          <SourcePanel meta={meta} activeDataset={activeDataset} registry={registry} profileAnalysis={profileAnalysis} />
+        ) : null}
+
+        {route.view === "about" ? <AboutPage meta={meta} activeDataset={activeDataset} /> : null}
+
+        {route.view === "group" ? (
+          <GroupPage
+            group={currentGroup}
+            subgroups={currentSubgroups}
+            controls={groupControls}
+            selectedControlIds={selectedControlIds}
+            loading={groupLoading}
+            selectingAllControls={selectAllRunningScope === "group"}
+            allControlsSelected={groupAllControlsSelected}
+            onOpenSubgroup={(groupId) => navigate(buildGroupHash(groupId))}
+            onOpenControl={(item) => navigate(buildControlHash(item.id, item.topGroupId))}
+            onToggleControlSelection={handleToggleControlSelection}
+            onSelectAllControls={handleSelectAllGroupControls}
+          />
+        ) : null}
+
+        {route.view === "search" ? (
+          <section className={`search-layout ${isWideDesktop ? "wide" : "compact"}`}>
+            {!isWideDesktop ? (
+              <div className="search-layout-actions">
+                <button type="button" className="secondary" onClick={() => setFilterSheetOpen(true)}>
+                  Filter
+                </button>
+              </div>
+            ) : null}
+
+            {isWideDesktop ? (
+              <FacetPanel
+                facets={searchResponse.facets}
+                filters={filters}
+                sortBase={sortBase}
+                sortDirection={sortDirection}
+                effortSortEnabled={effortSortEnabled}
+                onToggle={toggleFilter}
+                onSortBaseChange={handleSortBaseChange}
+                onSortDirectionToggle={handleSortDirectionToggle}
+                onReset={() => {
+                  const next = defaultFilters();
+                  setFilters(next);
+                  navigate(buildSearchHash(searchText, sort, next, null, null));
+                }}
+              />
+            ) : null}
+
+            <ResultList
+              items={searchResponse.items}
+              total={searchResponse.total}
+              query={searchText}
+              selectedId={selectedControlId}
+              selectedControlIds={selectedControlIds}
+              loading={searchLoading}
+              error={searchError}
+              hasActiveFilters={hasActiveFilters}
+              onResetFilters={() => {
+                const next = defaultFilters();
+                setFilters(next);
+                navigate(buildSearchHash(searchText, sort, next, null, null));
+              }}
+              onSelect={handleSelectResult}
+              onToggleSelection={handleToggleControlSelection}
+              onSelectAllControls={handleSelectAllSearchControls}
+              selectingAllControls={selectAllRunningScope === "search"}
+              allControlsSelected={searchAllControlsSelected}
+            />
+
+            {isWideDesktop ? (
+              <ControlDetailPanel
+                detail={detail}
+                loading={detailLoading}
+                error={detailError}
+                graphData={graphData}
+                graphLoading={graphLoading}
+                graphError={graphError}
+                graphHops={graphHops}
+                graphFilter={graphFilter}
+                onGraphHopsChange={setGraphHops}
+                onGraphFilterChange={setGraphFilter}
+                onRelationClick={handleRelationClick}
+                onPropertyFilterClick={handlePropertyFilterClick}
+                onBreadcrumbGroupClick={handleBreadcrumbGroupClick}
+                onBreadcrumbControlClick={handleBreadcrumbControlClick}
+                onBackToResults={showBackToResults ? handleBackToResults : null}
+              />
+            ) : null}
+          </section>
+        ) : null}
+
+        {route.view === "control" ? (
+          <section className="single-control-layout">
+            <ControlDetailPanel
+              detail={detail}
+              loading={detailLoading}
+              error={detailError}
+              graphData={graphData}
+              graphLoading={graphLoading}
+              graphError={graphError}
+              graphHops={graphHops}
+              graphFilter={graphFilter}
+              onGraphHopsChange={setGraphHops}
+              onGraphFilterChange={setGraphFilter}
+              onRelationClick={handleRelationClick}
+              onPropertyFilterClick={handlePropertyFilterClick}
+              onBreadcrumbGroupClick={handleBreadcrumbGroupClick}
+              onBreadcrumbControlClick={handleBreadcrumbControlClick}
+              onBackToResults={showBackToResults ? handleBackToResults : null}
+            />
+          </section>
+        ) : null}
+
+        {route.view === "impressum" ? <ImpressumPage /> : null}
+        {route.view === "datenschutz" ? <DatenschutzPage /> : null}
+      </div>
 
       {route.view === "search" ? (
-        <section className="search-layout">
+        <FilterSheet
+          open={filterSheetOpen && !isWideDesktop}
+          title="Filter"
+          variant="filter"
+          onClose={() => setFilterSheetOpen(false)}
+        >
           <FacetPanel
             facets={searchResponse.facets}
             filters={filters}
+            sortBase={sortBase}
+            sortDirection={sortDirection}
+            effortSortEnabled={effortSortEnabled}
             onToggle={toggleFilter}
+            onSortBaseChange={handleSortBaseChange}
+            onSortDirectionToggle={handleSortDirectionToggle}
             onReset={() => {
               const next = defaultFilters();
               setFilters(next);
               navigate(buildSearchHash(searchText, sort, next, null, null));
             }}
           />
-          <ResultList
-            items={searchResponse.items}
-            total={searchResponse.total}
-            query={searchText}
-            selectedId={selectedControlId}
-            selectedControlIds={selectedControlIds}
-            loading={searchLoading}
-            error={searchError}
-            onSelect={handleSelectResult}
-            onToggleSelection={handleToggleControlSelection}
-            onSelectAllControls={handleSelectAllSearchControls}
-            selectingAllControls={selectAllRunningScope === "search"}
-            allControlsSelected={searchAllControlsSelected}
-          />
+        </FilterSheet>
+      ) : null}
+
+      {route.view === "search" && !isWideDesktop && route.controlId ? (
+        <FilterSheet
+          open={Boolean(route.controlId)}
+          title="Control-Detail"
+          variant="detail"
+          onClose={() => navigate(buildSearchHash(searchText, sort, filters, null, null))}
+        >
+          {/* REQ: PD-06, Clarification Pack §8 */}
           <ControlDetailPanel
             detail={detail}
             loading={detailLoading}
@@ -1035,33 +1466,10 @@ export default function App() {
             onPropertyFilterClick={handlePropertyFilterClick}
             onBreadcrumbGroupClick={handleBreadcrumbGroupClick}
             onBreadcrumbControlClick={handleBreadcrumbControlClick}
+            onBackToResults={showBackToResults ? handleBackToResults : null}
           />
-        </section>
+        </FilterSheet>
       ) : null}
-
-      {route.view === "control" ? (
-        <section className="single-control-layout">
-          <ControlDetailPanel
-            detail={detail}
-            loading={detailLoading}
-            error={detailError}
-            graphData={graphData}
-            graphLoading={graphLoading}
-            graphError={graphError}
-            graphHops={graphHops}
-            graphFilter={graphFilter}
-            onGraphHopsChange={setGraphHops}
-            onGraphFilterChange={setGraphFilter}
-            onRelationClick={handleRelationClick}
-            onPropertyFilterClick={handlePropertyFilterClick}
-            onBreadcrumbGroupClick={handleBreadcrumbGroupClick}
-            onBreadcrumbControlClick={handleBreadcrumbControlClick}
-          />
-        </section>
-      ) : null}
-
-      {route.view === "impressum" ? <ImpressumPage /> : null}
-      {route.view === "datenschutz" ? <DatenschutzPage /> : null}
 
       <AppFooter />
     </main>

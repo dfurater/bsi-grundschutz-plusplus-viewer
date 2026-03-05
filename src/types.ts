@@ -189,7 +189,15 @@ export interface SearchQuery {
     tags: string[];
     relationTypes: string[];
   };
-  sort: "relevance" | "id-asc" | "title-asc";
+  /* REQ: Clarification Pack §10 (UI 5.2 Sortierung) */
+  sort:
+    | "relevance"
+    | "id-asc"
+    | "id-desc"
+    | "title-asc"
+    | "title-desc"
+    | "effort-asc"
+    | "effort-desc";
   limit?: number;
   offset?: number;
 }

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { SearchResponse } from "../types";
 
+type SortBase = "relevance" | "id" | "title" | "effort";
+
 export interface ActiveFilters {
   topGroupId: string[];
   groupId: string[];
@@ -16,7 +18,12 @@ export interface ActiveFilters {
 interface FacetPanelProps {
   facets: SearchResponse["facets"];
   filters: ActiveFilters;
+  sortBase: SortBase;
+  sortDirection: "asc" | "desc";
+  effortSortEnabled: boolean;
   onToggle: (facet: keyof ActiveFilters, value: string) => void;
+  onSortBaseChange: (value: SortBase) => void;
+  onSortDirectionToggle: () => void;
   onReset: () => void;
 }
 
@@ -71,11 +78,54 @@ function sortFacetOptions(
   });
 }
 
-export function FacetPanel({ facets, filters, onToggle, onReset }: FacetPanelProps) {
+export function FacetPanel({
+  facets,
+  filters,
+  sortBase,
+  sortDirection,
+  effortSortEnabled,
+  onToggle,
+  onSortBaseChange,
+  onSortDirectionToggle,
+  onReset
+}: FacetPanelProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   return (
+    /* REQ: US-08, A11y-02 */
     <aside className="facet-panel" aria-label="Filter">
+      {/* REQ: User Request Sort-Umzug Sidebar */}
+      <div className="facet-sort-block">
+        <label htmlFor="facet-sort-select" className="facet-sort-label">
+          Relevanz
+        </label>
+        <div className="sort-controls">
+          <select
+            id="facet-sort-select"
+            value={sortBase}
+            onChange={(event) => onSortBaseChange(event.target.value as SortBase)}
+            aria-label="Relevanz"
+          >
+            <option value="relevance">Relevanz</option>
+            <option value="id">ID</option>
+            <option value="title">Titel</option>
+            <option value="effort" disabled={!effortSortEnabled}>
+              Aufwand
+            </option>
+          </select>
+          {sortBase !== "relevance" ? (
+            <button
+              type="button"
+              className="icon-button"
+              aria-label={sortDirection === "asc" ? "Sortierung absteigend" : "Sortierung aufsteigend"}
+              onClick={onSortDirectionToggle}
+            >
+              {sortDirection === "asc" ? "↑" : "↓"}
+            </button>
+          ) : null}
+        </div>
+      </div>
+
       <div className="facet-panel-header">
         <h2>Filter</h2>
         <button type="button" className="link-button" onClick={onReset}>
@@ -98,6 +148,7 @@ export function FacetPanel({ facets, filters, onToggle, onReset }: FacetPanelPro
               type="button"
               className="facet-toggle"
               aria-expanded={!isCollapsed}
+              aria-label={`${FACET_LABELS[facetKey]} ein- oder ausklappen`}
               onClick={() => setCollapsed((prev) => ({ ...prev, [facetKey]: !isCollapsed }))}
             >
               <span>{FACET_LABELS[facetKey]}</span>
@@ -115,6 +166,7 @@ export function FacetPanel({ facets, filters, onToggle, onReset }: FacetPanelPro
                           type="checkbox"
                           checked={selected}
                           onChange={() => onToggle(facetKey, option.value)}
+                          aria-label={`${FACET_LABELS[facetKey]} ${option.value}`}
                         />
                         <span>{option.value}</span>
                         <em>{option.count}</em>

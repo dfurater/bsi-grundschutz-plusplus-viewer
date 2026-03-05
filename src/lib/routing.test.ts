@@ -34,4 +34,21 @@ describe("parseHash hardening", () => {
     expect(parseHash("#/about")).toEqual({ view: "about" });
     expect(parseHash("#/about/source")).toEqual({ view: "source" });
   });
+
+  it("parst alle Sortierungsvarianten aus der URL", () => {
+    const cases = [
+      ["#/search?sort=id-desc", "id-desc"],
+      ["#/search?sort=title-desc", "title-desc"],
+      ["#/search?sort=effort-asc", "effort-asc"],
+      ["#/search?sort=effort-desc", "effort-desc"]
+    ] as const;
+
+    for (const [hash, expectedSort] of cases) {
+      const route = parseHash(hash);
+      expect(route.view).toBe("search");
+      if (route.view === "search") {
+        expect(route.sort).toBe(expectedSort);
+      }
+    }
+  });
 });

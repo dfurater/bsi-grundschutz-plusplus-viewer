@@ -1,0 +1,20 @@
+interface StatusToastProps {
+  message: string | null;
+  tone?: "info" | "success" | "error";
+}
+
+/**
+ * Lightweight status toast for connectivity and import/export feedback.
+ * REQ: PD-09, PERF-04, C-08
+ */
+export function StatusToast({ message, tone = "info" }: StatusToastProps) {
+  if (!message) {
+    return null;
+  }
+
+  return (
+    <div className={`status-toast ${tone}`} role="status" aria-live="polite">
+      {message}
+    </div>
+  );
+}

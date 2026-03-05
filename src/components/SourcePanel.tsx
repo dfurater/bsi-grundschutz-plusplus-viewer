@@ -187,12 +187,7 @@ export function SourcePanel({ meta, activeDataset, registry, profileAnalysis }: 
         </section>
       ) : null}
 
-      <section>
-        <h3>Rechtliches</h3>
-        <p>
-          <a href="#/impressum">Impressum</a> / <a href="#/datenschutz">Datenschutz</a>
-        </p>
-      </section>
+      {/* REQ: K-03, P2-03 (Rechtliches nur im Footer) */}
     </section>
   );
 }

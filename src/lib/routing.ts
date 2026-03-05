@@ -68,7 +68,9 @@ export function parseHash(hash: string): AppRoute {
     return {
       view: "search",
       query: sanitizeSearchText(params.get("q")),
-      sort: ["relevance", "id-asc", "title-asc"].includes(sort) ? sort : "relevance",
+      sort: ["relevance", "id-asc", "id-desc", "title-asc", "title-desc", "effort-asc", "effort-desc"].includes(sort)
+        ? sort
+        : "relevance",
       filters,
       controlId: sanitizeRouteToken(params.get("control")),
       controlTopGroupId: sanitizeRouteToken(params.get("top"))

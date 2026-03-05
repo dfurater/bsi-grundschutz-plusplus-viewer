@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import type { SearchResultItem } from "../types";
 
 interface ResultListProps {
@@ -13,6 +14,8 @@ interface ResultListProps {
   onSelectAllControls: () => void;
   selectingAllControls: boolean;
   allControlsSelected: boolean;
+  hasActiveFilters: boolean;
+  onResetFilters?: () => void;
 }
 
 function markMatches(text: string, query: string) {
@@ -39,8 +42,19 @@ export function ResultList({
   onToggleSelection,
   onSelectAllControls,
   selectingAllControls,
-  allControlsSelected
+  allControlsSelected,
+  hasActiveFilters,
+  onResetFilters
 }: ResultListProps) {
+  /* REQ: EC-03, UI 5.2 Group/Search Pagination */
+  const [visibleCount, setVisibleCount] = useState(25);
+
+  useEffect(() => {
+    setVisibleCount(25);
+  }, [items, query]);
+
+  const visibleItems = useMemo(() => items.slice(0, visibleCount), [items, visibleCount]);
+
   if (loading) {
     return <div className="status-box">Index wird abgefragt…</div>;
   }
@@ -50,7 +64,18 @@ export function ResultList({
   }
 
   if (!items.length) {
-    return <div className="status-box">Keine Treffer. Filter lockern oder Suchbegriff anpassen.</div>;
+    return (
+      <div className="status-box">
+        {/* REQ: A-02, Clarification Pack §9 */}
+        <h2>Keine Treffer</h2>
+        <p>Passe Suche oder Filter an.</p>
+        {hasActiveFilters && onResetFilters ? (
+          <button type="button" className="secondary" onClick={onResetFilters}>
+            Filter zurücksetzen
+          </button>
+        ) : null}
+      </div>
+    );
   }
 
   return (
@@ -66,7 +91,7 @@ export function ResultList({
       </header>
 
       <ul>
-        {items.map((item) => {
+        {visibleItems.map((item) => {
           const selected = item.id === selectedId;
           const exportSelected = selectedControlIds.has(item.id);
           return (
@@ -106,6 +131,14 @@ export function ResultList({
           );
         })}
       </ul>
+
+      {visibleCount < items.length ? (
+        <div className="list-pagination">
+          <button type="button" className="secondary" onClick={() => setVisibleCount((prev) => prev + 25)}>
+            Mehr laden
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

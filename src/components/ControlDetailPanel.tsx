@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ControlDetail, RelationEdge, RelationGraphPayload } from "../types";
 import { RelationGraphLite } from "./RelationGraphLite";
 
@@ -16,6 +17,7 @@ interface ControlDetailPanelProps {
   onPropertyFilterClick: (facet: "secLevel" | "effortLevel" | "tags", value: string) => void;
   onBreadcrumbGroupClick: (groupId: string) => void;
   onBreadcrumbControlClick: (controlId: string) => void;
+  onBackToResults?: (() => void) | null;
 }
 
 function renderRelation(
@@ -75,6 +77,10 @@ function splitPropertyValues(facet: "secLevel" | "effortLevel" | "tags", rawValu
     .filter(Boolean);
 }
 
+/**
+ * Control detail with breadcrumb, back-to-results and collapsible secondary sections.
+ * REQ: US-05, US-06, US-07, A11y-02, F-06, F-07
+ */
 export function ControlDetailPanel({
   detail,
   loading,
@@ -89,8 +95,20 @@ export function ControlDetailPanel({
   onRelationClick,
   onPropertyFilterClick,
   onBreadcrumbGroupClick,
-  onBreadcrumbControlClick
+  onBreadcrumbControlClick,
+  onBackToResults
 }: ControlDetailPanelProps) {
+  const [sections, setSections] = useState({
+    guidance: false,
+    params: false,
+    relations: false,
+    properties: false
+  });
+
+  const toggleSection = (key: keyof typeof sections) => {
+    setSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
   if (loading) {
     return <section className="detail-panel status-box">Control wird geladen…</section>;
   }
@@ -135,6 +153,13 @@ export function ControlDetailPanel({
         </div>
       </header>
 
+      {/* REQ: US-06, 4.4.3 */}
+      {onBackToResults ? (
+        <button type="button" className="secondary" onClick={onBackToResults}>
+          Zur Ergebnisliste
+        </button>
+      ) : null}
+
       <nav aria-label="Breadcrumb" className="breadcrumb">
         {detail.groupPathTitles.map((title, index) => {
           const groupId = detail.groupPathIds[index];
@@ -145,11 +170,12 @@ export function ControlDetailPanel({
                 type="button"
                 className={`breadcrumb-link ${isLast ? "current" : ""}`}
                 onClick={() => {
-                  if (groupId) {
+                  if (!isLast && groupId) {
                     onBreadcrumbGroupClick(groupId);
                   }
                 }}
                 aria-current={isLast ? "page" : undefined}
+                disabled={isLast}
               >
                 {title}
               </button>
@@ -199,110 +225,154 @@ export function ControlDetailPanel({
         <p>{renderTextWithParams(detail.statementText, detail.params) || "Kein Statement vorhanden."}</p>
       </article>
 
-      <details open className="part-block">
-        <summary>Guidance</summary>
-        <p>{renderTextWithParams(detail.guidanceText, detail.params) || "Keine Guidance vorhanden."}</p>
-      </details>
-
-      {detail.params.length > 0 ? (
-        <section className="part-block">
-          <h3>Parameter</h3>
-          <ul>
-            {detail.params.map((param) => (
-              <li key={param.id ?? `${detail.id}-param`}>
-                <strong>{param.id}</strong>: {(param.values || []).join(", ") || param.label || "-"}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      <section className="part-block">
-        <div className="relation-heading-row">
-          <h3>Relationen</h3>
-          <div className="relation-controls">
-            <label>
-              Hops
-              <select
-                aria-label="Graph-Hop-Tiefe"
-                value={String(graphHops)}
-                onChange={(event) => onGraphHopsChange(Number(event.target.value) === 2 ? 2 : 1)}
-              >
-                <option value="1">1-Hop</option>
-                <option value="2">2-Hop</option>
-              </select>
-            </label>
-            <label>
-              Typ
-              <select
-                aria-label="Relations-Typ"
-                value={graphFilter}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  onGraphFilterChange(value === "required" || value === "related" ? value : "all");
-                }}
-              >
-                <option value="all">Alle</option>
-                <option value="required">Nur required</option>
-                <option value="related">Nur related</option>
-              </select>
-            </label>
-          </div>
-        </div>
-
-        {graphLoading ? <p className="relation-empty">Graph wird geladen…</p> : null}
-        {graphError ? <p className="relation-empty error">{graphError}</p> : null}
-
-        <RelationGraphLite
-          controlId={detail.id}
-          graph={graphData}
-          relFilter={graphFilter}
-          onNodeClick={onRelationClick}
-        />
-
-        <div className="relation-columns">
+      {/* REQ: US-07, A11y-02 */}
+      <section className="part-block accordion-block">
+        <button
+          type="button"
+          className="accordion-toggle"
+          aria-expanded={sections.guidance}
+          onClick={() => toggleSection("guidance")}
+        >
+          Guidance
+        </button>
+        {sections.guidance ? (
           <div>
-            <h4>Required / Related nach</h4>
-            <ul>{detail.relationsOutgoing.map((item) => renderRelation(item, "outgoing", onRelationClick))}</ul>
+            <p>{renderTextWithParams(detail.guidanceText, detail.params) || "Keine Guidance vorhanden."}</p>
           </div>
-          <div>
-            <h4>Verweist auf diese Control</h4>
-            <ul>{detail.relationsIncoming.map((item) => renderRelation(item, "incoming", onRelationClick))}</ul>
-          </div>
-        </div>
+        ) : null}
       </section>
 
-      <section className="part-block">
-        <h3>Eigenschaften</h3>
-        <ul>
-          {detail.props.map((prop, index) => {
-            const facet = resolveFilterFacet(prop.name);
-            const values = facet ? splitPropertyValues(facet, prop.value) : [];
+      <section className="part-block accordion-block">
+        <button
+          type="button"
+          className="accordion-toggle"
+          aria-expanded={sections.params}
+          onClick={() => toggleSection("params")}
+        >
+          Parameter
+        </button>
+        {sections.params ? (
+          detail.params.length > 0 ? (
+            <ul>
+              {detail.params.map((param) => (
+                <li key={param.id ?? `${detail.id}-param`}>
+                  <strong>{param.id}</strong>: {(param.values || []).join(", ") || param.label || "-"}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>Keine Parameter vorhanden.</p>
+          )
+        ) : null}
+      </section>
 
-            return (
-              <li key={`${detail.id}-prop-${index}`} className="property-item">
-                <strong>{prop.name}</strong>:{" "}
-                {facet && values.length > 0 ? (
-                  <span className="property-chip-row">
-                    {values.map((value) => (
-                      <button
-                        key={`${detail.id}-prop-${index}-${value}`}
-                        type="button"
-                        className="property-filter-chip"
-                        onClick={() => onPropertyFilterClick(facet, value)}
-                        title={`Nach ${value} filtern`}
-                      >
-                        {value}
-                      </button>
-                    ))}
-                  </span>
-                ) : (
-                  <span>{String(prop.value ?? "") || "-"}</span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+      <section className="part-block accordion-block">
+        <button
+          type="button"
+          className="accordion-toggle"
+          aria-expanded={sections.relations}
+          onClick={() => toggleSection("relations")}
+        >
+          Relationen
+        </button>
+
+        {sections.relations ? (
+          <div>
+            <div className="relation-heading-row">
+              <div className="relation-controls">
+                <label>
+                  Filter Hops
+                  <select
+                    aria-label="Filter Hops"
+                    value={String(graphHops)}
+                    onChange={(event) => onGraphHopsChange(Number(event.target.value) === 2 ? 2 : 1)}
+                  >
+                    <option value="1">1-Hop</option>
+                    <option value="2">2-Hop</option>
+                  </select>
+                </label>
+                <label>
+                  Filter Typ
+                  <select
+                    aria-label="Filter Typ"
+                    value={graphFilter}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      onGraphFilterChange(value === "required" || value === "related" ? value : "all");
+                    }}
+                  >
+                    <option value="all">Alle</option>
+                    <option value="required">Nur required</option>
+                    <option value="related">Nur related</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            {graphLoading ? <p className="relation-empty">Graph wird geladen…</p> : null}
+            {graphError ? <p className="relation-empty error">{graphError}</p> : null}
+
+            <RelationGraphLite
+              controlId={detail.id}
+              graph={graphData}
+              relFilter={graphFilter}
+              onNodeClick={onRelationClick}
+            />
+
+            <div className="relation-columns">
+              <div>
+                <h4>Required / Related nach</h4>
+                <ul>{detail.relationsOutgoing.map((item) => renderRelation(item, "outgoing", onRelationClick))}</ul>
+              </div>
+              <div>
+                <h4>Verweist auf diese Control</h4>
+                <ul>{detail.relationsIncoming.map((item) => renderRelation(item, "incoming", onRelationClick))}</ul>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="part-block accordion-block">
+        <button
+          type="button"
+          className="accordion-toggle"
+          aria-expanded={sections.properties}
+          onClick={() => toggleSection("properties")}
+        >
+          Eigenschaften
+        </button>
+        {sections.properties ? (
+          <ul>
+            {detail.props.map((prop, index) => {
+              const facet = resolveFilterFacet(prop.name);
+              const values = facet ? splitPropertyValues(facet, prop.value) : [];
+
+              return (
+                <li key={`${detail.id}-prop-${index}`} className="property-item">
+                  <strong>{prop.name}</strong>: {" "}
+                  {facet && values.length > 0 ? (
+                    <span className="property-chip-row">
+                      {values.map((value) => (
+                        <button
+                          key={`${detail.id}-prop-${index}-${value}`}
+                          type="button"
+                          className="property-filter-chip"
+                          onClick={() => onPropertyFilterClick(facet, value)}
+                          title={`Nach ${value} filtern`}
+                        >
+                          {value}
+                        </button>
+                      ))}
+                    </span>
+                  ) : (
+                    <span>{String(prop.value ?? "") || "-"}</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
       </section>
     </section>
   );

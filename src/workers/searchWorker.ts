@@ -162,7 +162,15 @@ function normalizeSearchQuery(rawQuery: SearchQuery): SearchQuery {
   const safeText = sanitizeSearchText(rawQuery?.text ?? "");
   return {
     text: safeText,
-    sort: rawQuery?.sort === "id-asc" || rawQuery?.sort === "title-asc" ? rawQuery.sort : "relevance",
+    sort:
+      rawQuery?.sort === "id-asc" ||
+      rawQuery?.sort === "id-desc" ||
+      rawQuery?.sort === "title-asc" ||
+      rawQuery?.sort === "title-desc" ||
+      rawQuery?.sort === "effort-asc" ||
+      rawQuery?.sort === "effort-desc"
+        ? rawQuery.sort
+        : "relevance",
     filters: {
       topGroupId: clampFilterValues(rawQuery?.filters?.topGroupId),
       groupId: clampFilterValues(rawQuery?.filters?.groupId),
@@ -309,8 +317,41 @@ async function buildSearchResponse(query: SearchQuery, requestId: string): Promi
 
   if (normalizedQuery.sort === "id-asc") {
     scored.sort((a, b) => a.doc.id.localeCompare(b.doc.id, "de"));
+  } else if (normalizedQuery.sort === "id-desc") {
+    scored.sort((a, b) => b.doc.id.localeCompare(a.doc.id, "de"));
   } else if (normalizedQuery.sort === "title-asc") {
     scored.sort((a, b) => a.doc.title.localeCompare(b.doc.title, "de"));
+  } else if (normalizedQuery.sort === "title-desc") {
+    scored.sort((a, b) => b.doc.title.localeCompare(a.doc.title, "de"));
+  } else if (normalizedQuery.sort === "effort-asc" || normalizedQuery.sort === "effort-desc") {
+    const direction = normalizedQuery.sort === "effort-asc" ? "asc" : "desc";
+    /* REQ: Clarification Pack §10 (fehlende Aufwandwerte immer am Ende) */
+    scored.sort((a, b) => {
+      const valueA = a.doc.facets.effortLevel;
+      const valueB = b.doc.facets.effortLevel;
+
+      const missingA = valueA == null || valueA === "";
+      const missingB = valueB == null || valueB === "";
+      if (missingA && !missingB) {
+        return 1;
+      }
+      if (!missingA && missingB) {
+        return -1;
+      }
+      if (missingA && missingB) {
+        return a.doc.id.localeCompare(b.doc.id, "de");
+      }
+
+      const numA = Number(valueA);
+      const numB = Number(valueB);
+      const bothNumeric = Number.isFinite(numA) && Number.isFinite(numB);
+      const baseCompare = bothNumeric
+        ? numA - numB
+        : String(valueA).localeCompare(String(valueB), "de");
+
+      const directionalCompare = direction === "asc" ? baseCompare : -baseCompare;
+      return directionalCompare || a.doc.id.localeCompare(b.doc.id, "de");
+    });
   } else {
     scored.sort((a, b) => b.score - a.score || a.doc.id.localeCompare(b.doc.id, "de"));
   }

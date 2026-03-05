@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import type { GroupNode, SearchResultItem } from "../types";
 
 interface GroupPageProps {
@@ -27,6 +28,15 @@ export function GroupPage({
   onToggleControlSelection,
   onSelectAllControls
 }: GroupPageProps) {
+  /* REQ: EC-03, UI 5.2 Group/Search Pagination */
+  const [visibleCount, setVisibleCount] = useState(25);
+
+  useEffect(() => {
+    setVisibleCount(25);
+  }, [group?.id, controls]);
+
+  const visibleControls = useMemo(() => controls.slice(0, visibleCount), [controls, visibleCount]);
+
   if (!group) {
     return <section className="status-box error">Gruppe nicht gefunden.</section>;
   }
@@ -94,7 +104,7 @@ export function GroupPage({
         </div>
         {loading ? <p>Controls werden geladen…</p> : null}
         <ul className="group-control-list">
-          {controls.map((control) => {
+          {visibleControls.map((control) => {
             const exportSelected = selectedControlIds.has(control.id);
             return (
               <li key={control.id} className={exportSelected ? "export-selected" : ""}>
@@ -116,6 +126,13 @@ export function GroupPage({
             );
           })}
         </ul>
+        {visibleCount < controls.length ? (
+          <div className="list-pagination">
+            <button type="button" className="secondary" onClick={() => setVisibleCount((prev) => prev + 25)}>
+              Mehr laden
+            </button>
+          </div>
+        ) : null}
       </section>
     </section>
   );
