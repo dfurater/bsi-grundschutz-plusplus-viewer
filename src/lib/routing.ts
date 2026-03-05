@@ -31,7 +31,9 @@ export type AppRoute =
   | SearchRouteState
   | { view: "group"; groupId: string }
   | { view: "control"; controlId: string; topGroupId: string | null }
-  | { view: "source" };
+  | { view: "source" }
+  | { view: "impressum" }
+  | { view: "datenschutz" };
 
 const filterKeyMap: Array<[keyof ActiveFilters, string]> = [
   ["topGroupId", "tg"],
@@ -94,6 +96,14 @@ export function parseHash(hash: string): AppRoute {
 
   if (path === "/about/source") {
     return { view: "source" };
+  }
+
+  if (path === "/impressum") {
+    return { view: "impressum" };
+  }
+
+  if (path === "/datenschutz") {
+    return { view: "datenschutz" };
   }
 
   return { view: "home" };

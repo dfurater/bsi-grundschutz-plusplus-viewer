@@ -44,6 +44,7 @@ Hinweis zu Abhaengigkeiten: Nach dem Klonen muss `npm install` ausgefuehrt werde
 
 - Reines CSR, statisch deploybar
 - Hash-Routing (`#/search`, `#/control/:id`, `#/group/:id`, `#/about/source`)
+- Rechtliche Seiten: `#/impressum` und `#/datenschutz` (global ueber Footer verlinkt)
 - Multi-Dataset-Unterstützung (Anwender, Kernel, Methodik)
 - Volltext- und ID-Suche mit Facetten (Web Worker)
 - Detailansicht mit Statement/Guidance/Parametern/Relationen
@@ -54,6 +55,37 @@ Hinweis zu Abhaengigkeiten: Nach dem Klonen muss `npm install` ausgefuehrt werde
 - Strikte JSON-Schema-Validierung und Security-Budgets (fail-closed)
 - Sichere externe Link-Behandlung (`http/https`-Whitelist)
 - CSV-Export fuer ausgewaehlte Controls (Excel-kompatibel, UTF-8 mit BOM)
+
+## Rechtliches
+
+Die App enthaelt zwei oeffentlich erreichbare Rechtsseiten:
+
+- `#/impressum`
+- `#/datenschutz`
+
+Die Links sind global im Footer sichtbar und damit auf allen Routen in maximal zwei Klicks erreichbar.
+
+### Platzhalter befuellen
+
+Die Inhalte werden ueber Platzhalter in `src/legal/placeholders.ts` gepflegt:
+
+- `{{OPERATOR_NAME}}`
+- `{{OPERATOR_ADDRESS_LINE1}}`
+- `{{OPERATOR_ADDRESS_LINE2}}`
+- `{{OPERATOR_EMAIL}}`
+
+Hosting-/Projekt-/Stand-Angaben sind direkt in den Rechtsseiten gepflegt:
+
+- `src/components/DatenschutzPage.tsx`
+- `src/components/ImpressumPage.tsx`
+
+Wichtige Datenschutzinhalte in der vorhandenen Erklaerung:
+
+- keine Cookies
+- keine externen Drittanbieter/Tracking-Requests beim Erstaufruf
+- `localStorage`-Key `gspp-theme` (Theme-Praeferenz)
+- Service-Worker Cache/Cache Storage (Performance/Offline)
+- lokale Upload-Verarbeitung im Browser (keine Uebertragung an App-Server)
 
 ## CSV Export (Controls)
 

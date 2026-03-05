@@ -6,6 +6,9 @@ import { GroupPage } from "./components/GroupPage";
 import { ResultList } from "./components/ResultList";
 import { SearchBar } from "./components/SearchBar";
 import { SourcePanel } from "./components/SourcePanel";
+import { ImpressumPage } from "./components/ImpressumPage";
+import { DatenschutzPage } from "./components/DatenschutzPage";
+import { AppFooter } from "./components/AppFooter";
 import { CONTROL_EXPORT_COLUMNS, extractControlExportRow } from "./lib/controlExport";
 import { downloadBlob, toCsv } from "./lib/csv";
 import { CatalogMetaSchema, CatalogRegistrySchema, ProfileAnalysisSchema } from "./lib/dataSchemas";
@@ -196,7 +199,7 @@ export default function App() {
     setBootProgress(76);
     setBootStatusText("Suche wird initialisiert…");
     setBootProgress(92);
-    setBootStatusText("Oberflaeche wird aufgebaut…");
+    setBootStatusText("Oberfläche wird aufgebaut…");
     setMeta(metaPayload);
     setSelectedDatasetId(datasetId);
     setSearchResponse(DEFAULT_SEARCH_RESPONSE);
@@ -264,7 +267,7 @@ export default function App() {
           })
         ])) as [CatalogRegistry, ProfileAnalysis];
         setBootProgress(16);
-        setBootStatusText("Datensatzbeziehungen werden geprueft…");
+        setBootStatusText("Datensatzbeziehungen werden geprüft…");
 
         if (!cancelled) {
           setProfileAnalysis(profilePayload);
@@ -330,7 +333,7 @@ export default function App() {
     try {
       const resolvedTopGroupId = topGroupId ?? (await resolveTopGroupId(controlId));
       if (!resolvedTopGroupId) {
-        throw new Error(`Top-Gruppe fuer ${controlId} konnte nicht bestimmt werden.`);
+        throw new Error(`Top-Gruppe für ${controlId} konnte nicht bestimmt werden.`);
       }
 
       const payload = await client.getControl(controlId, resolvedTopGroupId);
@@ -724,7 +727,7 @@ export default function App() {
         const [controlId, knownTopGroupId] = selectedEntries[index];
         const resolvedTopGroupId = knownTopGroupId || (await resolveTopGroupId(controlId));
         if (!resolvedTopGroupId) {
-          throw new Error(`Top-Gruppe fuer ${controlId} konnte nicht aufgeloest werden.`);
+          throw new Error(`Top-Gruppe für ${controlId} konnte nicht aufgelöst werden.`);
         }
 
         const detailPayload = await client.getControl(controlId, resolvedTopGroupId);
@@ -869,6 +872,7 @@ export default function App() {
     groups: activeDataset?.stats.groupCount ?? meta?.stats.groupCount ?? 0
   };
 
+  const isLegalRoute = route.view === "impressum" || route.view === "datenschutz";
   const homeAllControlsSelected = Boolean(
     meta && meta.stats.controlCount > 0 && selectedControlCount === meta.stats.controlCount
   );
@@ -881,45 +885,51 @@ export default function App() {
       searchResponse.items.every((item) => selectedControlIds.has(item.id))
   );
 
-  if (bootState === "loading" && !meta) {
+  if (bootState === "loading" && !meta && !isLegalRoute) {
     const progress = Math.min(100, Math.max(4, Math.round(bootProgress)));
     return (
-      <main className="app-shell status-screen" aria-live="polite">
-        <section className="status-box loading-box">
-          <h1>Index wird aufgebaut und geladen…</h1>
-          <p>{bootStatusText}</p>
-          <progress className="status-progress" value={progress} max={100} />
-          <small>{progress}%</small>
+      <main className="app-shell">
+        <section className="status-screen" aria-live="polite">
+          <div className="status-box loading-box">
+            <h1>Index wird aufgebaut und geladen…</h1>
+            <p>{bootStatusText}</p>
+            <progress className="status-progress" value={progress} max={100} />
+            <small>{progress}%</small>
+          </div>
         </section>
+        <AppFooter />
       </main>
     );
   }
 
-  if (bootState === "error") {
+  if (bootState === "error" && !isLegalRoute) {
     return (
-      <main className="app-shell status-screen error">
-        <section className="status-box error-box">
-          <h1>Initialisierung fehlgeschlagen</h1>
-          <p>{bootError}</p>
-          <textarea
-            readOnly
-            value={bootErrorDetails || bootError || "Kein Fehlerdetail verfuegbar."}
-            aria-label="Fehlerdetails"
-          />
-          <button
-            className="secondary"
-            type="button"
-            onClick={() =>
-              navigator.clipboard
-                .writeText(bootErrorDetails || bootError || "Kein Fehlerdetail verfuegbar.")
-                .catch(() => {
-                  // Clipboard support may be unavailable in hardened browser settings.
-                })
-            }
-          >
-            Fehlerdetails kopieren
-          </button>
+      <main className="app-shell">
+        <section className="status-screen error">
+          <div className="status-box error-box">
+            <h1>Initialisierung fehlgeschlagen</h1>
+            <p>{bootError}</p>
+            <textarea
+              readOnly
+              value={bootErrorDetails || bootError || "Kein Fehlerdetail verfügbar."}
+              aria-label="Fehlerdetails"
+            />
+            <button
+              className="secondary"
+              type="button"
+              onClick={() =>
+                navigator.clipboard
+                  .writeText(bootErrorDetails || bootError || "Kein Fehlerdetail verfügbar.")
+                  .catch(() => {
+                    // Clipboard support may be unavailable in hardened browser settings.
+                  })
+              }
+            >
+              Fehlerdetails kopieren
+            </button>
+          </div>
         </section>
+        <AppFooter />
       </main>
     );
   }
@@ -1045,6 +1055,11 @@ export default function App() {
           />
         </section>
       ) : null}
+
+      {route.view === "impressum" ? <ImpressumPage /> : null}
+      {route.view === "datenschutz" ? <DatenschutzPage /> : null}
+
+      <AppFooter />
     </main>
   );
 }
