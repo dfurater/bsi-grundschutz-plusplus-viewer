@@ -2,12 +2,14 @@ interface AppHeaderProps {
   isTabletUp: boolean;
   isShrunk: boolean;
   searchOverlayOpen: boolean;
+  theme: "light" | "dark";
   datasets: Array<{ id: string; label: string }>;
   selectedDatasetId: string;
   overflowOpen: boolean;
   onDatasetChange: (datasetId: string) => void;
   onOpenSearchOverlay: () => void;
   onToggleOverflow: () => void;
+  onToggleTheme: () => void;
   onGoHome: () => void;
   onGoBack: () => void;
   showBack: boolean;
@@ -21,16 +23,22 @@ export function AppHeader({
   isTabletUp,
   isShrunk,
   searchOverlayOpen,
+  theme,
   datasets,
   selectedDatasetId,
   overflowOpen,
   onDatasetChange,
   onOpenSearchOverlay,
   onToggleOverflow,
+  onToggleTheme,
   onGoHome,
   onGoBack,
   showBack
 }: AppHeaderProps) {
+  const nextThemeLabel = theme === "dark" ? "Hellmodus" : "Dunkelmodus";
+  const selectedDatasetLabel = datasets.find((dataset) => dataset.id === selectedDatasetId)?.label ?? "Katalog";
+  const datasetSelectWidthCh = Math.max(selectedDatasetLabel.length + 3, 12);
+
   return (
     <header className={`app-header-shell ${isShrunk ? "is-shrunk" : ""}`}>
       {/* REQ: PD-01, PD-07, 4.4.1 */}
@@ -54,6 +62,38 @@ export function AppHeader({
                 fill="currentColor"
               />
             </svg>
+          </button>
+          <button
+            type="button"
+            className="icon-button app-theme-button theme-toggle-button"
+            aria-label={nextThemeLabel}
+            aria-pressed={theme === "dark"}
+            title={nextThemeLabel}
+            onClick={onToggleTheme}
+          >
+            {theme === "dark" ? (
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                <path
+                  d="M12 2.8v2.4M12 18.8v2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M2.8 12h2.4M18.8 12h2.4M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path
+                  d="M18.2 14.6a7.2 7.2 0 1 1-8.8-8.8 8 8 0 1 0 8.8 8.8Z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
           </button>
 
           {isTabletUp ? (
@@ -106,6 +146,7 @@ export function AppHeader({
               className="dataset-select"
               aria-label="Datensatz auswählen"
               value={selectedDatasetId}
+              style={{ width: `${datasetSelectWidthCh}ch`, minWidth: `${datasetSelectWidthCh}ch` }}
               onChange={(event) => onDatasetChange(event.target.value)}
             >
               {datasets.map((dataset) => (

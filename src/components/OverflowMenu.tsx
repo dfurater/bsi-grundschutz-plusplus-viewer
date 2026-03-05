@@ -5,13 +5,11 @@ interface OverflowMenuProps {
   selectedControlCount: number;
   exportingCsv: boolean;
   importBusy: boolean;
-  theme: "light" | "dark";
   onClose: () => void;
   onGoSource: () => void;
   onGoAbout: () => void;
   onGoImpressum?: () => void;
   onGoDatenschutz?: () => void;
-  onToggleTheme: () => void;
   onExportCsv: () => void;
   onUpload: (file: File) => void;
 }
@@ -25,17 +23,14 @@ export function OverflowMenu({
   selectedControlCount,
   exportingCsv,
   importBusy,
-  theme,
   onClose,
   onGoSource,
   onGoAbout,
-  onToggleTheme,
   onExportCsv,
   onUpload
 }: OverflowMenuProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const nextThemeLabel = theme === "dark" ? "Hellmodus" : "Dunkelmodus";
 
   useEffect(() => {
     if (!open) {
@@ -150,20 +145,6 @@ export function OverflowMenu({
           />
         </div>
 
-        <div className="overflow-menu-group" role="presentation">
-          <p className="overflow-group-title">Einstellungen</p>
-          <button
-            type="button"
-            role="menuitem"
-            className="secondary"
-            onClick={() => {
-              onToggleTheme();
-              onClose();
-            }}
-          >
-            {nextThemeLabel}
-          </button>
-        </div>
       </section>
     </div>
   );

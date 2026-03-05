@@ -195,6 +195,17 @@ summary:focus-visible {
   background: var(--chip);
 }
 
+.app-theme-button {
+  color: #6d5318;
+  background: linear-gradient(160deg, #fff8dd 0%, #f8ebc9 100%);
+  border-color: #e8d59f;
+}
+
+.app-theme-button:hover {
+  border-color: #d2ad56;
+  background: #f6e6b9;
+}
+
 :root[data-theme="dark"] .app-home-button {
   color: #9fe8de;
   background: linear-gradient(160deg, #153238 0%, #10262f 100%);
@@ -203,6 +214,16 @@ summary:focus-visible {
 
 :root[data-theme="dark"] .app-home-button:hover {
   background: #17343a;
+}
+
+:root[data-theme="dark"] .app-theme-button {
+  color: #ffd673;
+  background: linear-gradient(160deg, #3b2e0f 0%, #2a2109 100%);
+  border-color: #705824;
+}
+
+:root[data-theme="dark"] .app-theme-button:hover {
+  background: #463715;
 }
 
 .search-trigger-field {
@@ -989,11 +1010,6 @@ summary:focus-visible {
   margin-bottom: 0.5rem;
 }
 
-.facet-toggle strong {
-  font-size: 1rem;
-  line-height: 1;
-}
-
 .facet-section ul {
   list-style: none;
   margin: 0;
@@ -1213,6 +1229,10 @@ summary:focus-visible {
 }
 
 .accordion-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
   width: 100%;
   border: 0;
   background: transparent;
@@ -1221,6 +1241,19 @@ summary:focus-visible {
   padding: 0.22rem 0;
   font-weight: 600;
   cursor: pointer;
+}
+
+.accordion-indicator {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1;
+  transition: transform 140ms ease;
+}
+
+.accordion-toggle[aria-expanded="false"] .accordion-indicator,
+.facet-toggle[aria-expanded="false"] .accordion-indicator {
+  transform: rotate(-90deg);
 }
 
 .part-block p {

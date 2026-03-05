@@ -8,14 +8,12 @@ interface AppDrawerProps {
   selectedControlCount: number;
   exportingCsv: boolean;
   importBusy: boolean;
-  theme: "light" | "dark";
   onClose: () => void;
   onDatasetChange: (datasetId: string) => void;
   onGoSource: () => void;
   onGoAbout: () => void;
   onGoImpressum?: () => void;
   onGoDatenschutz?: () => void;
-  onToggleTheme: () => void;
   onExportCsv: () => void;
   onUpload: (file: File) => void;
 }
@@ -31,18 +29,15 @@ export function AppDrawer({
   selectedControlCount,
   exportingCsv,
   importBusy,
-  theme,
   onClose,
   onDatasetChange,
   onGoSource,
   onGoAbout,
-  onToggleTheme,
   onExportCsv,
   onUpload
 }: AppDrawerProps) {
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const nextThemeLabel = theme === "dark" ? "Hellmodus" : "Dunkelmodus";
 
   useFocusTrap(drawerRef, open, onClose);
 
@@ -150,19 +145,6 @@ export function AppDrawer({
           />
         </section>
 
-        <section className="drawer-group" aria-label="Einstellungen">
-          <h3>Einstellungen</h3>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              onToggleTheme();
-              onClose();
-            }}
-          >
-            {nextThemeLabel}
-          </button>
-        </section>
       </aside>
     </div>
   );

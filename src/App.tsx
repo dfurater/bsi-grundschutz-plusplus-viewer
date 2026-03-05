@@ -844,7 +844,7 @@ export default function App() {
         setExportCsvMessage(`${items.length} Controls aus der CSV-Auswahl entfernt.`);
       }
     } catch (error) {
-      setExportCsvMessage(getErrorMessage(error, "Alles auswaehlen fehlgeschlagen."));
+      setExportCsvMessage(getErrorMessage(error, "Alles auswählen fehlgeschlagen."));
     } finally {
       setSelectAllRunningScope(null);
     }
@@ -882,7 +882,7 @@ export default function App() {
         setExportCsvMessage(`${items.length} Gruppen-Controls aus der CSV-Auswahl entfernt.`);
       }
     } catch (error) {
-      setExportCsvMessage(getErrorMessage(error, "Alles auswaehlen in Gruppe fehlgeschlagen."));
+      setExportCsvMessage(getErrorMessage(error, "Alles auswählen in Gruppe fehlgeschlagen."));
     } finally {
       setSelectAllRunningScope(null);
     }
@@ -909,7 +909,7 @@ export default function App() {
         setExportCsvMessage(`${items.length} Suchtreffer aus der CSV-Auswahl entfernt.`);
       }
     } catch (error) {
-      setExportCsvMessage(getErrorMessage(error, "Alles auswaehlen in Suche fehlgeschlagen."));
+      setExportCsvMessage(getErrorMessage(error, "Alles auswählen in Suche fehlgeschlagen."));
     } finally {
       setSelectAllRunningScope(null);
     }
@@ -1221,6 +1221,7 @@ export default function App() {
         isTabletUp={isTabletUp}
         isShrunk={headerShrunk}
         searchOverlayOpen={searchOverlayOpen}
+        theme={theme}
         datasets={datasetOptions}
         selectedDatasetId={selectedDatasetId}
         overflowOpen={isTabletUp ? overflowOpen : drawerOpen}
@@ -1240,6 +1241,7 @@ export default function App() {
           setDrawerOpen((prev) => !prev);
           setOverflowOpen(false);
         }}
+        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onGoHome={() => navigate("#/")}
         onGoBack={() => {
           if (window.history.length > 1) {
@@ -1256,13 +1258,11 @@ export default function App() {
         selectedControlCount={selectedControlCount}
         exportingCsv={exportCsvRunning}
         importBusy={importBusy}
-        theme={theme}
         onClose={() => setOverflowOpen(false)}
         onGoSource={() => navigate("#/about/source")}
         onGoAbout={() => navigate("#/about")}
         onGoImpressum={() => navigate("#/impressum")}
         onGoDatenschutz={() => navigate("#/datenschutz")}
-        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onExportCsv={handleExportCsv}
         onUpload={handleUpload}
       />
@@ -1274,14 +1274,12 @@ export default function App() {
         selectedControlCount={selectedControlCount}
         exportingCsv={exportCsvRunning}
         importBusy={importBusy}
-        theme={theme}
         onClose={() => setDrawerOpen(false)}
         onDatasetChange={handleDatasetChange}
         onGoSource={() => navigate("#/about/source")}
         onGoAbout={() => navigate("#/about")}
         onGoImpressum={() => navigate("#/impressum")}
         onGoDatenschutz={() => navigate("#/datenschutz")}
-        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onExportCsv={handleExportCsv}
         onUpload={handleUpload}
       />
@@ -1398,6 +1396,7 @@ export default function App() {
                 onBreadcrumbGroupClick={handleBreadcrumbGroupClick}
                 onBreadcrumbControlClick={handleBreadcrumbControlClick}
                 onBackToResults={showBackToResults ? handleBackToResults : null}
+                expandAllByDefault
               />
             ) : null}
           </section>
@@ -1421,6 +1420,7 @@ export default function App() {
               onBreadcrumbGroupClick={handleBreadcrumbGroupClick}
               onBreadcrumbControlClick={handleBreadcrumbControlClick}
               onBackToResults={showBackToResults ? handleBackToResults : null}
+              expandAllByDefault
             />
           </section>
         ) : null}
@@ -1478,6 +1478,7 @@ export default function App() {
             onBreadcrumbGroupClick={handleBreadcrumbGroupClick}
             onBreadcrumbControlClick={handleBreadcrumbControlClick}
             onBackToResults={showBackToResults ? handleBackToResults : null}
+            expandAllByDefault
           />
         </FilterSheet>
       ) : null}
