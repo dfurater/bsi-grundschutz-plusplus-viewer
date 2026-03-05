@@ -1,0 +1,42 @@
+name: quality
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SECURITY_HEADERS_URL: ${{ vars.SECURITY_HEADERS_URL }}
+      VITE_OPERATOR_NAME: Max Mustermann
+      VITE_OPERATOR_ADDRESS_LINE1: Musterstrasse 1
+      VITE_OPERATOR_ADDRESS_LINE2: 10115 Berlin
+      VITE_OPERATOR_EMAIL: max.mustermann@example.invalid
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Dependency Audit Policy
+        run: npm run audit:prod && npm run audit:dev
+
+      - name: Run QA checks
+        run: npm run qa
+
+      - name: Check Security Headers (if URL provided)
+        run: npm run check:headers

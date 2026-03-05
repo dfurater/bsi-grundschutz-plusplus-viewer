@@ -1,0 +1,9 @@
+node_modules
+dist
+.DS_Store
+*.tsbuildinfo
+.lighthouseci
+test-results
+playwright-report
+.env*
+!.env.example

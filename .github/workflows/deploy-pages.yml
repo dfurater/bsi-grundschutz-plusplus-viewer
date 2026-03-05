@@ -1,0 +1,63 @@
+name: deploy-pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build static site for GitHub Pages
+        env:
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_OPERATOR_NAME: ${{ secrets.VITE_OPERATOR_NAME }}
+          VITE_OPERATOR_ADDRESS_LINE1: ${{ secrets.VITE_OPERATOR_ADDRESS_LINE1 }}
+          VITE_OPERATOR_ADDRESS_LINE2: ${{ secrets.VITE_OPERATOR_ADDRESS_LINE2 }}
+          VITE_OPERATOR_EMAIL: ${{ secrets.VITE_OPERATOR_EMAIL }}
+        run: npm run build
+
+      - name: Ensure no Jekyll processing
+        run: touch dist/.nojekyll
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
