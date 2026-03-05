@@ -1259,10 +1259,6 @@ export default function App() {
         exportingCsv={exportCsvRunning}
         importBusy={importBusy}
         onClose={() => setOverflowOpen(false)}
-        onGoSource={() => navigate("#/about/source")}
-        onGoAbout={() => navigate("#/about")}
-        onGoImpressum={() => navigate("#/impressum")}
-        onGoDatenschutz={() => navigate("#/datenschutz")}
         onExportCsv={handleExportCsv}
         onUpload={handleUpload}
       />
@@ -1276,10 +1272,6 @@ export default function App() {
         importBusy={importBusy}
         onClose={() => setDrawerOpen(false)}
         onDatasetChange={handleDatasetChange}
-        onGoSource={() => navigate("#/about/source")}
-        onGoAbout={() => navigate("#/about")}
-        onGoImpressum={() => navigate("#/impressum")}
-        onGoDatenschutz={() => navigate("#/datenschutz")}
         onExportCsv={handleExportCsv}
         onUpload={handleUpload}
       />

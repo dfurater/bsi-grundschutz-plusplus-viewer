@@ -10,10 +10,6 @@ interface AppDrawerProps {
   importBusy: boolean;
   onClose: () => void;
   onDatasetChange: (datasetId: string) => void;
-  onGoSource: () => void;
-  onGoAbout: () => void;
-  onGoImpressum?: () => void;
-  onGoDatenschutz?: () => void;
   onExportCsv: () => void;
   onUpload: (file: File) => void;
 }
@@ -31,8 +27,6 @@ export function AppDrawer({
   importBusy,
   onClose,
   onDatasetChange,
-  onGoSource,
-  onGoAbout,
   onExportCsv,
   onUpload
 }: AppDrawerProps) {
@@ -63,30 +57,6 @@ export function AppDrawer({
             ✕
           </button>
         </div>
-
-        <section className="drawer-group" aria-label="Info">
-          <h3>Info</h3>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              onGoSource();
-              onClose();
-            }}
-          >
-            Quellen &amp; Version
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              onGoAbout();
-              onClose();
-            }}
-          >
-            About
-          </button>
-        </section>
 
         <section className="drawer-group" aria-label="Daten">
           <h3>Daten</h3>

@@ -11,17 +11,17 @@ describe("OverflowMenu", () => {
         exportingCsv={false}
         importBusy={false}
         onClose={vi.fn()}
-        onGoSource={vi.fn()}
-        onGoAbout={vi.fn()}
         onExportCsv={vi.fn()}
         onUpload={vi.fn()}
       />
     );
 
-    expect(html).toContain("Info");
     expect(html).toContain("Daten");
+    expect(html).not.toContain("Info");
     expect(html).not.toContain("CSV exportieren");
     expect(html).toContain("JSON laden");
+    expect(html).not.toContain("Quellen &amp; Version");
+    expect(html).not.toContain("About");
     expect(html).not.toContain("Dunkelmodus");
     expect(html).not.toContain("Impressum");
     expect(html).not.toContain("Datenschutz");
