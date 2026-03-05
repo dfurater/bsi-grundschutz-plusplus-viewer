@@ -56,6 +56,32 @@ function cleanText(value: string | null | undefined): string {
     .trim();
 }
 
+function resolveParamTemplates(text: string, detail: ControlDetail): string {
+  if (!text || !text.includes("{{")) {
+    return text;
+  }
+
+  const paramValues = new Map<string, string>();
+  for (const param of detail.params) {
+    const id = cleanText(param.id).toLowerCase();
+    if (!id) {
+      continue;
+    }
+
+    const preferredValue = param.values.map((value) => cleanText(value)).find(Boolean) ?? cleanText(param.label);
+    if (preferredValue) {
+      paramValues.set(id, preferredValue);
+    }
+  }
+
+  const replaced = text.replace(/\{\{\s*insert:\s*param,\s*([^\s}]+)\s*\}\}/gi, (_, rawParamId: string) => {
+    const lookupId = String(rawParamId ?? "").trim().toLowerCase();
+    return paramValues.get(lookupId) ?? "";
+  });
+
+  return replaced.replace(/\s{2,}/g, " ").trim();
+}
+
 function propValues(detail: ControlDetail, keys: string[]): string[] {
   const values = keys.flatMap((key) => detail.propsMap[key] ?? []);
   return values.map((value) => cleanText(value)).filter(Boolean);
@@ -93,6 +119,8 @@ function mapLinks(detail: ControlDetail): string {
 export function extractControlExportRow(control: ControlDetail, context: ControlExportContext): ControlExportRow {
   const modalverbs = control.modalverbs.map((value) => cleanText(value)).filter(Boolean);
   const handlungsworteFromProps = propValues(control, ["handlungsworte", "handlungswort", "handlungswoerter"]);
+  const statement = resolveParamTemplates(cleanText(control.statementText), control);
+  const guidance = resolveParamTemplates(cleanText(control.guidanceText), control);
 
   return {
     control_id: control.id,
@@ -104,8 +132,8 @@ export function extractControlExportRow(control: ControlDetail, context: Control
     modalverb: joinUnique(modalverbs),
     handlungsworte: joinUnique(handlungsworteFromProps.length ? handlungsworteFromProps : modalverbs),
     tags: joinUnique(control.tags.map((value) => cleanText(value))),
-    statement: cleanText(control.statementText),
-    guidance: cleanText(control.guidanceText),
+    statement,
+    guidance,
     params: mapParams(control),
     links: mapLinks(control),
     source_version: cleanText(context.sourceVersion),

@@ -743,7 +743,7 @@ export default function App() {
       }
 
       const csvText = toCsv(rows, CONTROL_EXPORT_COLUMNS, {
-        delimiter: ",",
+        delimiter: ";",
         lineEnding: "\r\n",
         withBom: true
       });

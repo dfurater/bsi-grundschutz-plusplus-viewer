@@ -39,4 +39,22 @@ describe("toCsv", () => {
     );
     expect(csv).toBe(`value\r\n"'=HYPERLINK(""https://evil"")"`);
   });
+
+  it("unterstuetzt Semikolon als Delimiter fuer Excel-DE-Import", () => {
+    const csv = toCsv(
+      [
+        {
+          id: "BER.5.3",
+          statement: "Berechtigung SOLLTE regelmäßig prüfen, dokumentieren"
+        }
+      ],
+      [
+        { key: "id", header: "id" },
+        { key: "statement", header: "statement" }
+      ],
+      { withBom: false, delimiter: ";" }
+    );
+
+    expect(csv).toBe("id;statement\r\nBER.5.3;Berechtigung SOLLTE regelmäßig prüfen, dokumentieren");
+  });
 });
