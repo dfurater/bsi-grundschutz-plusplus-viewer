@@ -2,6 +2,7 @@ interface AppHeaderProps {
   isDesktop: boolean;
   isShrunk: boolean;
   searchValue: string;
+  theme: "light" | "dark";
   datasets: Array<{ id: string; label: string }>;
   selectedDatasetId: string;
   overflowOpen: boolean;
@@ -10,6 +11,7 @@ interface AppHeaderProps {
   onSearchSubmit: (valueOverride?: string) => void;
   onSearchClear: () => void;
   onDatasetChange: (datasetId: string) => void;
+  onToggleTheme: () => void;
   onOpenSearchOverlay: () => void;
   onToggleOverflow: () => void;
   onToggleDrawer: () => void;
@@ -26,6 +28,7 @@ export function AppHeader({
   isDesktop,
   isShrunk,
   searchValue,
+  theme,
   datasets,
   selectedDatasetId,
   overflowOpen,
@@ -34,6 +37,7 @@ export function AppHeader({
   onSearchSubmit,
   onSearchClear,
   onDatasetChange,
+  onToggleTheme,
   onOpenSearchOverlay,
   onToggleOverflow,
   onToggleDrawer,
@@ -41,6 +45,8 @@ export function AppHeader({
   onGoBack,
   showBack
 }: AppHeaderProps) {
+  const nextThemeLabel = theme === "dark" ? "Hellmodus" : "Dunkelmodus";
+
   return (
     <header className={`app-header-shell ${isShrunk ? "is-shrunk" : ""}`}>
       {/* REQ: PD-01, PD-07, 4.4.1 */}
@@ -91,6 +97,17 @@ export function AppHeader({
               🔍
             </button>
           ) : null}
+
+          <button
+            type="button"
+            className={`icon-button theme-toggle-button ${theme === "dark" ? "active" : ""}`}
+            aria-label={nextThemeLabel}
+            aria-pressed={theme === "dark"}
+            title={nextThemeLabel}
+            onClick={onToggleTheme}
+          >
+            <span aria-hidden="true">{theme === "dark" ? "☀︎" : "☾"}</span>
+          </button>
 
           <button
             type="button"

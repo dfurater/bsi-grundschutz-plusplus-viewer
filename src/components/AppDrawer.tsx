@@ -8,13 +8,10 @@ interface AppDrawerProps {
   selectedControlCount: number;
   exportingCsv: boolean;
   importBusy: boolean;
-  offline: boolean;
-  theme: "light" | "dark";
   onClose: () => void;
   onGoHome: () => void;
   onOpenSearchOverlay: () => void;
   onDatasetChange: (datasetId: string) => void;
-  onToggleTheme: () => void;
   onGoSource: () => void;
   onGoAbout: () => void;
   onExportCsv: () => void;
@@ -32,13 +29,10 @@ export function AppDrawer({
   selectedControlCount,
   exportingCsv,
   importBusy,
-  offline,
-  theme,
   onClose,
   onGoHome,
   onOpenSearchOverlay,
   onDatasetChange,
-  onToggleTheme,
   onGoSource,
   onGoAbout,
   onExportCsv,
@@ -107,14 +101,6 @@ export function AppDrawer({
         </label>
 
         <div className="drawer-actions">
-          <button type="button" className="secondary" onClick={onToggleTheme}>
-            {theme === "dark" ? "Tagmodus" : "Nachtmodus"}
-          </button>
-
-          <p className="menu-status" aria-live="polite">
-            Status: {offline ? "Offline" : "Online"}
-          </p>
-
           <button
             type="button"
             className="secondary"
@@ -132,8 +118,8 @@ export function AppDrawer({
             type="button"
             className="secondary"
             onClick={() => fileRef.current?.click()}
-            disabled={importBusy || offline}
-            title={offline ? "Import offline nicht verfügbar" : "JSON-Datei laden"}
+            disabled={importBusy}
+            title="JSON-Datei laden"
           >
             {importBusy ? "JSON wird geladen" : "JSON laden"}
           </button>

@@ -4,7 +4,6 @@ import { SECURITY_BUDGETS } from "../lib/securityBudgets";
 interface SearchBarProps {
   value: string;
   sort: "relevance" | "id-asc" | "title-asc";
-  offline: boolean;
   theme: "light" | "dark";
   datasets: Array<{ id: string; label: string }>;
   selectedDatasetId: string;
@@ -34,7 +33,6 @@ interface SearchBarProps {
 export function SearchBar({
   value,
   sort,
-  offline,
   theme,
   datasets,
   selectedDatasetId,
@@ -53,6 +51,7 @@ export function SearchBar({
   exportMessage,
   onExportCsv
 }: SearchBarProps) {
+  const nextThemeLabel = theme === "dark" ? "Hellmodus" : "Dunkelmodus";
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const popoverRef = useRef<HTMLSpanElement | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -103,13 +102,13 @@ export function SearchBar({
               className={`theme-badge ${theme === "dark" ? "active" : ""}`}
               onClick={onToggleTheme}
               type="button"
-              aria-label={theme === "dark" ? "Tagmodus aktivieren" : "Nachtmodus aktivieren"}
-              title={theme === "dark" ? "Tagmodus" : "Nachtmodus"}
+              aria-label={nextThemeLabel}
+              aria-pressed={theme === "dark"}
+              title={nextThemeLabel}
             >
               <span className="theme-toggle-icon" aria-hidden="true">
                 {theme === "dark" ? "☀︎" : "☾"}
               </span>
-              <span>{theme === "dark" ? "Tag" : "Nacht"}</span>
             </button>
             <button className="link-button" onClick={onGoHome} type="button">
               Grundschutz++ Katalog
@@ -161,7 +160,6 @@ export function SearchBar({
               ) : null}
             </span>
 
-            <span className={`network-badge ${offline ? "offline" : "online"}`}>{offline ? "Offline" : "Online"}</span>
           </div>
         </div>
 

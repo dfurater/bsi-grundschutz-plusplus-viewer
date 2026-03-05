@@ -7,15 +7,12 @@ describe("OverflowMenu", () => {
     const html = renderToStaticMarkup(
       <OverflowMenu
         open
-        offline={false}
-        theme="light"
         selectedControlCount={0}
         exportingCsv={false}
         importBusy={false}
         onClose={vi.fn()}
         onGoSource={vi.fn()}
         onGoAbout={vi.fn()}
-        onToggleTheme={vi.fn()}
         onExportCsv={vi.fn()}
         onUpload={vi.fn()}
       />
@@ -23,5 +20,6 @@ describe("OverflowMenu", () => {
 
     expect(html).toContain("CSV exportieren");
     expect(html).not.toContain("CSV exportieren (0)");
+    expect(html).not.toContain("Nachtmodus");
   });
 });

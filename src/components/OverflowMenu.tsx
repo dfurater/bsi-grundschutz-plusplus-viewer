@@ -2,15 +2,12 @@ import { useEffect, useRef } from "react";
 
 interface OverflowMenuProps {
   open: boolean;
-  offline: boolean;
-  theme: "light" | "dark";
   selectedControlCount: number;
   exportingCsv: boolean;
   importBusy: boolean;
   onClose: () => void;
   onGoSource: () => void;
   onGoAbout: () => void;
-  onToggleTheme: () => void;
   onExportCsv: () => void;
   onUpload: (file: File) => void;
 }
@@ -21,15 +18,12 @@ interface OverflowMenuProps {
  */
 export function OverflowMenu({
   open,
-  offline,
-  theme,
   selectedControlCount,
   exportingCsv,
   importBusy,
   onClose,
   onGoSource,
   onGoAbout,
-  onToggleTheme,
   onExportCsv,
   onUpload
 }: OverflowMenuProps) {
@@ -92,14 +86,6 @@ export function OverflowMenu({
         >
           About
         </button>
-        <button type="button" role="menuitem" className="secondary" onClick={onToggleTheme}>
-          {theme === "dark" ? "Tagmodus" : "Nachtmodus"}
-        </button>
-
-        {/* REQ: PD-09, PERF-04 */}
-        <p className="menu-status" aria-live="polite">
-          Status: {offline ? "Offline" : "Online"}
-        </p>
 
         <button
           type="button"
@@ -121,8 +107,8 @@ export function OverflowMenu({
           role="menuitem"
           className="secondary"
           onClick={() => fileInputRef.current?.click()}
-          disabled={importBusy || offline}
-          title={offline ? "Import offline nicht verfügbar" : "JSON-Datei laden"}
+          disabled={importBusy}
+          title="JSON-Datei laden"
         >
           {importBusy ? "JSON wird geladen" : "JSON laden"}
         </button>
@@ -141,7 +127,6 @@ export function OverflowMenu({
             onClose();
           }}
         />
-
       </section>
     </div>
   );

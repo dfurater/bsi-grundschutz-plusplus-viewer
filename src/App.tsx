@@ -211,7 +211,6 @@ export default function App() {
   const [exportCsvRunning, setExportCsvRunning] = useState(false);
   const [selectAllRunningScope, setSelectAllRunningScope] = useState<"home" | "group" | "search" | null>(null);
 
-  const [offline, setOffline] = useState(!navigator.onLine);
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
   const [headerShrunk, setHeaderShrunk] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
@@ -225,7 +224,6 @@ export default function App() {
   const debouncedSearchText = useDebouncedValue(searchText, 300);
   const requestCounter = useRef(0);
   const graphRequestCounter = useRef(0);
-  const previousOffline = useRef(offline);
   const lastSearchStateRef = useRef<{
     query: string;
     sort: SearchQuery["sort"];
@@ -323,16 +321,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (previousOffline.current === offline) {
-      return;
-    }
-    previousOffline.current = offline;
-    /* REQ: PD-09, PERF-04 */
-    setToastTone(offline ? "error" : "success");
-    setToastMessage(offline ? "Offline-Modus aktiv." : "Verbindung wiederhergestellt.");
-  }, [offline]);
-
-  useEffect(() => {
     if (!toastMessage) {
       return;
     }
@@ -350,17 +338,9 @@ export default function App() {
       setOverflowOpen(false);
       setFilterSheetOpen(false);
     };
-    const onOnline = () => setOffline(false);
-    const onOffline = () => setOffline(true);
-
     window.addEventListener("hashchange", onHash);
-    window.addEventListener("online", onOnline);
-    window.addEventListener("offline", onOffline);
-
     return () => {
       window.removeEventListener("hashchange", onHash);
-      window.removeEventListener("online", onOnline);
-      window.removeEventListener("offline", onOffline);
     };
   }, []);
 
@@ -1212,6 +1192,7 @@ export default function App() {
         isDesktop={isDesktop}
         isShrunk={headerShrunk}
         searchValue={searchText}
+        theme={theme}
         datasets={datasetOptions}
         selectedDatasetId={selectedDatasetId}
         overflowOpen={overflowOpen}
@@ -1220,6 +1201,7 @@ export default function App() {
         onSearchSubmit={handleSubmitSearch}
         onSearchClear={handleClearSearch}
         onDatasetChange={handleDatasetChange}
+        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onOpenSearchOverlay={() => setSearchOverlayOpen(true)}
         onToggleOverflow={() => {
           setOverflowOpen((prev) => !prev);
@@ -1242,15 +1224,12 @@ export default function App() {
 
       <OverflowMenu
         open={overflowOpen}
-        offline={offline}
-        theme={theme}
         selectedControlCount={selectedControlCount}
         exportingCsv={exportCsvRunning}
         importBusy={importBusy}
         onClose={() => setOverflowOpen(false)}
         onGoSource={() => navigate("#/about/source")}
         onGoAbout={() => navigate("#/about")}
-        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onExportCsv={handleExportCsv}
         onUpload={handleUpload}
       />
@@ -1262,13 +1241,10 @@ export default function App() {
         selectedControlCount={selectedControlCount}
         exportingCsv={exportCsvRunning}
         importBusy={importBusy}
-        offline={offline}
-        theme={theme}
         onClose={() => setDrawerOpen(false)}
         onGoHome={() => navigate("#/")}
         onOpenSearchOverlay={() => setSearchOverlayOpen(true)}
         onDatasetChange={handleDatasetChange}
-        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onGoSource={() => navigate("#/about/source")}
         onGoAbout={() => navigate("#/about")}
         onExportCsv={handleExportCsv}

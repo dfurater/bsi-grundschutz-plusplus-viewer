@@ -56,6 +56,27 @@ test.describe("Kernflows", () => {
     await expect(searchInput).toHaveValue("");
   });
 
+  test("Theme-Toggle als Icon im Header und klickbarer Theme-Wechsel", async ({ page }) => {
+    await page.goto("/#/search?q=KONF");
+
+    const themeRoot = page.locator("html");
+    const initialTheme = (await themeRoot.getAttribute("data-theme")) ?? "light";
+    const nextTheme = initialTheme === "dark" ? "light" : "dark";
+    const toggleLabel = initialTheme === "dark" ? "Hellmodus" : "Dunkelmodus";
+    const nextToggleLabel = nextTheme === "dark" ? "Hellmodus" : "Dunkelmodus";
+
+    const toggle = page.getByRole("button", { name: toggleLabel });
+    await expect(page.locator(".app-bar-end .theme-toggle-button")).toHaveCount(1);
+    await expect(toggle).toBeVisible();
+    await toggle.click();
+
+    await expect(themeRoot).toHaveAttribute("data-theme", nextTheme);
+    await expect(page.getByRole("button", { name: nextToggleLabel })).toBeVisible();
+
+    await page.getByRole("button", { name: "Weitere Aktionen" }).click();
+    await expect(page.getByRole("menuitem", { name: /Nachtmodus|Tagmodus/ })).toHaveCount(0);
+  });
+
   test("Debounce aktualisiert Suchzustand", async ({ page }) => {
     await page.goto("/#/search");
     const searchInput = page.getByRole("searchbox", { name: "Suche" }).first();

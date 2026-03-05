@@ -9,6 +9,7 @@ describe("AppHeader", () => {
         isDesktop
         isShrunk={false}
         searchValue=""
+        theme="light"
         datasets={[{ id: "anwender", label: "Anwender" }]}
         selectedDatasetId="anwender"
         overflowOpen={false}
@@ -17,6 +18,7 @@ describe("AppHeader", () => {
         onSearchSubmit={vi.fn()}
         onSearchClear={vi.fn()}
         onDatasetChange={vi.fn()}
+        onToggleTheme={vi.fn()}
         onOpenSearchOverlay={vi.fn()}
         onToggleOverflow={vi.fn()}
         onToggleDrawer={vi.fn()}
@@ -27,7 +29,9 @@ describe("AppHeader", () => {
     );
 
     expect(html).toContain("Datensatz auswählen");
+    expect(html).toContain("aria-label=\"Dunkelmodus\"");
     expect(html).toContain('aria-haspopup="menu"');
     expect(html).toContain("Grundschutz++");
+    expect(html).not.toContain("Nachtmodus");
   });
 });
