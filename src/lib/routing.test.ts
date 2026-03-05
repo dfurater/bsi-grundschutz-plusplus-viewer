@@ -24,4 +24,9 @@ describe("parseHash hardening", () => {
       expect(route.query.length).toBe(SECURITY_BUDGETS.maxQueryChars);
     }
   });
+
+  it("parst Impressum- und Datenschutz-Routen", () => {
+    expect(parseHash("#/impressum")).toEqual({ view: "impressum" });
+    expect(parseHash("#/datenschutz")).toEqual({ view: "datenschutz" });
+  });
 });

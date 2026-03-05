@@ -6,6 +6,7 @@ Clientseitige React/Vite-Webanwendung zur Suche und Navigation eines BSI Grundsc
 
 - Reines CSR, statisch deploybar
 - Hash-Routing (`#/search`, `#/control/:id`, `#/group/:id`, `#/about/source`)
+- Rechtliche Seiten: `#/impressum` und `#/datenschutz` (global ueber Footer verlinkt)
 - Multi-Dataset-Unterstützung (Anwender, Kernel, Methodik)
 - Volltext- und ID-Suche mit Facetten (Web Worker)
 - Detailansicht mit Statement/Guidance/Parametern/Relationen
@@ -16,6 +17,36 @@ Clientseitige React/Vite-Webanwendung zur Suche und Navigation eines BSI Grundsc
 - Strikte JSON-Schema-Validierung und Security-Budgets (fail-closed)
 - Sichere externe Link-Behandlung (`http/https`-Whitelist)
 - CSV-Export fuer ausgewaehlte Controls (Excel-kompatibel, UTF-8 mit BOM)
+
+## Rechtliches
+
+Die App enthaelt zwei oeffentlich erreichbare Rechtsseiten:
+
+- `#/impressum`
+- `#/datenschutz`
+
+Die Links sind global im Footer sichtbar und damit auf allen Routen in maximal zwei Klicks erreichbar.
+
+### Platzhalter befuellen
+
+Die Inhalte werden ueber Platzhalter in `src/legal/placeholders.ts` gepflegt:
+
+- `{{OPERATOR_NAME}}`
+- `{{OPERATOR_ADDRESS_LINE1}}`
+- `{{OPERATOR_ADDRESS_LINE2}}`
+- `{{OPERATOR_EMAIL}}`
+- `{{HOSTING_PROVIDER_NAME}}`
+- `{{HOSTING_PROVIDER_CONTACT}}`
+- `{{PROJECT_REPO_URL}}`
+- `{{LAST_UPDATED_DATE}}`
+
+Wichtige Datenschutzinhalte in der vorhandenen Erklaerung:
+
+- keine Cookies
+- keine externen Drittanbieter/Tracking-Requests beim Erstaufruf
+- `localStorage`-Key `gspp-theme` (Theme-Praeferenz)
+- Service-Worker Cache/Cache Storage (Performance/Offline)
+- lokale Upload-Verarbeitung im Browser (keine Uebertragung an App-Server)
 
 ## CSV Export (Controls)
 

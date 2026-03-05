@@ -186,6 +186,13 @@ export function SourcePanel({ meta, activeDataset, registry, profileAnalysis }: 
           <p>{meta.remarks}</p>
         </section>
       ) : null}
+
+      <section>
+        <h3>Rechtliches</h3>
+        <p>
+          <a href="#/impressum">Impressum</a> / <a href="#/datenschutz">Datenschutz</a>
+        </p>
+      </section>
     </section>
   );
 }
