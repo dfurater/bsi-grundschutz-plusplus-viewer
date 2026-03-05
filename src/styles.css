@@ -91,7 +91,10 @@ summary:focus-visible {
 
 .app-shell {
   width: min(1600px, calc(100vw - 2rem));
-  margin: 1rem auto 2rem;
+  margin: 1rem auto;
+  min-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
   overflow-x: clip;
 }
 
@@ -119,6 +122,7 @@ summary:focus-visible {
 
 .app-main-content {
   margin-top: 1rem;
+  padding-bottom: 1rem;
 }
 
 /* REQ: PD-01, PD-07, RESP-01, 4.4.1 */
@@ -161,13 +165,9 @@ summary:focus-visible {
 
 .app-bar-end {
   margin-left: auto;
+  justify-content: flex-end;
   flex-wrap: nowrap;
-}
-
-.app-logo-button {
-  font-size: 0.96rem;
-  padding: 0 0.15rem;
-  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .icon-button {
@@ -184,6 +184,79 @@ summary:focus-visible {
   color: var(--text);
   cursor: pointer;
   line-height: 1;
+}
+
+.app-home-button {
+  color: var(--accent-strong);
+  background: linear-gradient(160deg, #ecf8f7 0%, #e8f3f2 100%);
+  border-color: #bcded8;
+}
+
+.app-home-button:hover {
+  border-color: var(--accent);
+  background: var(--chip);
+}
+
+.app-theme-button {
+  color: #6d5318;
+  background: linear-gradient(160deg, #fff8dd 0%, #f8ebc9 100%);
+  border-color: #e8d59f;
+}
+
+.app-theme-button:hover {
+  border-color: #d2ad56;
+  background: #f6e6b9;
+}
+
+:root[data-theme="dark"] .app-home-button {
+  color: #9fe8de;
+  background: linear-gradient(160deg, #153238 0%, #10262f 100%);
+  border-color: #26535e;
+}
+
+:root[data-theme="dark"] .app-home-button:hover {
+  background: #17343a;
+}
+
+:root[data-theme="dark"] .app-theme-button {
+  color: #ffd673;
+  background: linear-gradient(160deg, #3b2e0f 0%, #2a2109 100%);
+  border-color: #705824;
+}
+
+:root[data-theme="dark"] .app-theme-button:hover {
+  background: #463715;
+}
+
+.search-trigger-field {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--input-bg);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.52rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+}
+
+.search-trigger-field:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.search-trigger-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.search-trigger-text {
+  white-space: nowrap;
 }
 
 .clear-button {
@@ -506,6 +579,7 @@ summary:focus-visible {
 .status-screen {
   display: grid;
   place-items: center;
+  flex: 1 1 auto;
   min-height: 70vh;
   font-size: 1.2rem;
 }
@@ -799,8 +873,21 @@ summary:focus-visible {
   padding: 1.2rem;
 }
 
+.hero-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
 .hero-card h1 {
-  margin-top: 0;
+  margin: 0;
+}
+
+.hero-dataset-picker {
+  margin-left: auto;
+  flex: 0 0 auto;
 }
 
 .hero-stats {
@@ -935,11 +1022,6 @@ summary:focus-visible {
   cursor: pointer;
   font-weight: 600;
   margin-bottom: 0.5rem;
-}
-
-.facet-toggle strong {
-  font-size: 1rem;
-  line-height: 1;
 }
 
 .facet-section ul {
@@ -1161,6 +1243,10 @@ summary:focus-visible {
 }
 
 .accordion-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
   width: 100%;
   display: flex;
   align-items: center;
@@ -1174,9 +1260,17 @@ summary:focus-visible {
   cursor: pointer;
 }
 
-.accordion-toggle strong {
-  font-size: 1rem;
+.accordion-indicator {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
   line-height: 1;
+  transition: transform 140ms ease;
+}
+
+.accordion-toggle[aria-expanded="false"] .accordion-indicator,
+.facet-toggle[aria-expanded="false"] .accordion-indicator {
+  transform: rotate(-90deg);
 }
 
 .part-block p {
@@ -1334,6 +1428,10 @@ summary:focus-visible {
   padding: 1rem;
 }
 
+.group-page {
+  background: var(--hero-bg);
+}
+
 .about-page h1 {
   margin-top: 0;
   margin-bottom: 0.75rem;
@@ -1384,12 +1482,16 @@ summary:focus-visible {
 }
 
 .app-footer {
-  margin-top: 1rem;
+  margin-top: auto;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--panel);
   box-shadow: var(--shadow);
   padding: 0.7rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
 }
 
 .app-footer-links {
@@ -1397,6 +1499,7 @@ summary:focus-visible {
   gap: 1rem;
   align-items: center;
   flex-wrap: wrap;
+  flex: 1 1 auto;
 }
 
 .app-footer-links a {
@@ -1404,6 +1507,26 @@ summary:focus-visible {
   text-decoration: underline;
   text-underline-offset: 0.14rem;
   text-decoration-thickness: 0.08rem;
+}
+
+.app-footer-link-button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--link);
+  font: inherit;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.14rem;
+  text-decoration-thickness: 0.08rem;
+}
+
+.app-footer-link-button:disabled {
+  color: var(--link);
+  opacity: 1;
+  cursor: default;
 }
 
 .section-heading-row {
@@ -1597,13 +1720,10 @@ summary:focus-visible {
     min-height: 56px;
   }
 
-  .app-logo-button {
-    font-size: 0.92rem;
-  }
-
   .app-shell {
     width: min(1600px, calc(100vw - 1rem));
-    margin-top: 0.5rem;
+    margin: 0.5rem auto;
+    min-height: calc(100vh - 1rem);
   }
 
   .overflow-menu-wrap {

@@ -3,6 +3,10 @@ import type { CatalogMeta, GroupNode } from "../types";
 interface GroupOverviewProps {
   meta: CatalogMeta | null;
   datasetId: string;
+  datasets: Array<{ id: string; label: string }>;
+  selectedDatasetId: string;
+  isTabletUp: boolean;
+  onDatasetChange: (datasetId: string) => void;
   onOpenGroup: (groupId: string) => void;
   onStartSearch: () => void;
   onSelectAllControls: () => void;
@@ -26,6 +30,10 @@ function heroIntroTextForDataset(datasetId: string) {
 export function GroupOverview({
   meta,
   datasetId,
+  datasets,
+  selectedDatasetId,
+  isTabletUp,
+  onDatasetChange,
   onOpenGroup,
   onStartSearch,
   onSelectAllControls,
@@ -37,6 +45,8 @@ export function GroupOverview({
   }
 
   const topGroups = meta.groups.filter((group) => group.depth === 1);
+  const selectedDatasetLabel = datasets.find((dataset) => dataset.id === selectedDatasetId)?.label ?? "Katalog";
+  const datasetSelectWidthCh = Math.max(selectedDatasetLabel.length + 3, 12);
   const countByTopGroup = new Map<string, number>();
   for (const group of meta.groups.filter((item) => item.depth > 1)) {
     countByTopGroup.set(group.topGroupId, (countByTopGroup.get(group.topGroupId) ?? 0) + 1);
@@ -45,7 +55,26 @@ export function GroupOverview({
   return (
     <section className="dashboard-view">
       <article className="hero-card">
-        <h1>{meta.title}</h1>
+        <div className="hero-head">
+          <h1>{meta.title}</h1>
+          {isTabletUp ? (
+            <div className="hero-dataset-picker">
+              <select
+                className="dataset-select"
+                aria-label="Datensatz auswählen"
+                value={selectedDatasetId}
+                style={{ width: `${datasetSelectWidthCh}ch`, minWidth: `${datasetSelectWidthCh}ch` }}
+                onChange={(event) => onDatasetChange(event.target.value)}
+              >
+                {datasets.map((dataset) => (
+                  <option key={dataset.id} value={dataset.id}>
+                    {dataset.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+        </div>
         <p>{heroIntroTextForDataset(datasetId)}</p>
         <p className="hero-stats">
           Aktuell durchsuchbar: {meta.stats.controlCount} Controls in {meta.stats.groupCount} Gruppen.
@@ -55,7 +84,7 @@ export function GroupOverview({
             Zur Suche
           </button>
           <button className="secondary" type="button" onClick={onSelectAllControls} disabled={selectingAllControls}>
-            {selectingAllControls ? "Alles auswaehlen..." : allControlsSelected ? "Alles abwaehlen (CSV)" : "Alles auswaehlen (CSV)"}
+            {selectingAllControls ? "Alles auswählen..." : allControlsSelected ? "Alles abwählen (CSV)" : "Alles auswählen (CSV)"}
           </button>
         </div>
       </article>

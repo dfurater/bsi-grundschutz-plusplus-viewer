@@ -7,17 +7,9 @@ interface AppDrawerProps {
   selectedDatasetId: string;
   selectedControlCount: number;
   exportingCsv: boolean;
-  importBusy: boolean;
-  theme: "light" | "dark";
   onClose: () => void;
   onDatasetChange: (datasetId: string) => void;
-  onGoSource: () => void;
-  onGoAbout: () => void;
-  onGoImpressum: () => void;
-  onGoDatenschutz: () => void;
-  onToggleTheme: () => void;
   onExportCsv: () => void;
-  onUpload: (file: File) => void;
 }
 
 /**
@@ -30,21 +22,11 @@ export function AppDrawer({
   selectedDatasetId,
   selectedControlCount,
   exportingCsv,
-  importBusy,
-  theme,
   onClose,
   onDatasetChange,
-  onGoSource,
-  onGoAbout,
-  onGoImpressum,
-  onGoDatenschutz,
-  onToggleTheme,
-  onExportCsv,
-  onUpload
+  onExportCsv
 }: AppDrawerProps) {
   const drawerRef = useRef<HTMLDivElement | null>(null);
-  const fileRef = useRef<HTMLInputElement | null>(null);
-  const nextThemeLabel = theme === "dark" ? "Hellmodus" : "Dunkelmodus";
 
   useFocusTrap(drawerRef, open, onClose);
 
@@ -70,30 +52,6 @@ export function AppDrawer({
             ✕
           </button>
         </div>
-
-        <section className="drawer-group" aria-label="Info">
-          <h3>Info</h3>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              onGoSource();
-              onClose();
-            }}
-          >
-            Quellen &amp; Version
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              onGoAbout();
-              onClose();
-            }}
-          >
-            About
-          </button>
-        </section>
 
         <section className="drawer-group" aria-label="Daten">
           <h3>Daten</h3>
@@ -126,65 +84,8 @@ export function AppDrawer({
             </button>
           ) : null}
 
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => fileRef.current?.click()}
-            disabled={importBusy}
-            title="JSON-Datei laden"
-          >
-            {importBusy ? "JSON wird geladen" : "JSON laden"}
-          </button>
-
-          <input
-            ref={fileRef}
-            type="file"
-            hidden
-            accept="application/json"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) {
-                onUpload(file);
-              }
-              event.currentTarget.value = "";
-              onClose();
-            }}
-          />
         </section>
 
-        <section className="drawer-group" aria-label="Einstellungen">
-          <h3>Einstellungen</h3>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              onToggleTheme();
-              onClose();
-            }}
-          >
-            {nextThemeLabel}
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              onGoImpressum();
-              onClose();
-            }}
-          >
-            Impressum
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              onGoDatenschutz();
-              onClose();
-            }}
-          >
-            Datenschutz
-          </button>
-        </section>
       </aside>
     </div>
   );

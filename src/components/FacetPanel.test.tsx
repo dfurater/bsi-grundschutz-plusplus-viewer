@@ -41,5 +41,8 @@ describe("FacetPanel", () => {
     expect(html).toContain("facet-sort-select");
     expect(html).toContain("Relevanz");
     expect(html).toContain("Filter");
+    expect(html).toContain("▾");
+    expect(html).not.toContain("+");
+    expect(html).not.toContain("−");
   });
 });

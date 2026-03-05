@@ -104,7 +104,7 @@ Wichtige Datenschutzinhalte in der vorhandenen Erklaerung:
 ## CSV Export (Controls)
 
 - Auswahl pro Control ueber Checkbox in Such- und Gruppenansicht
-- "Alles auswaehlen / Alles abwaehlen" ist auf allen Ebenen verfuegbar:
+- "Alles auswählen / Alles abwählen" ist auf allen Ebenen verfuegbar:
   - `#/` (Startseite): alle Controls des aktiven Datensatzes
   - `#/group/...`: alle Controls der aktuellen Gruppe
   - `#/search...`: alle Treffer der aktuellen Suche (inkl. Filter)
