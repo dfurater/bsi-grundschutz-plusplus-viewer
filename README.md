@@ -73,9 +73,38 @@ Exportspalten:
 
 Hinweise:
 - `links` exportiert nur `http/https`; unsichere Schemes werden verworfen.
-- CSV wird mit UTF-8 BOM und `CRLF` erzeugt, damit Excel-Import robust funktioniert.
+- CSV wird mit UTF-8 BOM, `CRLF` und Semikolon-Delimiter (`;`) erzeugt, damit Excel-Import robust funktioniert.
+- OSCAL-Template-Marker in Texten (z. B. `{{ insert: param, ... }}`) werden, wenn moeglich, mit Parameterwerten aufgeloest.
 - Potenziell gefaehrliche Spreadsheet-Formeln (`=`, `+`, `-`, `@` am Feldanfang) werden neutralisiert.
 - Nach erfolgreichem Export wird die aktuelle Auswahl automatisch geleert.
+
+## JSON Import (lokal, ohne Server)
+
+- Import ueber Header-Button `JSON laden`
+- Erwartetes Format: OSCAL-Katalog JSON (wird strikt validiert)
+- Fail-closed Verhalten: bei Parse-/Schema-/Budget-Fehlern wird der Import komplett abgelehnt
+- Upload-Limit: maximal `8 MiB` pro Datei
+- Sicherheitsbudgets fuer Ingestion sind aktiv (u. a. Mengen-/Zeitbudgets), damit fehlerhafte oder zu grosse Inputs die App nicht blockieren
+- Der Import ist rein lokal im Browser (keine externe Uebertragung); nach Reload wird wieder der statische Standarddatensatz geladen
+
+## Suche, Filter und Routen
+
+- Suche nach ID oder Volltext, Sortierung nach Relevanz/ID/Titel
+- Facettierte Filter fuer Top-Gruppe, Sicherheitsniveau, Aufwand, Klasse, Modalverb, Zielobjekte, Tags, Relationstyp
+- Suchquery ist auf `180` Zeichen begrenzt
+- Hash-Routing:
+  - `#/` Startseite
+  - `#/search` Suche
+  - `#/group/:id` Gruppenansicht
+  - `#/control/:id` Einzel-Control
+  - `#/about/source` Quellen & Version
+
+## Relations-Graph
+
+- Visualisierung eingehender/ausgehender Relationen pro Control
+- 1-Hop und 2-Hop Ansicht
+- Filter nach `all`, `required`, `related`
+- Knoten sind klickbar und navigieren direkt zu Controls
 
 ## Entwicklung
 
