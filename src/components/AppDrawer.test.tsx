@@ -17,8 +17,6 @@ describe("AppDrawer", () => {
         onDatasetChange={vi.fn()}
         onGoSource={vi.fn()}
         onGoAbout={vi.fn()}
-        onGoImpressum={vi.fn()}
-        onGoDatenschutz={vi.fn()}
         onToggleTheme={vi.fn()}
         onExportCsv={vi.fn()}
         onUpload={vi.fn()}
@@ -28,8 +26,8 @@ describe("AppDrawer", () => {
     expect(html).toContain('role="dialog"');
     expect(html).toContain("Datensatz auswählen");
     expect(html).toContain("Dunkelmodus");
-    expect(html).toContain("Impressum");
-    expect(html).toContain("Datenschutz");
+    expect(html).not.toContain("Impressum");
+    expect(html).not.toContain("Datenschutz");
     expect(html).not.toContain("CSV exportieren");
   });
 });

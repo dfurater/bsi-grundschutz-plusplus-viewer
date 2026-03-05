@@ -41,23 +41,66 @@ export function AppHeader({
               Zurück
             </button>
           ) : null}
-          <button type="button" className="link-button app-logo-button" onClick={onGoHome}>
-            Grundschutz++
+          <button
+            type="button"
+            className="icon-button app-home-button"
+            aria-label="Zur Startseite"
+            title="Startseite"
+            onClick={onGoHome}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path
+                d="M4 11.6 12 5l8 6.6v7.4a1 1 0 0 1-1 1h-4.8v-5.4h-4.4V20H5a1 1 0 0 1-1-1v-7.4Z"
+                fill="currentColor"
+              />
+            </svg>
           </button>
+
+          {isTabletUp ? (
+            <button
+              type="button"
+              className="search-trigger-field"
+              aria-label="Suche öffnen"
+              aria-haspopup="dialog"
+              aria-expanded={searchOverlayOpen}
+              onClick={onOpenSearchOverlay}
+            >
+              <span className="search-trigger-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                  <path
+                    d="M10.5 3.5a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm9.2 13.8-3.2-3.2"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+              <span className="search-trigger-text">Katalog durchsuchen</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Suche öffnen"
+              aria-haspopup="dialog"
+              aria-expanded={searchOverlayOpen}
+              onClick={onOpenSearchOverlay}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path
+                  d="M10.5 3.5a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm9.2 13.8-3.2-3.2"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          )}
         </div>
 
         <div className="app-bar-end">
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Suche öffnen"
-            aria-haspopup="dialog"
-            aria-expanded={searchOverlayOpen}
-            onClick={onOpenSearchOverlay}
-          >
-            🔍
-          </button>
-
           {isTabletUp ? (
             <select
               className="dataset-select"
