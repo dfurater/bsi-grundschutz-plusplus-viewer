@@ -5,6 +5,9 @@ interface GroupOverviewProps {
   datasetId: string;
   onOpenGroup: (groupId: string) => void;
   onStartSearch: () => void;
+  onSelectAllControls: () => void;
+  selectingAllControls: boolean;
+  allControlsSelected: boolean;
 }
 
 function heroIntroTextForDataset(datasetId: string) {
@@ -20,7 +23,15 @@ function heroIntroTextForDataset(datasetId: string) {
   return "Dieser Katalog stellt sicherheitsrelevante Anforderungen strukturiert und durchsuchbar bereit.";
 }
 
-export function GroupOverview({ meta, datasetId, onOpenGroup, onStartSearch }: GroupOverviewProps) {
+export function GroupOverview({
+  meta,
+  datasetId,
+  onOpenGroup,
+  onStartSearch,
+  onSelectAllControls,
+  selectingAllControls,
+  allControlsSelected
+}: GroupOverviewProps) {
   if (!meta) {
     return <section className="status-box">Katalogdaten werden geladen…</section>;
   }
@@ -39,9 +50,14 @@ export function GroupOverview({ meta, datasetId, onOpenGroup, onStartSearch }: G
         <p className="hero-stats">
           Aktuell durchsuchbar: {meta.stats.controlCount} Controls in {meta.stats.groupCount} Gruppen.
         </p>
-        <button className="primary" type="button" onClick={onStartSearch}>
-          Zur Suche
-        </button>
+        <div className="hero-actions">
+          <button className="primary" type="button" onClick={onStartSearch}>
+            Zur Suche
+          </button>
+          <button className="secondary" type="button" onClick={onSelectAllControls} disabled={selectingAllControls}>
+            {selectingAllControls ? "Alles auswaehlen..." : allControlsSelected ? "Alles abwaehlen (CSV)" : "Alles auswaehlen (CSV)"}
+          </button>
+        </div>
       </article>
 
       <section>
@@ -49,9 +65,9 @@ export function GroupOverview({ meta, datasetId, onOpenGroup, onStartSearch }: G
         <div className="group-grid">
           {topGroups.map((group) => (
             <button key={group.id} type="button" className="group-tile" onClick={() => onOpenGroup(group.id)}>
-              <strong>{group.id}</strong>
-              <span>{group.title}</span>
-              <em>{countByTopGroup.get(group.id) ?? 0} Untergruppen</em>
+              <strong className="group-tile-id">{group.id}</strong>
+              <span className="group-tile-title">{group.title}</span>
+              <em className="group-tile-meta">{countByTopGroup.get(group.id) ?? 0} Untergruppen</em>
             </button>
           ))}
         </div>

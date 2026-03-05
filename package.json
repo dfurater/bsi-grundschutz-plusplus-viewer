@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=20.19.0",
+    "npm": ">=10"
+  },
   "scripts": {
     "dev": "npm run build:data && vite",
     "clean:release-artifacts": "node scripts/clean-release-artifacts.mjs",

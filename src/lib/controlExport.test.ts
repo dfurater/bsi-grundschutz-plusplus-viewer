@@ -110,4 +110,28 @@ describe("extractControlExportRow", () => {
     expect(row.handlungsworte).toBe("pruefen; dokumentieren");
     expect(row.params).toBe("p1:Intervall=30 Tage; p2:Verantwortlich=Team A");
   });
+
+  it("setzt OSCAL-Param-Templates in Statement und Guidance auf", () => {
+    const detail = makeControlDetail({
+      statementText:
+        "Berechtigung SOLLTE vergebene Berechtigungen {{ insert: param, ber.5.3-prm1 }} auf Erforderlichkeit überprüfen.",
+      guidanceText: "Intervall: {{ insert: param, BER.5.3-PRM1 }}.",
+      params: [
+        {
+          id: "ber.5.3-prm1",
+          label: "Intervall",
+          values: ["regelmäßig"],
+          props: []
+        }
+      ]
+    });
+
+    const row = extractControlExportRow(detail, {
+      sourceVersion: "2.0",
+      sourceLastModified: "2026-03-04"
+    });
+
+    expect(row.statement).toBe("Berechtigung SOLLTE vergebene Berechtigungen regelmäßig auf Erforderlichkeit überprüfen.");
+    expect(row.guidance).toBe("Intervall: regelmäßig.");
+  });
 });

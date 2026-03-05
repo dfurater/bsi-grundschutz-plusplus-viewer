@@ -24,6 +24,11 @@ Die App ist rein clientseitig. Browser-Schutzmassnahmen muessen daher ueber den 
 GitHub Pages erlaubt ohne zusaetzlichen Reverse-Proxy/CDN keine frei konfigurierbaren Security-Header pro Response.
 Fuer Public Release mit harter Header-Policy wird daher Cloudflare Pages oder Netlify empfohlen.
 
+Wichtig fuer dieses Repository:
+- `_headers` und `netlify.toml` werden von GitHub Pages nicht als Header-Policy ausgewertet.
+- Die App-internen Security-Massnahmen (strikte Datenvalidierung, URL-Sanitizing, fail-closed Budgets etc.) bleiben unabhaengig vom Host wirksam.
+- Wenn strikte Header-Vorgaben verpflichtend sind, muss vor GitHub Pages ein steuerbarer Proxy/CDN eingesetzt werden oder auf Netlify/Cloudflare Pages deployt werden.
+
 ## Lokale Verifikation
 
 ```bash

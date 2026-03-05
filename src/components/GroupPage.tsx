@@ -6,9 +6,12 @@ interface GroupPageProps {
   controls: SearchResultItem[];
   selectedControlIds: Set<string>;
   loading: boolean;
+  selectingAllControls: boolean;
+  allControlsSelected: boolean;
   onOpenSubgroup: (id: string) => void;
   onOpenControl: (control: SearchResultItem) => void;
   onToggleControlSelection: (control: SearchResultItem, selected: boolean) => void;
+  onSelectAllControls: () => void;
 }
 
 export function GroupPage({
@@ -17,9 +20,12 @@ export function GroupPage({
   controls,
   selectedControlIds,
   loading,
+  selectingAllControls,
+  allControlsSelected,
   onOpenSubgroup,
   onOpenControl,
-  onToggleControlSelection
+  onToggleControlSelection,
+  onSelectAllControls
 }: GroupPageProps) {
   if (!group) {
     return <section className="status-box error">Gruppe nicht gefunden.</section>;
@@ -71,8 +77,8 @@ export function GroupPage({
           <div className="group-grid">
             {subgroups.map((subgroup) => (
               <button key={subgroup.id} type="button" className="group-tile" onClick={() => onOpenSubgroup(subgroup.id)}>
-                <strong>{subgroup.id}</strong>
-                <span>{subgroup.title}</span>
+                <strong className="group-tile-id">{subgroup.id}</strong>
+                <span className="group-tile-title">{subgroup.title}</span>
               </button>
             ))}
           </div>
@@ -80,7 +86,12 @@ export function GroupPage({
       ) : null}
 
       <section>
-        <h2>Controls</h2>
+        <div className="section-heading-row">
+          <h2>Controls</h2>
+          <button className="secondary compact" type="button" onClick={onSelectAllControls} disabled={selectingAllControls}>
+            {selectingAllControls ? "Alles auswaehlen..." : allControlsSelected ? "Alles abwaehlen" : "Alles auswaehlen"}
+          </button>
+        </div>
         {loading ? <p>Controls werden geladen…</p> : null}
         <ul className="group-control-list">
           {controls.map((control) => {

@@ -164,6 +164,7 @@ export default function App() {
   const [selectedControlTopGroups, setSelectedControlTopGroups] = useState<Record<string, string>>({});
   const [exportCsvMessage, setExportCsvMessage] = useState<string | null>(null);
   const [exportCsvRunning, setExportCsvRunning] = useState(false);
+  const [selectAllRunningScope, setSelectAllRunningScope] = useState<"home" | "group" | "search" | null>(null);
 
   const [offline, setOffline] = useState(!navigator.onLine);
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
@@ -210,6 +211,7 @@ export default function App() {
     setGroupControls([]);
     setSelectedControlTopGroups({});
     setExportCsvMessage(null);
+    setSelectAllRunningScope(null);
     setBootProgress(100);
     setBootStatusText("Fertig");
     setBootState("ready");
@@ -521,6 +523,7 @@ export default function App() {
       setGraphData(null);
       setSelectedControlTopGroups({});
       setExportCsvMessage(null);
+      setSelectAllRunningScope(null);
       navigate(buildSearchHash("", "relevance", defaultFilters()));
     } catch (error) {
       setBootState("error");
@@ -565,26 +568,146 @@ export default function App() {
     });
   }
 
-  function handleToggleSelectPage(items: SearchResultItem[], selected: boolean) {
+  async function fetchAllMatchingControls(baseQuery: Omit<SearchQuery, "limit" | "offset">): Promise<SearchResultItem[]> {
+    const limit = 1200;
+    let offset = 0;
+    let total = Number.POSITIVE_INFINITY;
+    const byId = new Map<string, SearchResultItem>();
+
+    while (offset < total && offset < SECURITY_BUDGETS.maxControlCount) {
+      const response = await client.search({
+        ...baseQuery,
+        limit,
+        offset
+      });
+
+      total = response.total;
+      for (const item of response.items) {
+        byId.set(item.id, item);
+      }
+
+      if (!response.items.length) {
+        break;
+      }
+      offset += response.items.length;
+    }
+
+    return Array.from(byId.values());
+  }
+
+  function toggleSelectionForItems(items: SearchResultItem[]): "selected" | "deselected" | "none" {
+    if (!items.length) {
+      return "none";
+    }
+
+    const allAlreadySelected = items.every((item) => selectedControlIds.has(item.id));
     setSelectedControlTopGroups((prev) => {
-      if (selected) {
-        const next = { ...prev };
+      const next = { ...prev };
+      if (allAlreadySelected) {
         for (const item of items) {
-          next[item.id] = item.topGroupId;
+          delete next[item.id];
         }
         return next;
       }
 
-      const next = { ...prev };
-      let changed = false;
       for (const item of items) {
-        if (next[item.id]) {
-          delete next[item.id];
-          changed = true;
-        }
+        next[item.id] = item.topGroupId;
       }
-      return changed ? next : prev;
+      return next;
     });
+
+    return allAlreadySelected ? "deselected" : "selected";
+  }
+
+  async function handleSelectAllHomeControls() {
+    if (selectAllRunningScope || bootState !== "ready") {
+      return;
+    }
+    setSelectAllRunningScope("home");
+    try {
+      const items = await fetchAllMatchingControls({
+        text: "",
+        sort: "id-asc",
+        filters: defaultFilters()
+      });
+      const action = toggleSelectionForItems(items);
+      if (action === "none") {
+        setExportCsvMessage("Keine Controls gefunden.");
+      } else if (action === "selected") {
+        setExportCsvMessage(`${items.length} Controls zur CSV-Auswahl hinzugefuegt.`);
+      } else {
+        setExportCsvMessage(`${items.length} Controls aus der CSV-Auswahl entfernt.`);
+      }
+    } catch (error) {
+      setExportCsvMessage(getErrorMessage(error, "Alles auswaehlen fehlgeschlagen."));
+    } finally {
+      setSelectAllRunningScope(null);
+    }
+  }
+
+  async function handleSelectAllGroupControls() {
+    if (selectAllRunningScope || route.view !== "group" || !meta) {
+      return;
+    }
+
+    const group = meta.groups.find((item) => item.id === route.groupId);
+    if (!group) {
+      return;
+    }
+
+    const queryFilters = defaultFilters();
+    queryFilters.topGroupId = [group.topGroupId];
+    if (group.depth > 1) {
+      queryFilters.groupId = [group.id];
+    }
+
+    setSelectAllRunningScope("group");
+    try {
+      const items = await fetchAllMatchingControls({
+        text: "",
+        sort: "id-asc",
+        filters: queryFilters
+      });
+      const action = toggleSelectionForItems(items);
+      if (action === "none") {
+        setExportCsvMessage("Keine Gruppen-Controls gefunden.");
+      } else if (action === "selected") {
+        setExportCsvMessage(`${items.length} Gruppen-Controls zur CSV-Auswahl hinzugefuegt.`);
+      } else {
+        setExportCsvMessage(`${items.length} Gruppen-Controls aus der CSV-Auswahl entfernt.`);
+      }
+    } catch (error) {
+      setExportCsvMessage(getErrorMessage(error, "Alles auswaehlen in Gruppe fehlgeschlagen."));
+    } finally {
+      setSelectAllRunningScope(null);
+    }
+  }
+
+  async function handleSelectAllSearchControls() {
+    if (selectAllRunningScope || route.view !== "search") {
+      return;
+    }
+
+    setSelectAllRunningScope("search");
+    try {
+      const items = await fetchAllMatchingControls({
+        text: sanitizeSearchText(route.query),
+        sort: route.sort,
+        filters: mapRouteFilters(route.filters)
+      });
+      const action = toggleSelectionForItems(items);
+      if (action === "none") {
+        setExportCsvMessage("Keine Suchtreffer gefunden.");
+      } else if (action === "selected") {
+        setExportCsvMessage(`${items.length} Suchtreffer zur CSV-Auswahl hinzugefuegt.`);
+      } else {
+        setExportCsvMessage(`${items.length} Suchtreffer aus der CSV-Auswahl entfernt.`);
+      }
+    } catch (error) {
+      setExportCsvMessage(getErrorMessage(error, "Alles auswaehlen in Suche fehlgeschlagen."));
+    } finally {
+      setSelectAllRunningScope(null);
+    }
   }
 
   async function handleExportCsv() {
@@ -623,7 +746,7 @@ export default function App() {
       }
 
       const csvText = toCsv(rows, CONTROL_EXPORT_COLUMNS, {
-        delimiter: ",",
+        delimiter: ";",
         lineEnding: "\r\n",
         withBom: true
       });
@@ -631,6 +754,7 @@ export default function App() {
       const filename = `grundschutz-controls_${now}_${rows.length}.csv`;
       const csvBlob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
       downloadBlob(filename, csvBlob);
+      setSelectedControlTopGroups({});
       setExportCsvMessage(`CSV erfolgreich exportiert (${rows.length} Controls).`);
     } catch (error) {
       setExportCsvMessage(getErrorMessage(error, "CSV-Export fehlgeschlagen."));
@@ -749,6 +873,17 @@ export default function App() {
   };
 
   const isLegalRoute = route.view === "impressum" || route.view === "datenschutz";
+  const homeAllControlsSelected = Boolean(
+    meta && meta.stats.controlCount > 0 && selectedControlCount === meta.stats.controlCount
+  );
+  const groupAllControlsSelected = Boolean(
+    currentGroup && groupControls.length > 0 && groupControls.every((item) => selectedControlIds.has(item.id))
+  );
+  const searchAllControlsSelected = Boolean(
+    route.view === "search" &&
+      searchResponse.items.length > 0 &&
+      searchResponse.items.every((item) => selectedControlIds.has(item.id))
+  );
 
   if (bootState === "loading" && !meta && !isLegalRoute) {
     const progress = Math.min(100, Math.max(4, Math.round(bootProgress)));
@@ -829,6 +964,9 @@ export default function App() {
           datasetId={selectedDatasetId}
           onOpenGroup={(groupId) => navigate(buildGroupHash(groupId))}
           onStartSearch={() => navigate(buildSearchHash(searchText, sort, filters))}
+          onSelectAllControls={handleSelectAllHomeControls}
+          selectingAllControls={selectAllRunningScope === "home"}
+          allControlsSelected={homeAllControlsSelected}
         />
       ) : null}
 
@@ -843,9 +981,12 @@ export default function App() {
           controls={groupControls}
           selectedControlIds={selectedControlIds}
           loading={groupLoading}
+          selectingAllControls={selectAllRunningScope === "group"}
+          allControlsSelected={groupAllControlsSelected}
           onOpenSubgroup={(groupId) => navigate(buildGroupHash(groupId))}
           onOpenControl={(item) => navigate(buildControlHash(item.id, item.topGroupId))}
           onToggleControlSelection={handleToggleControlSelection}
+          onSelectAllControls={handleSelectAllGroupControls}
         />
       ) : null}
 
@@ -871,7 +1012,9 @@ export default function App() {
             error={searchError}
             onSelect={handleSelectResult}
             onToggleSelection={handleToggleControlSelection}
-            onToggleSelectPage={handleToggleSelectPage}
+            onSelectAllControls={handleSelectAllSearchControls}
+            selectingAllControls={selectAllRunningScope === "search"}
+            allControlsSelected={searchAllControlsSelected}
           />
           <ControlDetailPanel
             detail={detail}

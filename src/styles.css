@@ -450,6 +450,12 @@ summary:focus-visible {
   margin-top: 0.4rem;
 }
 
+.hero-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .group-grid {
   margin-top: 0.8rem;
   display: grid;
@@ -458,9 +464,10 @@ summary:focus-visible {
 }
 
 .group-tile {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  display: grid;
+  grid-template-rows: auto minmax(2.7em, 1fr) auto;
+  align-items: start;
+  gap: 0.3rem;
   text-align: left;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -468,8 +475,7 @@ summary:focus-visible {
   color: var(--text);
   padding: 0.8rem;
   cursor: pointer;
-  min-height: 100px;
-  gap: 0.15rem;
+  min-height: 128px;
 }
 
 .group-tile strong,
@@ -490,6 +496,21 @@ summary:focus-visible {
   color: var(--text-muted);
   font-style: normal;
   font-size: 0.86rem;
+}
+
+.group-tile-id {
+  margin: 0;
+  line-height: 1.1;
+}
+
+.group-tile-title {
+  margin: 0;
+  line-height: 1.3;
+}
+
+.group-tile-meta {
+  margin: 0;
+  align-self: end;
 }
 
 :root[data-theme="dark"] .group-tile em {
@@ -963,6 +984,18 @@ summary:focus-visible {
   text-decoration: underline;
   text-underline-offset: 0.14rem;
   text-decoration-thickness: 0.08rem;
+}
+
+.section-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.section-heading-row h2 {
+  margin: 0;
 }
 
 .group-control-list {
