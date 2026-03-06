@@ -26,8 +26,7 @@ describe("AppHeader", () => {
     expect(html).toContain("Suche öffnen");
     expect(html).toContain("Katalog durchsuchen");
     expect(html).not.toContain("Datensatz auswählen");
-    expect(html).toContain("Weitere Aktionen");
-    expect(html).toContain('aria-haspopup="menu"');
+    expect(html).not.toContain("Weitere Aktionen");
     expect(html).toContain("Zur Startseite");
     expect(html).not.toContain("Grundschutz++");
     expect(html).not.toContain("<h1");
