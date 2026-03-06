@@ -186,6 +186,7 @@ export default function App() {
   const [bootStatusText, setBootStatusText] = useState("Index wird aufgebaut und geladen…");
 
   const [searchText, setSearchText] = useState("");
+  const [searchOverlayText, setSearchOverlayText] = useState("");
   const [searchInputDirty, setSearchInputDirty] = useState(false);
   const [sort, setSort] = useState<SearchQuery["sort"]>("relevance");
   const [effortSortEnabled, setEffortSortEnabled] = useState(true);
@@ -216,6 +217,7 @@ export default function App() {
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
+  const [pendingSearchResultsFocusQuery, setPendingSearchResultsFocusQuery] = useState<string | null>(null);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastTone, setToastTone] = useState<"info" | "success" | "error">("info");
@@ -238,6 +240,35 @@ export default function App() {
     }
     history.replaceState(null, "", `${window.location.pathname}${window.location.search}${normalized}`);
     setRoute(parseHash(window.location.hash));
+  }
+
+  function focusSearchResultsArea() {
+    const focusTarget = document.querySelector<HTMLElement>(
+      '[data-search-results-focus="results"], [data-search-results-focus="status"]'
+    );
+    focusTarget?.focus();
+  }
+
+  function scheduleSearchResultsFocus() {
+    let attempt = 0;
+
+    function run() {
+      focusSearchResultsArea();
+      if (attempt >= 8) {
+        setPendingSearchResultsFocusQuery(null);
+        return;
+      }
+      attempt += 1;
+      window.setTimeout(run, 40);
+    }
+
+    run();
+  }
+
+  function clearPendingSearchResultsFocus() {
+    if (pendingSearchResultsFocusQuery !== null) {
+      setPendingSearchResultsFocusQuery(null);
+    }
   }
 
   async function initializeDataset(datasetId: string, registryOverride: CatalogRegistry | null) {
@@ -337,7 +368,6 @@ export default function App() {
       setRoute(parseHash(window.location.hash));
       setOverflowOpen(false);
       setDrawerOpen(false);
-      setSearchOverlayOpen(false);
       setFilterSheetOpen(false);
     };
     window.addEventListener("hashchange", onHash);
@@ -580,10 +610,13 @@ export default function App() {
         setDetail(null);
         setGraphData(null);
       }
+      setPendingSearchResultsFocusQuery(null);
       return;
     }
 
     const current = ++requestCounter.current;
+    const shouldFocusAfterSearch =
+      pendingSearchResultsFocusQuery !== null && pendingSearchResultsFocusQuery === route.query && !searchOverlayOpen;
     setSearchLoading(true);
     setSearchError(null);
 
@@ -619,9 +652,14 @@ export default function App() {
       .finally(() => {
         if (current === requestCounter.current) {
           setSearchLoading(false);
+          if (shouldFocusAfterSearch) {
+            window.requestAnimationFrame(() => {
+              scheduleSearchResultsFocus();
+            });
+          }
         }
       });
-  }, [bootState, client, route]);
+  }, [bootState, client, pendingSearchResultsFocusQuery, route, searchOverlayOpen]);
 
   useEffect(() => {
     if (bootState !== "ready" || route.view !== "group" || !meta) {
@@ -986,24 +1024,40 @@ export default function App() {
 
   function handleSubmitSearch(valueOverride?: string) {
     /* REQ: US-02, PD-04 */
-    const nextSearch = sanitizeSearchText(typeof valueOverride === "string" ? valueOverride : searchText);
+    const nextSearch = sanitizeSearchText(
+      typeof valueOverride === "string" ? valueOverride : searchOverlayText || searchText
+    );
+    const nextHash = buildSearchHash(nextSearch, sort, filters, null, null);
+    const hashWillChange = window.location.hash !== nextHash.replace(/^#/, "#");
+
     setSearchText(nextSearch);
+    setSearchOverlayText("");
     setSearchInputDirty(false);
-    navigate(buildSearchHash(nextSearch, sort, filters, null, null));
+    setPendingSearchResultsFocusQuery(hashWillChange ? nextSearch : null);
+    navigate(nextHash);
     setSearchOverlayOpen(false);
     setOverflowOpen(false);
     setDrawerOpen(false);
+
+    if (!hashWillChange) {
+      window.requestAnimationFrame(() => {
+        scheduleSearchResultsFocus();
+      });
+    }
   }
 
   function handleClearSearch() {
     setSearchText("");
+    setSearchOverlayText("");
     setSearchInputDirty(false);
+    clearPendingSearchResultsFocus();
     const nextFilters = route.view === "search" ? filters : defaultFilters();
-    navigate(buildSearchHash("", sort, nextFilters, null, null));
+    replaceHash(buildSearchHash("", sort, nextFilters, null, null));
   }
 
   function handleSearchTextChange(nextValue: string) {
     setSearchInputDirty(true);
+    setSearchOverlayText(nextValue);
     setSearchText(nextValue);
   }
 
@@ -1260,7 +1314,7 @@ export default function App() {
 
       <SearchOverlay
         open={searchOverlayOpen}
-        value={searchText}
+        value={searchOverlayText}
         onChange={handleSearchTextChange}
         onClear={handleClearSearch}
         onSubmit={handleSubmitSearch}
