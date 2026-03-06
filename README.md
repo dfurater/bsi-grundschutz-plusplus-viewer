@@ -111,10 +111,26 @@ SECURITY_HEADERS_URL="https://example.org" npm run check:headers
   - `VITE_OPERATOR_ADDRESS_LINE2`
   - `VITE_OPERATOR_EMAIL`
 
+### Daily BSI Sync + Auto-PR
+
+- Workflow: `.github/workflows/daily-bsi-sync.yml`
+- Trigger: täglich per Schedule sowie manuell via `workflow_dispatch`
+- Quelle: `BSI-Bund/Stand-der-Technik-Bibliothek` (standardmäßig `main`)
+- Ablauf:
+  - `npm run sync:bsi` synchronisiert nur `Kataloge/*.json` bei Inhaltsänderung
+  - nur bei Änderungen werden Build/Tests ausgeführt und ein PR erzeugt
+  - bei unveränderten Katalogen endet der Workflow ohne PR (No-Op)
+
 ### Netlify / Hosts mit Header-Support
 
 - Header-Policy in `netlify.toml` bzw. `public/_headers`
 - auf GitHub Pages werden diese Header-Dateien nicht als Policy erzwungen
+
+### Manueller Katalog-Sync lokal
+
+```bash
+npm run sync:bsi
+```
 
 ## Konfiguration / Umgebungsvariablen
 
@@ -136,7 +152,7 @@ SECURITY_HEADERS_URL="https://example.org" npm run check:headers
 ├─ tests/                    # Playwright E2E- und A11y-Tests
 ├─ Kataloge/                 # OSCAL-Quellkataloge (Input für build:data)
 ├─ public/data/              # generierte statische Datenartefakte
-├─ .github/workflows/        # CI (quality) und CD (deploy-pages)
+├─ .github/workflows/        # CI (quality), CD (deploy-pages), Sync-Automation (daily-bsi-sync)
 └─ docs/                     # vertiefende technische Dokumentation
 ```
 

@@ -81,6 +81,17 @@ Enthält Build, Unit-Tests, Release-Hygiene, Lighthouse und Playwright-A11y.
 - Build-Artefakt: `dist/`
 - Secrets: `VITE_OPERATOR_*`
 
+### Daily BSI Sync + Auto-PR
+
+- Workflow: `.github/workflows/daily-bsi-sync.yml`
+- Trigger: `schedule` (täglich) und `workflow_dispatch`
+- Quelle: `BSI-Bund/Stand-der-Technik-Bibliothek` (`main`, optionaler Override via `upstream_ref`)
+- Ablauf:
+  1. `npm run sync:bsi` synchronisiert die vier relevanten Katalogdateien nach `Kataloge/`.
+  2. Nur bei echten Dateidifferenzen in `Kataloge/` folgen `npm ci`, `npm run build`, `npm run test:unit`, `npm run check:release-hygiene`.
+  3. Anschließend erstellt/aktualisiert `peter-evans/create-pull-request` einen PR.
+  4. Ohne Katalogdifferenzen endet der Job ohne PR.
+
 ### Alternative Hosts
 
 - Header-Policy-Dateien: `netlify.toml`, `public/_headers`
@@ -101,6 +112,7 @@ Enthält Build, Unit-Tests, Release-Hygiene, Lighthouse und Playwright-A11y.
 
 - Quellkataloge: `Kataloge/`
 - Standarddatensatz: `anwender` (`public/data/catalog-registry.json`)
+- manueller Upstream-Sync: `npm run sync:bsi`
 
 ## Troubleshooting
 
