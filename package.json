@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "npm run build:data && vite",
+    "sync:bsi": "node scripts/sync-bsi-catalogs.mjs",
     "clean:release-artifacts": "node scripts/clean-release-artifacts.mjs",
     "build:data": "node scripts/build-catalog.mjs",
     "build": "npm run clean:release-artifacts && npm run build:data && tsc -b && node scripts/check-legal-placeholders.mjs && vite build",
