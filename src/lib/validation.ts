@@ -1,11 +1,19 @@
 import { type ZodType, z } from "zod";
 
-function describePath(path: Array<string | number>): string {
+function describePath(path: ReadonlyArray<PropertyKey>): string {
   if (!path.length) {
     return "<root>";
   }
   return path
-    .map((segment) => (typeof segment === "number" ? `[${segment}]` : segment))
+    .map((segment) => {
+      if (typeof segment === "number") {
+        return `[${segment}]`;
+      }
+      if (typeof segment === "symbol") {
+        return segment.description ? `[symbol:${segment.description}]` : "[symbol]";
+      }
+      return segment;
+    })
     .join(".")
     .replace(/\.\[/g, "[");
 }
