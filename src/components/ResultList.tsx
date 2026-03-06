@@ -48,6 +48,7 @@ export function ResultList({
 }: ResultListProps) {
   /* REQ: EC-03, UI 5.2 Group/Search Pagination */
   const [visibleCount, setVisibleCount] = useState(25);
+  const normalizedQuery = query.trim();
 
   useEffect(() => {
     setVisibleCount(25);
@@ -56,19 +57,30 @@ export function ResultList({
   const visibleItems = useMemo(() => items.slice(0, visibleCount), [items, visibleCount]);
 
   if (loading) {
-    return <div className="status-box">Index wird abgefragt…</div>;
+    return (
+      <div className="status-box" role="status" aria-live="polite" tabIndex={-1} data-search-results-focus="loading">
+        Index wird abgefragt…
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="status-box error">{error}</div>;
+    return (
+      <div className="status-box error" role="alert" tabIndex={-1} data-search-results-focus="status">
+        {error}
+      </div>
+    );
   }
 
   if (!items.length) {
+    const emptyMessage = normalizedQuery
+      ? `Keine Ergebnisse für „${normalizedQuery}“. Passe Suche oder Filter an.`
+      : "Keine Ergebnisse. Passe Suche oder Filter an.";
     return (
-      <div className="status-box">
+      <div className="status-box" role="status" aria-live="polite" tabIndex={-1} data-search-results-focus="status">
         {/* REQ: A-02, Clarification Pack §9 */}
         <h2>Keine Treffer</h2>
-        <p>Passe Suche oder Filter an.</p>
+        <p>{emptyMessage}</p>
         {hasActiveFilters && onResetFilters ? (
           <button type="button" className="secondary" onClick={onResetFilters}>
             Filter zurücksetzen
@@ -79,9 +91,15 @@ export function ResultList({
   }
 
   return (
-    <section className="result-list" aria-label="Suchergebnisse">
+    <section
+      className="result-list"
+      aria-label="Suchergebnisse"
+      aria-labelledby="search-results-heading"
+      tabIndex={-1}
+      data-search-results-focus="results"
+    >
       <header>
-        <h2>Ergebnisse</h2>
+        <h2 id="search-results-heading">Ergebnisse</h2>
         <div className="result-list-header-meta">
           <span>{total} Treffer</span>
           <button type="button" className="secondary compact" onClick={onSelectAllControls} disabled={selectingAllControls}>
