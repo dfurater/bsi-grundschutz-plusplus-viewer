@@ -61,6 +61,14 @@ npm run qa
 5. Vor Merge: `npm run qa`.
 6. Doku aktualisieren (`README.md` und `docs/*`) wenn Verhalten/Setup betroffen ist.
 
+## Branch- und Merge-Regeln
+
+1. Nicht direkt auf `main` committen oder pushen.
+2. Änderungen nur über Pull Requests nach `main` integrieren.
+3. Vor Merge müssen die Required Checks grün sein (insbesondere `quality / qa`).
+4. Merge Queue für `main` verwenden, wenn sie im Repository aktiviert ist.
+5. Squash Merge ist die bevorzugte Merge-Methode.
+
 ## Fallstricke
 
 1. `npm run dev` erzeugt Daten neu (`build:data`) und aktualisiert lokale Artefakte unter `public/data/*`.
