@@ -86,14 +86,19 @@ test.describe("Kernflows", () => {
     await searchInput.press("Enter");
 
     await expect(page).toHaveURL(/q=KONF\.12\.4/);
-
-    await page.getByRole("button", { name: "Suche öffnen" }).click();
-    await overlayDialog.getByRole("button", { name: "Suche leeren" }).click();
-    await expect(page).not.toHaveURL(/q=KONF\.12\.4/);
     await expect(overlayDialog).toBeHidden();
+    await expect(page.locator('[data-search-results-focus="results"], [data-search-results-focus="status"]')).toBeFocused();
 
     await page.getByRole("button", { name: "Suche öffnen" }).click();
-    await expect(page.getByRole("dialog", { name: "Suche" }).getByRole("searchbox", { name: "Suche" })).toHaveValue("");
+    await expect(overlayDialog.getByRole("searchbox", { name: "Suche" })).toHaveValue("");
+    await expect(overlayDialog.getByRole("button", { name: "Suchtext leeren" })).toHaveCount(0);
+    await overlayDialog.getByRole("searchbox", { name: "Suche" }).fill("abc");
+    await overlayDialog.getByRole("button", { name: "Suchtext leeren" }).click();
+    await expect(page).not.toHaveURL(/q=/);
+    await expect(overlayDialog).toBeVisible();
+    await expect(overlayDialog.getByRole("searchbox", { name: "Suche" })).toHaveValue("");
+    await expect(overlayDialog.getByRole("searchbox", { name: "Suche" })).toBeFocused();
+    await expect(overlayDialog.getByRole("button", { name: "Suchtext leeren" })).toHaveCount(0);
   });
 
   test("Theme-Toggle liegt im Header rechts und wechselt Theme", async ({ page }) => {
