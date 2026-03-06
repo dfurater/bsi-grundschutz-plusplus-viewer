@@ -42,6 +42,8 @@ npm run test:unit
 npm run qa
 ```
 
+Hinweis: `public/data/**` und `public/sw.js` sind nicht versioniert und werden im Build erzeugt. `npm run test:unit` führt deshalb intern zuerst `npm run build` aus.
+
 ### CI
 
 Workflow `.github/workflows/quality.yml` führt aus:
@@ -49,7 +51,6 @@ Workflow `.github/workflows/quality.yml` führt aus:
 2. Playwright Browser Install
 3. Dependency-Audit
 4. `npm run qa`
-5. optional `npm run check:headers`
 
 ## Nachgewiesene lokale Läufe (2026-03-06)
 
@@ -72,7 +73,7 @@ Workflow `.github/workflows/quality.yml` führt aus:
 
 1. Kein dedizierter Integrationstest für Worker-Protokollgrenzen unter Last.
 2. Kein Snapshot-/Regressionstest für komplette Seitenzustände.
-3. Kein verpflichtender automatisierter Test für echten Hosting-Header-Stack (URL-abhängiger optionaler Check).
+3. Kein dedizierter automationsgestützter Test für reale Response-Header auf dem Produktiv-Host.
 
 ## Empfohlene Prioritäten
 
@@ -84,7 +85,7 @@ Workflow `.github/workflows/quality.yml` führt aus:
 ### Should-have
 
 1. E2E-Tests für Datensatzwechsel + Upload + Graph-Klickpfade erweitern.
-2. CI-Header-Check für Preview-/Produktions-URLs verpflichtend ausführen.
+2. Zusätzliche Integrationsprüfungen für Host-spezifisches Laufzeitverhalten ergänzen.
 
 ### Nice-to-have
 

@@ -35,7 +35,7 @@ npm run test:unit
 - `src/lib/normalize-core.js`: OSCAL -> internes Datenmodell
 - `scripts/build-catalog.mjs`: Build-Datenpipeline
 - `scripts/sync-bsi-catalogs.mjs`: Upstream-Sync der BSI-Katalogdateien
-- `public/data/**`: generierte Such-/Metadaten
+- `public/data/**` und `public/sw.js`: generierte Such-/Metadaten inkl. Service Worker (nicht versioniert)
 - `tests/`: Playwright E2E/A11y
 - `.github/workflows/`: CI/CD
 
@@ -63,19 +63,18 @@ npm run qa
 
 ## Fallstricke
 
-1. `npm run dev` erzeugt Daten neu (`build:data`) und kann dadurch `public/data/*` ändern.
+1. `npm run dev` erzeugt Daten neu (`build:data`) und aktualisiert lokale Artefakte unter `public/data/*`.
 2. Build bricht ab, wenn `VITE_OPERATOR_*` fehlt oder Platzhalter enthält.
-3. `vite preview` verhält sich bezüglich Security-Headern anders als produktives Hosting.
+3. `vite preview` bildet Host-spezifisches Produktionsverhalten (z. B. Header-/CDN-Regeln) nicht vollständig ab.
 4. Service Worker ist lokal deaktiviert (localhost), in Production aktiv.
 5. Hash-Routing ist bewusst gewählt; History-Routing-Annahmen passen hier nicht.
 
 ## Qualitätscheckliste vor PR
 
-1. `npm run test:unit` ist grün.
-2. `npm run build` ist grün.
+1. `npm run build` ist grün.
+2. `npm run test:unit` ist grün.
 3. `npm run check:release-hygiene` ist grün.
-4. Keine unbeabsichtigten Änderungen in generierten Datenartefakten (oder sauber begründet).
-5. Dokumentation bei funktionalen/operativen Änderungen angepasst.
+4. Dokumentation bei funktionalen/operativen Änderungen angepasst.
 
 ## Empfohlene Einarbeitungsreihenfolge
 

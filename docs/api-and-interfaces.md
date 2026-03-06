@@ -7,6 +7,8 @@
 
 ## 1) Statische Daten-Schnittstellen (`public/data/**`)
 
+Hinweis: Die Dateien unter `public/data/**` sind generierte Build-Artefakte (aus `Kataloge/*.json`) und nicht versioniert.
+
 ### Registry
 
 Datei: `./data/catalog-registry.json`

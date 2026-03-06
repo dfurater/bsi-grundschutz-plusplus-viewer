@@ -26,7 +26,6 @@
 
 ### Browser- und Hosting-Schutz
 
-- Header-Policies in `public/_headers` und `netlify.toml` (CSP, XCTO, COOP, CORP, Referrer-Policy, Permissions-Policy).
 - Service Worker auf localhost deaktiviert, in Production registriert.
 
 ### CI-/Supply-Chain-Kontrollen
@@ -37,7 +36,7 @@
 
 ## Repository-sichtbare Sicherheitslücken und Risiken
 
-1. Header-Policy auf GitHub Pages wird nicht über `_headers`/`netlify.toml` erzwungen.
+1. GitHub Pages bietet nur eingeschränkte, nicht repository-lokale Steuerung von Response-Headern.
 2. Es gibt keine Authentifizierung/Autorisierung.
 3. Es gibt keine SAST-/Lint-Sicherheitsregeln im Build.
 4. TypeScript ist nicht im Strict-Modus (`strict: false`).
@@ -65,7 +64,7 @@
 
 1. TypeScript schrittweise auf `strict: true` migrieren.
 2. Linting/SAST in die CI-Pipeline ergänzen.
-3. Header-Checks auf Preview-/Produktions-URLs verpflichtend ausführen.
+3. Host-bezogene Sicherheitsprüfungen außerhalb des Repositories ergänzen (z. B. vorgelagertes Gateway/CDN).
 
 ### Nice-to-have
 
