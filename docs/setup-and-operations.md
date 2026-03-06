@@ -93,6 +93,31 @@ Enthält Build, Unit-Tests, Release-Hygiene, Lighthouse und Playwright-A11y.
   3. Anschließend erstellt/aktualisiert `peter-evans/create-pull-request` einen PR.
   4. Ohne Katalogdifferenzen endet der Job ohne PR.
 
+### Main-Branch-Governance (GitHub-Einstellungen)
+
+Diese Einstellungen werden in GitHub manuell im Repository gesetzt (z. B. Ruleset für `main`):
+
+- Require a pull request before merging
+- Require status checks to pass before merging
+- Require merge queue
+- Disallow force pushes
+- Disallow deletions
+- Optional: Require linear history
+
+Empfohlene Merge-Methode:
+- Squash merge aktivieren und als Standard verwenden
+
+Empfohlener Required Status Check:
+- Job `qa` aus Workflow `.github/workflows/quality.yml` (in der GitHub-UI typischerweise als `quality / qa` sichtbar)
+
+Merge-Queue-Kompatibilität:
+- Der Qualitätsworkflow triggert auf `pull_request` und `merge_group`.
+- `deploy-pages.yml` ist absichtlich kein Required PR-Check, da Deployment erst nach Merge auf `main` läuft.
+- `daily-bsi-sync.yml` ist eine Automationspipeline und ebenfalls kein Required PR-Check für Feature-PRs.
+
+Hinweis zu Auto-merge:
+- Auto-merge nur aktivieren, wenn es im Teamprozess nicht redundant zur Merge Queue ist.
+
 ### Hosting
 
 - Produktiv-Deployment ist auf GitHub Pages ausgerichtet.

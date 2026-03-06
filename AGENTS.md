@@ -169,7 +169,7 @@ Minimum doc targets to consider:
 
 ## CI/CD awareness
 This repository already has:
-- a quality workflow for QA on push/PR
+- a quality workflow for QA on push/PR/merge_group (Merge Queue kompatibel)
 - a GitHub Pages deploy workflow
 - a daily BSI sync workflow that may create PRs when catalog files change
 
