@@ -1275,6 +1275,7 @@ export default function App() {
         isTabletUp={isTabletUp}
         isShrunk={headerShrunk}
         searchOverlayOpen={searchOverlayOpen}
+        secondaryActionsOpen={isTabletUp ? overflowOpen : drawerOpen}
         theme={theme}
         selectedControlCount={selectedControlCount}
         exportingCsv={exportCsvRunning}
@@ -1284,6 +1285,16 @@ export default function App() {
           setDrawerOpen(false);
         }}
         onExportCsv={handleExportCsv}
+        onToggleSecondaryActions={() => {
+          setSearchOverlayOpen(false);
+          if (isTabletUp) {
+            setDrawerOpen(false);
+            setOverflowOpen((prev) => !prev);
+            return;
+          }
+          setOverflowOpen(false);
+          setDrawerOpen((prev) => !prev);
+        }}
         onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onGoHome={() => navigate("#/")}
         onGoBack={() => {
