@@ -12,7 +12,7 @@ Kernziele:
 - Multi-Dataset-Betrieb (`anwender`, `kernel`, `methodik`)
 - CSV-Export ausgewählter Controls
 - lokaler JSON-Import (ohne Server)
-- statisches Deployment (GitHub Pages/Netlify-kompatibel)
+- statisches Deployment (GitHub Pages)
 
 ## Kernfunktionen
 
@@ -28,7 +28,7 @@ Kernziele:
 
 - Frontend: React 19 + TypeScript + Vite (CSR)
 - Suche/Indexierung: Browser Worker (`src/workers/searchWorker.ts`)
-- Datenhaltung: statische JSON-Artefakte in `public/data/**`
+- Datenhaltung: statische JSON-/SW-Artefakte in `public/data/**` und `public/sw.js` (werden im Build erzeugt)
 - Build-Datenpipeline: `scripts/build-catalog.mjs` erzeugt Suchindex, Detail-Chunks, Registry, Profilanalyse und Service Worker
 - Deployment: statisches Hosting (CI-Workflow für GitHub Pages vorhanden)
 
@@ -91,12 +91,14 @@ npm run check:release-hygiene
 npm run qa
 ```
 
+`public/data/**` und `public/sw.js` sind generiertes Build-Output und werden nicht versioniert.
+`npm run test:unit` führt daher intern zuerst `npm run build` aus.
+
 Zusätzliche Checks:
 
 ```bash
 npm run audit:prod
 npm run audit:dev
-SECURITY_HEADERS_URL="https://example.org" npm run check:headers
 ```
 
 ## Deployment-Hinweise
@@ -121,10 +123,10 @@ SECURITY_HEADERS_URL="https://example.org" npm run check:headers
   - nur bei Änderungen werden Build/Tests ausgeführt und ein PR erzeugt
   - bei unveränderten Katalogen endet der Workflow ohne PR (No-Op)
 
-### Netlify / Hosts mit Header-Support
+### Hosting Scope
 
-- Header-Policy in `netlify.toml` bzw. `public/_headers`
-- auf GitHub Pages werden diese Header-Dateien nicht als Policy erzwungen
+- Produktiv-Deployment ist auf GitHub Pages ausgerichtet.
+- Es gibt in diesem Repository keine hostspezifischen Header-Policy-Dateien mehr.
 
 ### Manueller Katalog-Sync lokal
 
@@ -141,7 +143,6 @@ npm run sync:bsi
 | `VITE_OPERATOR_ADDRESS_LINE2` | Impressum/Datenschutz Adresse Zeile 2 | ja (Build-Check) |
 | `VITE_OPERATOR_EMAIL` | Impressum/Datenschutz Kontakt-E-Mail | ja (Build-Check) |
 | `VITE_BASE_PATH` | Vite Base Path für Hosting-Unterpfade | nein (optional, je Hosting) |
-| `SECURITY_HEADERS_URL` | Ziel-URL für Header-Check-Skript | nein (optional) |
 
 ## Projektstruktur
 
@@ -151,7 +152,8 @@ npm run sync:bsi
 ├─ scripts/                  # Build-/Security-/Hygiene-Skripte
 ├─ tests/                    # Playwright E2E- und A11y-Tests
 ├─ Kataloge/                 # OSCAL-Quellkataloge (Input für build:data)
-├─ public/data/              # generierte statische Datenartefakte
+├─ public/data/              # generierte statische Datenartefakte (nicht versioniert)
+├─ public/sw.js              # generierter Service Worker (nicht versioniert)
 ├─ .github/workflows/        # CI (quality), CD (deploy-pages), Sync-Automation (daily-bsi-sync)
 └─ docs/                     # vertiefende technische Dokumentation
 ```
@@ -167,7 +169,6 @@ npm run sync:bsi
 - [Developer Onboarding](docs/developer-onboarding.md)
 - [ADR-Zusammenfassung](docs/adr-summary.md)
 - [Offene Punkte / Gaps](docs/open-issues-and-gaps.md)
-- [Hosting Security Headers](docs/hosting-security-headers.md)
 
 ## Lizenz
 

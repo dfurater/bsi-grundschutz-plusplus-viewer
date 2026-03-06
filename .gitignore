@@ -5,5 +5,7 @@ dist
 .lighthouseci
 test-results
 playwright-report
+public/data/
+public/sw.js
 .env*
 !.env.example

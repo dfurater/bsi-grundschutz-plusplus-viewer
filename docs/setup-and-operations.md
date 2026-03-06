@@ -58,6 +58,7 @@ npm run test:unit
 ```
 
 Vitest testet `src/**/*.test.ts(x)` im Node-Environment.
+`npm run test:unit` führt intern zuerst `npm run build` aus, damit die generierten Artefakte unter `public/data/**` und `public/sw.js` verfügbar sind.
 
 ### Erweiterte QA
 
@@ -92,10 +93,10 @@ Enthält Build, Unit-Tests, Release-Hygiene, Lighthouse und Playwright-A11y.
   3. Anschließend erstellt/aktualisiert `peter-evans/create-pull-request` einen PR.
   4. Ohne Katalogdifferenzen endet der Job ohne PR.
 
-### Alternative Hosts
+### Hosting
 
-- Header-Policy-Dateien: `netlify.toml`, `public/_headers`
-- Hinweis zu GitHub Pages: `_headers`/`netlify.toml` werden dort nicht als Header-Policy erzwungen.
+- Produktiv-Deployment ist auf GitHub Pages ausgerichtet.
+- Es gibt keine hostspezifischen Header-Policy-Dateien im Repository.
 
 ## Konfiguration
 
@@ -106,12 +107,12 @@ Enthält Build, Unit-Tests, Release-Hygiene, Lighthouse und Playwright-A11y.
 - `VITE_OPERATOR_ADDRESS_LINE1`
 - `VITE_OPERATOR_ADDRESS_LINE2`
 - `VITE_OPERATOR_EMAIL`
-- `SECURITY_HEADERS_URL`
 
 ### Datenkonfiguration
 
 - Quellkataloge: `Kataloge/`
 - Standarddatensatz: `anwender` (`public/data/catalog-registry.json`)
+- `public/data/**` und `public/sw.js` sind generiertes Build-Output (nicht versioniert)
 - manueller Upstream-Sync: `npm run sync:bsi`
 
 ## Troubleshooting
@@ -134,16 +135,6 @@ Lösung:
 npm run build:data
 ```
 
-### Header-Check wird übersprungen
-
-Ursache:
-- `SECURITY_HEADERS_URL` nicht gesetzt.
-
-Lösung:
-```bash
-SECURITY_HEADERS_URL="https://<preview-or-prod-url>" npm run check:headers
-```
-
 ## Betriebsaspekte
 
 - Service Worker wird auf localhost deregistriert.
@@ -161,7 +152,7 @@ SECURITY_HEADERS_URL="https://<preview-or-prod-url>" npm run check:headers
 ## Betriebsrisiken
 
 - Die Datenqualität hängt von den Katalogquellen in `Kataloge/` und deren Strukturkonsistenz ab.
-- Auf GitHub Pages werden Security-Header aus `_headers`/`netlify.toml` nicht erzwungen.
+- GitHub Pages bietet nur eingeschränkte, nicht repository-lokale Steuerung von Response-Headern.
 
 ## Einstiegsvoraussetzungen für Entwickler
 

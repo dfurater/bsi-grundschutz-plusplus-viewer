@@ -3,7 +3,7 @@
 ## Systemkontext
 
 - Clientseitige Single-Page-App (React/Vite) für Grundschutz++-Katalogdaten.
-- Kein eigener Application-Server; Daten werden als statische JSON-Dateien ausgeliefert (`public/data/**`).
+- Kein eigener Application-Server; Daten werden als statische Dateien ausgeliefert (`public/data/**`, `public/sw.js`, im Build generiert).
 - Eingabedaten liegen als OSCAL-JSON-Dateien in `Kataloge/`.
 - Deployment ist auf statische Hosts ausgelegt, inklusive GitHub Pages Workflow.
 
@@ -65,7 +65,7 @@ Aufgabe:
 
 1. `scripts/build-catalog.mjs` liest Kataloge aus `Kataloge/`.
 2. `normalizeCatalog` erzeugt normalisierte Strukturen.
-3. Skript schreibt statische Assets nach `public/data/**`.
+3. Skript schreibt statische Assets nach `public/data/**` und `public/sw.js`.
 4. Vite baut die App nach `dist/`.
 
 ### Laufzeit
@@ -107,6 +107,6 @@ Aufgabe:
 - TypeScript `strict` ist `false`.
 - Keine dedizierte Linting-/Formatting-Pipeline im `package.json`.
 - Keine Coverage-Messung konfiguriert.
-- Header-Policy auf GitHub Pages wird nicht über `public/_headers`/`netlify.toml` erzwungen.
+- GitHub Pages bietet nur eingeschränkte, nicht repository-lokale Steuerung von Response-Headern.
 - Keine serverseitigen APIs oder Datenbanken.
 - Keine Authentifizierung/Autorisierung implementiert.

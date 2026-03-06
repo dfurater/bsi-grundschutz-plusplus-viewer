@@ -78,7 +78,7 @@ jobs:
 
       - name: Validate build and tests
         if: steps.changes.outputs.has_changes == 'true'
-        run: npm run build && npm run test:unit && npm run check:release-hygiene
+        run: npm run build && npm run test:unit:raw && npm run check:release-hygiene
 
       - name: Create or update Pull Request
         if: steps.changes.outputs.has_changes == 'true'
@@ -103,8 +103,6 @@ jobs:
             bsi-catalog-update
           add-paths: |
             Kataloge/*.json
-            public/data/**
-            public/sw.js
 
       - name: Skip notice
         if: steps.changes.outputs.has_changes != 'true'
