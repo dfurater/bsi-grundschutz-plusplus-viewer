@@ -1,0 +1,111 @@
+name: daily-bsi-sync
+
+on:
+  schedule:
+    - cron: "23 4 * * *"
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: "Optional upstream ref (branch/tag/sha)"
+        required: false
+        default: "main"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: daily-bsi-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-and-pr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      VITE_OPERATOR_NAME: Max Mustermann
+      VITE_OPERATOR_ADDRESS_LINE1: Musterstrasse 1
+      VITE_OPERATOR_ADDRESS_LINE2: 10115 Berlin
+      VITE_OPERATOR_EMAIL: max.mustermann@example.invalid
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Resolve upstream ref
+        id: upstream
+        shell: bash
+        run: |
+          ref_input="${{ github.event.inputs.upstream_ref }}"
+          if [ -n "$ref_input" ]; then
+            echo "ref=$ref_input" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Sync BSI catalog files
+        id: sync
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BSI_REPO: BSI-Bund/Stand-der-Technik-Bibliothek
+          BSI_REF: ${{ steps.upstream.outputs.ref }}
+        run: npm run sync:bsi
+
+      - name: Detect catalog changes
+        id: changes
+        shell: bash
+        run: |
+          if git diff --quiet -- Kataloge; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "No catalog changes detected."
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "Changed catalog files:"
+            git diff --name-only -- Kataloge
+          fi
+
+      - name: Install dependencies
+        if: steps.changes.outputs.has_changes == 'true'
+        run: npm ci
+
+      - name: Validate build and tests
+        if: steps.changes.outputs.has_changes == 'true'
+        run: npm run build && npm run test:unit && npm run check:release-hygiene
+
+      - name: Create or update Pull Request
+        if: steps.changes.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: automation/bsi-daily-sync
+          delete-branch: true
+          title: "chore(sync): update BSI catalogs"
+          commit-message: "chore(sync): update BSI catalogs from ${{ steps.sync.outputs.upstream_commit }}"
+          body: |
+            This PR was generated automatically by `.github/workflows/daily-bsi-sync.yml`.
+
+            - Upstream repository: `${{ steps.sync.outputs.upstream_repo }}`
+            - Upstream ref: `${{ steps.sync.outputs.upstream_ref }}`
+            - Upstream commit: `${{ steps.sync.outputs.upstream_commit }}`
+            - Changed catalog files: `${{ steps.sync.outputs.changed_files }}`
+
+            PR creation is skipped automatically if no catalog files changed.
+          labels: |
+            automated-sync
+            bsi-catalog-update
+          add-paths: |
+            Kataloge/*.json
+            public/data/**
+            public/sw.js
+
+      - name: Skip notice
+        if: steps.changes.outputs.has_changes != 'true'
+        run: echo "No new catalogs published. PR creation skipped."
