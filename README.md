@@ -26,7 +26,7 @@ Kernziele:
 
 ## Architektur (Kurzüberblick)
 
-- Frontend: React 18 + TypeScript + Vite (CSR)
+- Frontend: React 19 + TypeScript + Vite (CSR)
 - Suche/Indexierung: Browser Worker (`src/workers/searchWorker.ts`)
 - Datenhaltung: statische JSON-Artefakte in `public/data/**`
 - Build-Datenpipeline: `scripts/build-catalog.mjs` erzeugt Suchindex, Detail-Chunks, Registry, Profilanalyse und Service Worker
