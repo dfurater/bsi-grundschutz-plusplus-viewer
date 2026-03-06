@@ -9,8 +9,10 @@ describe("AppHeader", () => {
         isTabletUp
         isShrunk={false}
         searchOverlayOpen={false}
+        secondaryActionsOpen={false}
         theme="light"
         onOpenSearchOverlay={vi.fn()}
+        onToggleSecondaryActions={vi.fn()}
         onToggleTheme={vi.fn()}
         onGoHome={vi.fn()}
         onGoBack={vi.fn()}
@@ -21,7 +23,8 @@ describe("AppHeader", () => {
     expect(html).toContain("Suche öffnen");
     expect(html).toContain("Katalog durchsuchen");
     expect(html).not.toContain("Datensatz auswählen");
-    expect(html).not.toContain("Weitere Aktionen");
+    expect(html).toContain("Weitere Aktionen");
+    expect(html).toContain('aria-haspopup="menu"');
     expect(html).toContain("Zur Startseite");
     expect(html).not.toContain("Grundschutz++");
     expect(html).not.toContain("<h1");
@@ -36,8 +39,10 @@ describe("AppHeader", () => {
         isTabletUp={false}
         isShrunk={false}
         searchOverlayOpen={false}
+        secondaryActionsOpen={true}
         theme="dark"
         onOpenSearchOverlay={vi.fn()}
+        onToggleSecondaryActions={vi.fn()}
         onToggleTheme={vi.fn()}
         onGoHome={vi.fn()}
         onGoBack={vi.fn()}
@@ -47,7 +52,9 @@ describe("AppHeader", () => {
 
     expect(html).toContain("Suche öffnen");
     expect(html).not.toContain("Katalog durchsuchen");
-    expect(html).not.toContain("Weitere Aktionen");
+    expect(html).toContain("Weitere Aktionen");
+    expect(html).toContain('aria-haspopup="dialog"');
+    expect(html).toContain('aria-expanded="true"');
     expect(html).not.toContain("Datensatz auswählen");
     expect(html).toContain("Hellmodus");
   });
