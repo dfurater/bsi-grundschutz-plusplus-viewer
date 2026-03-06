@@ -8,14 +8,14 @@
 ## Sicherheits-/Governance-Gaps
 
 1. Es gibt keine Authentifizierung/Autorisierung.
-2. Security-Header werden auf GitHub Pages nicht über `_headers`/`netlify.toml` erzwungen.
+2. GitHub Pages bietet nur eingeschränkte, nicht repository-lokale Steuerung von Response-Headern.
 3. Es gibt keine SAST-/Lint-Sicherheitsregeln im Build.
 
 ## Qualitäts-/Testgaps
 
 1. Es gibt keine Coverage-Metriken.
 2. Es gibt keinen dedizierten Last-/Soak-Test für Worker und große Uploads.
-3. Der Header-Check ist optional und abhängig von `SECURITY_HEADERS_URL`.
+3. Es gibt keinen dedizierten automationsgestützten Test für reale Response-Header auf dem Produktiv-Host.
 
 ## Betriebsgaps
 

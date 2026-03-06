@@ -14,14 +14,14 @@
     "build:data": "node scripts/build-catalog.mjs",
     "build": "npm run clean:release-artifacts && npm run build:data && tsc -b && node scripts/check-legal-placeholders.mjs && vite build",
     "preview": "vite preview --strictPort --host 127.0.0.1 --port 4173",
-    "test:unit": "vitest run",
+    "test:unit:raw": "vitest run",
+    "test:unit": "npm run build && npm run test:unit:raw",
     "check:release-hygiene": "npm run clean:release-artifacts && node scripts/check-release-hygiene.mjs",
-    "check:headers": "node scripts/check-security-headers.mjs",
     "audit:prod": "npm audit --omit=dev --audit-level=high",
     "audit:dev": "node scripts/audit-dev-policy.mjs",
     "qa:lighthouse": "lhci autorun --config=./lighthouserc.json",
     "qa:a11y": "playwright test --config=playwright.a11y.config.ts",
-    "qa": "npm run build && npm run test:unit && npm run check:release-hygiene && start-server-and-test preview http://127.0.0.1:4173 \"npm run qa:lighthouse && npm run qa:a11y\""
+    "qa": "npm run build && npm run test:unit:raw && npm run check:release-hygiene && start-server-and-test preview http://127.0.0.1:4173 \"npm run qa:lighthouse && npm run qa:a11y\""
   },
   "dependencies": {
     "react": "^19.2.4",
