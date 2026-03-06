@@ -36,7 +36,6 @@ export function AppHeader({
   showBack
 }: AppHeaderProps) {
   const nextThemeLabel = theme === "dark" ? "Hellmodus" : "Dunkelmodus";
-  const actionsPopupRole = isTabletUp ? "menu" : "dialog";
 
   return (
     <header className={`app-header-shell ${isShrunk ? "is-shrunk" : ""}`}>
@@ -111,25 +110,27 @@ export function AppHeader({
               {exportingCsv ? "CSV wird erstellt" : `Export CSV (${selectedControlCount})`}
             </button>
           ) : null}
-          <button
-            type="button"
-            className="icon-button app-actions-button"
-            aria-label="Weitere Aktionen"
-            aria-haspopup={actionsPopupRole}
-            aria-expanded={secondaryActionsOpen}
-            title="Weitere Aktionen"
-            onClick={onToggleSecondaryActions}
-          >
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-              <path
-                d="M5 7.5h14M5 12h14M5 16.5h14"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.9"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
+          {!isTabletUp ? (
+            <button
+              type="button"
+              className="icon-button app-actions-button"
+              aria-label="Weitere Aktionen"
+              aria-haspopup="dialog"
+              aria-expanded={secondaryActionsOpen}
+              title="Weitere Aktionen"
+              onClick={onToggleSecondaryActions}
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path
+                  d="M5 7.5h14M5 12h14M5 16.5h14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          ) : null}
           <button
             type="button"
             className="icon-button app-theme-button theme-toggle-button"
