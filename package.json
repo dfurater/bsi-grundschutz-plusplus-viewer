@@ -24,7 +24,7 @@
     "qa": "npm run build && npm run test:unit && npm run check:release-hygiene && start-server-and-test preview http://127.0.0.1:4173 \"npm run qa:lighthouse && npm run qa:a11y\""
   },
   "dependencies": {
-    "react": "^18.3.1",
+    "react": "^19.2.4",
     "react-dom": "^18.3.1",
     "zod": "^3.25.76"
   },
@@ -33,7 +33,7 @@
     "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.58.2",
     "@types/node": "^24.3.0",
-    "@types/react": "^18.3.28",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^5.1.0",
     "start-server-and-test": "^2.1.5",
