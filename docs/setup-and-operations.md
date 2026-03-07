@@ -88,10 +88,11 @@ Enthält Build, Unit-Tests, Release-Hygiene, Lighthouse und Playwright-A11y.
 - Trigger: `schedule` (täglich) und `workflow_dispatch`
 - Quelle: `BSI-Bund/Stand-der-Technik-Bibliothek` (`main`, optionaler Override via `upstream_ref`)
 - Ablauf:
-  1. `npm run sync:bsi` synchronisiert die vier relevanten Katalogdateien nach `Kataloge/`.
-  2. Nur bei echten Dateidifferenzen in `Kataloge/` folgen `npm ci`, `npm run build`, `npm run test:unit`, `npm run check:release-hygiene`.
-  3. Anschließend erstellt/aktualisiert `peter-evans/create-pull-request` einen PR.
-  4. Ohne Katalogdifferenzen endet der Job ohne PR.
+  1. `npm run sync:bsi` lädt die vier relevanten Katalogdateien gegen einen aufgelösten Commit-Snapshot (`BSI_REF -> Commit SHA`), mit Retry/Backoff.
+  2. Der Sync validiert Struktur/Semantik (inkl. Profil-Importauflösung, Hash-Verifikation sofern vorhanden, Drift-/Plausibilitätswarnungen) und promoted Änderungen atomar nach `Kataloge/`.
+  3. Nur bei echten Dateidifferenzen in `Kataloge/` folgen `npm ci`, `npm run build`, `npm run test:unit:raw`, `npm run check:release-hygiene`, `npm run check:profile-relation-audit`.
+  4. Anschließend erstellt/aktualisiert `peter-evans/create-pull-request` einen PR inklusive Sync-Report und Relation-Audit-Summary.
+  5. Ohne Katalogdifferenzen endet der Job ohne PR.
 
 ### Main-Branch-Governance (GitHub-Einstellungen)
 
@@ -139,6 +140,7 @@ Hinweis zu Auto-merge:
 - Standarddatensatz: `anwender` (`public/data/catalog-registry.json`)
 - `public/data/**` und `public/sw.js` sind generiertes Build-Output (nicht versioniert)
 - manueller Upstream-Sync: `npm run sync:bsi`
+- optionaler Relation-Audit-Gate-Modus: `RELATION_AUDIT_MODE=off|warn|error` (Default im Daily-Workflow: `warn`)
 
 ## Troubleshooting
 
