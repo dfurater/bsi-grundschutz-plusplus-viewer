@@ -34,16 +34,16 @@ Dieses Dokument fasst zentrale, im Repository umgesetzte Architekturentscheidung
 ## ADR-005: Build-time Normalisierung in statische Artefakte
 
 - Kontext: Runtime vereinfachen und Suche beschleunigen.
-- Entscheidung: `build-catalog.mjs` generiert Index/Meta/Detail-Chunks/Registry/Profile.
+- Entscheidung: `build-catalog.mjs` generiert Index/Meta/Detail-Chunks aus dem Grundschutz++-Anwenderkatalog.
 - Konsequenzen:
   - Runtime greift auf vorbereitete Datenstrukturen zu
 
-## ADR-006: Multi-Dataset-Architektur mit Registry
+## ADR-006: Single-Source-Architektur mit Anwenderkatalog
 
-- Kontext: Gleichzeitige Bereitstellung mehrerer Kataloge.
-- Entscheidung: `catalog-registry.json` plus dataset-spezifische Verzeichnisse.
+- Kontext: Fachlich maßgebliche Nutzung des fertigen BSI-Anwenderkatalogs.
+- Entscheidung: Produktivpfad basiert auf `Kataloge/Grundschutz++-catalog.json` als Source of Truth.
 - Konsequenzen:
-  - Datensatzwechsel über einheitliches Metamodell
+  - keine Pflichtabhängigkeit auf Kernel/Methodik/Profile im Viewer-Laufzeitpfad
 
 ## ADR-007: Build-Gate für Rechtsseiten-Platzhalter
 

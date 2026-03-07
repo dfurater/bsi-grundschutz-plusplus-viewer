@@ -5,9 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   CatalogIndexSchema,
   CatalogMetaSchema,
-  CatalogRegistrySchema,
   DetailChunkSchema,
-  ProfileAnalysisSchema,
   UploadCatalogSchema
 } from "./dataSchemas";
 import { validateOrThrow } from "./validation";
@@ -39,14 +37,10 @@ describe("schema validation", () => {
   it("validiert reale Build-Artefakte", () => {
     const index = readJson("public/data/catalog-index.json");
     const meta = readJson("public/data/catalog-meta.json");
-    const registry = readJson("public/data/catalog-registry.json");
-    const profile = readJson("public/data/profile-links.json");
     const detailChunk = readJson(findSampleDetailChunkPath());
 
     expect(() => validateOrThrow(index, CatalogIndexSchema, "index")).not.toThrow();
     expect(() => validateOrThrow(meta, CatalogMetaSchema, "meta")).not.toThrow();
-    expect(() => validateOrThrow(registry, CatalogRegistrySchema, "registry")).not.toThrow();
-    expect(() => validateOrThrow(profile, ProfileAnalysisSchema, "profile")).not.toThrow();
     expect(() => validateOrThrow(detailChunk, DetailChunkSchema, "detail")).not.toThrow();
   });
 

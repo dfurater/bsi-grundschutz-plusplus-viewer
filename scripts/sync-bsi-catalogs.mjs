@@ -1,4 +1,4 @@
-import { createHash, getHashes } from "node:crypto";
+import { createHash } from "node:crypto";
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,38 +9,16 @@ const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_RETRY_BASE_MS = 500;
 const DEFAULT_MIN_CONTROL_RATIO = 0.8;
 
-const catalogFileMappings = [
-  {
-    fileId: "anwender-catalog",
-    fileKind: "catalog",
-    upstreamPath: "Anwenderkataloge/Grundschutz++/Grundschutz++-catalog.json",
-    localPath: "Kataloge/Grundschutz++-catalog.json"
-  },
-  {
-    fileId: "kernel-catalog",
-    fileKind: "catalog",
-    upstreamPath: "Quellkataloge/Kernel/BSI-Stand-der-Technik-Kernel-catalog.json",
-    localPath: "Kataloge/BSI-Stand-der-Technik-Kernel-catalog.json"
-  },
-  {
-    fileId: "methodik-catalog",
-    fileKind: "catalog",
-    upstreamPath: "Quellkataloge/Methodik-Grundschutz++/BSI-Methodik-Grundschutz++-catalog.json",
-    localPath: "Kataloge/BSI-Methodik-Grundschutz++-catalog.json"
-  },
-  {
-    fileId: "grundschutz-profile",
-    fileKind: "profile",
-    upstreamPath: "Quellkataloge/Methodik-Grundschutz++/Grundschutz++-profile.json",
-    localPath: "Kataloge/Grundschutz++-profile.json"
-  }
-];
+const catalogFileMapping = {
+  fileId: "anwender-catalog",
+  fileKind: "catalog",
+  upstreamPath: "Anwenderkataloge/Grundschutz++/Grundschutz++-catalog.json",
+  localPath: "Kataloge/Grundschutz++-catalog.json"
+};
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..");
-const supportedHashAlgorithms = new Set(getHashes().map((value) => value.toLowerCase()));
-const strongIntegrityAlgorithms = new Set(["sha256", "sha384", "sha512"]);
 
 class SyncError extends Error {
   constructor(message, options = {}) {
@@ -64,10 +42,6 @@ function toFloatOrDefault(value, fallback) {
 
 function sha256(text) {
   return createHash("sha256").update(text).digest("hex");
-}
-
-function hashWithAlgorithm(algorithm, text) {
-  return createHash(algorithm).update(text).digest("hex");
 }
 
 function createApiHeaders(token) {
@@ -96,32 +70,29 @@ function looksLikeTransientStatus(status) {
   return status === 408 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
 }
 
-function normalizeHashAlgorithm(rawAlgorithm) {
-  const normalized = String(rawAlgorithm ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
-
-  if (!normalized) {
-    return null;
-  }
-
-  if (normalized === "sha256") {
-    return "sha256";
-  }
-  if (normalized === "sha384") {
-    return "sha384";
-  }
-  if (normalized === "sha512") {
-    return "sha512";
-  }
-
-  return supportedHashAlgorithms.has(normalized) ? normalized : null;
-}
-
 function sleep(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
+  });
+}
+
+function classifyFetchError(error, description) {
+  if (error instanceof SyncError) {
+    return error;
+  }
+
+  if (error instanceof TypeError) {
+    return new SyncError(`${description} network error: ${error.message}`, {
+      kind: "network",
+      retryable: true,
+      cause: error
+    });
+  }
+
+  return new SyncError(`${description} unknown error: ${String(error)}`, {
+    kind: "network",
+    retryable: false,
+    cause: error
   });
 }
 
@@ -160,26 +131,6 @@ async function fetchWithRetry(url, headers, parser, description, options) {
   }
 
   throw new SyncError(`${description} failed after retries.`, { kind: "network", retryable: false });
-}
-
-function classifyFetchError(error, description) {
-  if (error instanceof SyncError) {
-    return error;
-  }
-
-  if (error instanceof TypeError) {
-    return new SyncError(`${description} network error: ${error.message}`, {
-      kind: "network",
-      retryable: true,
-      cause: error
-    });
-  }
-
-  return new SyncError(`${description} unknown error: ${String(error)}`, {
-    kind: "network",
-    retryable: false,
-    cause: error
-  });
 }
 
 async function fetchJson(url, headers, description, options) {
@@ -255,13 +206,6 @@ function countControlsFromGroups(groups) {
 function extractCatalogRoot(parsed) {
   if (asObject(parsed?.catalog)) {
     return parsed.catalog;
-  }
-  return asObject(parsed);
-}
-
-function extractProfileRoot(parsed) {
-  if (asObject(parsed?.profile)) {
-    return parsed.profile;
   }
   return asObject(parsed);
 }
@@ -406,162 +350,6 @@ function validateCatalog(parsed, mapping, localParsed, options) {
   };
 }
 
-function buildResourceByUuid(profileRoot) {
-  const resources = asArray(profileRoot?.["back-matter"]?.resources);
-  const map = new Map();
-  for (const resource of resources) {
-    const uuid = resource?.uuid;
-    if (uuid) {
-      map.set(String(uuid), resource);
-    }
-  }
-  return map;
-}
-
-function getImportResolvedHref(entry, resourceByUuid) {
-  const href = String(entry?.href ?? "");
-  if (!href.startsWith("#")) {
-    return href;
-  }
-
-  const resource = resourceByUuid.get(href.slice(1));
-  const rlink = asArray(resource?.rlinks)[0];
-  return rlink?.href ? String(rlink.href) : "";
-}
-
-function getImportHashInfo(entry, resourceByUuid) {
-  const href = String(entry?.href ?? "");
-  const resource = href.startsWith("#") ? resourceByUuid.get(href.slice(1)) : null;
-  const rlink = asArray(resource?.rlinks)[0];
-  const hash = asArray(rlink?.hashes)[0];
-  if (!hash) {
-    return null;
-  }
-  return {
-    algorithm: hash.algorithm == null ? null : String(hash.algorithm),
-    value: hash.value == null ? null : String(hash.value)
-  };
-}
-
-function validateProfile(parsed, mapping, stagedByFileName, localParsed) {
-  const warnings = [];
-  const root = extractProfileRoot(parsed);
-  if (!root) {
-    throw new SyncError(`${mapping.localPath} has no profile object.`, { kind: "schema" });
-  }
-
-  if (!Array.isArray(root.imports)) {
-    throw new SyncError(`${mapping.localPath} schema invalid: profile.imports must be an array.`, {
-      kind: "schema"
-    });
-  }
-
-  const metadata = asObject(root.metadata);
-  if (!metadata) {
-    throw new SyncError(`${mapping.localPath} schema invalid: profile.metadata missing.`, { kind: "schema" });
-  }
-
-  const profileAllowedKeys = new Set(["uuid", "metadata", "imports", "merge", "modify", "back-matter"]);
-  const unknownProfileKeys = Object.keys(root).filter((key) => !profileAllowedKeys.has(key));
-  if (unknownProfileKeys.length > 0) {
-    warnings.push(`Profile drift detected in ${mapping.localPath}: unexpected profile keys [${unknownProfileKeys.join(", ")}].`);
-  }
-
-  const localRoot = localParsed ? extractProfileRoot(localParsed) : null;
-  const localMetadata = localRoot ? asObject(localRoot.metadata) : null;
-
-  const version = metadata.version == null ? null : String(metadata.version);
-  const lastModified = metadata["last-modified"] == null ? null : String(metadata["last-modified"]);
-  const localVersion = localMetadata?.version == null ? null : String(localMetadata.version);
-  const localLastModified = localMetadata?.["last-modified"] == null ? null : String(localMetadata["last-modified"]);
-
-  if (version && localVersion && compareVersions(version, localVersion) < 0) {
-    warnings.push(`${mapping.localPath}: profile metadata.version regressed (${version} < ${localVersion}).`);
-  }
-  if (lastModified && localLastModified && compareTimestamps(lastModified, localLastModified) < 0) {
-    warnings.push(`${mapping.localPath}: profile metadata.last-modified regressed (${lastModified} < ${localLastModified}).`);
-  }
-
-  const resourceByUuid = buildResourceByUuid(root);
-  const integrityChecks = [];
-
-  for (const entry of root.imports) {
-    const rawHref = String(entry?.href ?? "");
-    const resolvedHref = getImportResolvedHref(entry, resourceByUuid);
-
-    if (!resolvedHref) {
-      throw new SyncError(`${mapping.localPath}: unresolved profile import '${rawHref}'.`, {
-        kind: "semantic"
-      });
-    }
-
-    const targetFileName = path.basename(resolvedHref);
-    const stagedTarget = stagedByFileName.get(targetFileName) ?? null;
-    if (!stagedTarget) {
-      throw new SyncError(
-        `${mapping.localPath}: profile import '${rawHref}' resolves to '${resolvedHref}', which is not part of tracked catalog files.`,
-        { kind: "semantic" }
-      );
-    }
-
-    const hashInfo = getImportHashInfo(entry, resourceByUuid);
-    if (!hashInfo || !hashInfo.value) {
-      integrityChecks.push({
-        href: rawHref,
-        resolvedHref,
-        status: "no-hash"
-      });
-      continue;
-    }
-
-    const algorithm = normalizeHashAlgorithm(hashInfo.algorithm);
-    if (!algorithm) {
-      warnings.push(`${mapping.localPath}: unsupported hash algorithm '${hashInfo.algorithm}' for import '${rawHref}'.`);
-      integrityChecks.push({
-        href: rawHref,
-        resolvedHref,
-        status: "unsupported-algorithm",
-        algorithm: hashInfo.algorithm
-      });
-      continue;
-    }
-
-    const expected = String(hashInfo.value).trim().toLowerCase();
-    const actual = hashWithAlgorithm(algorithm, stagedTarget.content).toLowerCase();
-    const matched = expected === actual;
-    const isStrongAlgorithm = strongIntegrityAlgorithms.has(algorithm);
-
-    integrityChecks.push({
-      href: rawHref,
-      resolvedHref,
-      status: matched ? "match" : isStrongAlgorithm ? "mismatch" : "mismatch-weak",
-      algorithm
-    });
-
-    if (!matched) {
-      if (!isStrongAlgorithm) {
-        warnings.push(
-          `${mapping.localPath}: hash mismatch for import '${rawHref}' uses weak algorithm '${algorithm}' and is treated as warning.`
-        );
-        continue;
-      }
-      throw new SyncError(
-        `${mapping.localPath}: hash mismatch for import '${rawHref}' (${algorithm}). expected=${expected.slice(0, 16)}..., actual=${actual.slice(0, 16)}...`,
-        { kind: "semantic" }
-      );
-    }
-  }
-
-  return {
-    kind: "profile",
-    importCount: root.imports.length,
-    metadataVersion: version,
-    metadataLastModified: lastModified,
-    warnings,
-    integrityChecks
-  };
-}
-
 function renderSyncReportMarkdown(report) {
   const lines = [];
   lines.push("### BSI catalog sync report");
@@ -582,14 +370,6 @@ function renderSyncReportMarkdown(report) {
     lines.push(
       `- \`${file.localPath}\`: ${file.status}, sha256=\`${file.sha256.slice(0, 12)}\`, size=${file.sizeBytes}B, kind=${file.validation.kind}`
     );
-  }
-
-  if (report.profileIntegrityChecks.length > 0) {
-    lines.push("");
-    lines.push("#### Profile import integrity");
-    for (const item of report.profileIntegrityChecks) {
-      lines.push(`- ${item.href} -> ${item.resolvedHref}: ${item.status}${item.algorithm ? ` (${item.algorithm})` : ""}`);
-    }
   }
 
   if (report.warnings.length > 0) {
@@ -670,81 +450,46 @@ async function main() {
 
   process.stdout.write(`Sync source: ${upstreamRepo}@${upstreamRef} (resolved ${upstreamCommitSha})\n`);
 
-  const stagedFiles = [];
+  const apiPath = encodePathSegments(catalogFileMapping.upstreamPath);
+  const metadataUrl = `https://api.github.com/repos/${upstreamRepo}/contents/${apiPath}?ref=${encodeURIComponent(upstreamCommitSha)}`;
+  const metadata = await fetchJson(metadataUrl, apiHeaders, `Load metadata for ${catalogFileMapping.upstreamPath}`, fetchOptions);
 
-  for (const mapping of catalogFileMappings) {
-    const apiPath = encodePathSegments(mapping.upstreamPath);
-    const metadataUrl = `https://api.github.com/repos/${upstreamRepo}/contents/${apiPath}?ref=${encodeURIComponent(upstreamCommitSha)}`;
-    const metadata = await fetchJson(metadataUrl, apiHeaders, `Load metadata for ${mapping.upstreamPath}`, fetchOptions);
-
-    if (metadata.type !== "file" || typeof metadata.download_url !== "string") {
-      throw new SyncError(`Unexpected metadata for ${mapping.upstreamPath}.`, {
-        kind: "api"
-      });
-    }
-
-    const upstreamContent = await fetchText(
-      metadata.download_url,
-      rawHeaders,
-      `Download ${mapping.upstreamPath}`,
-      fetchOptions
-    );
-
-    const localAbsolutePath = path.join(rootDir, mapping.localPath);
-    const localContent = await readLocalFileIfExists(localAbsolutePath);
-
-    stagedFiles.push({
-      ...mapping,
-      localAbsolutePath,
-      upstreamContent,
-      localContent,
-      sizeBytes: Buffer.byteLength(upstreamContent, "utf8"),
-      sha256: sha256(upstreamContent)
+  if (metadata.type !== "file" || typeof metadata.download_url !== "string") {
+    throw new SyncError(`Unexpected metadata for ${catalogFileMapping.upstreamPath}.`, {
+      kind: "api"
     });
   }
 
-  const stagedByFileName = new Map(stagedFiles.map((entry) => [path.basename(entry.localPath), { content: entry.upstreamContent, mapping: entry }]));
+  const upstreamContent = await fetchText(
+    metadata.download_url,
+    rawHeaders,
+    `Download ${catalogFileMapping.upstreamPath}`,
+    fetchOptions
+  );
 
-  const warnings = [];
-  const filesReport = [];
-  const profileIntegrityChecks = [];
+  const localAbsolutePath = path.join(rootDir, catalogFileMapping.localPath);
+  const localContent = await readLocalFileIfExists(localAbsolutePath);
 
-  for (const staged of stagedFiles) {
-    const parsed = parseJsonOrThrow(staged.upstreamContent, staged.localPath);
-    const localParsed = staged.localContent ? parseJsonOrThrow(staged.localContent, `${staged.localPath} (local)`) : null;
+  const parsed = parseJsonOrThrow(upstreamContent, catalogFileMapping.localPath);
+  const localParsed = localContent ? parseJsonOrThrow(localContent, `${catalogFileMapping.localPath} (local)`) : null;
+  const validation = validateCatalog(parsed, catalogFileMapping, localParsed, { minControlRatio });
+  const warnings = [...validation.warnings];
 
-    let validation;
-    if (staged.fileKind === "catalog") {
-      validation = validateCatalog(parsed, staged, localParsed, { minControlRatio });
-    } else {
-      validation = validateProfile(parsed, staged, stagedByFileName, localParsed);
-      for (const check of validation.integrityChecks) {
-        profileIntegrityChecks.push(check);
-      }
-    }
+  const fileReport = {
+    localPath: catalogFileMapping.localPath,
+    upstreamPath: catalogFileMapping.upstreamPath,
+    status: localContent === upstreamContent ? "unchanged" : "changed",
+    sha256: sha256(upstreamContent),
+    sizeBytes: Buffer.byteLength(upstreamContent, "utf8"),
+    validation
+  };
 
-    collectWarnings(warnings, validation.warnings);
-
-    const status = staged.localContent === staged.upstreamContent ? "unchanged" : "changed";
-    filesReport.push({
-      localPath: staged.localPath,
-      upstreamPath: staged.upstreamPath,
-      status,
-      sha256: staged.sha256,
-      sizeBytes: staged.sizeBytes,
-      validation
-    });
-  }
-
-  const changedFiles = stagedFiles.filter((entry) => entry.localContent !== entry.upstreamContent);
-  for (const changed of changedFiles) {
-    await mkdir(path.dirname(changed.localAbsolutePath), { recursive: true });
-    await writeFile(changed.localAbsolutePath, changed.upstreamContent, "utf8");
-    process.stdout.write(`+ updated ${changed.localPath} (${changed.sha256.slice(0, 12)})\n`);
-  }
-
-  for (const unchanged of stagedFiles.filter((entry) => entry.localContent === entry.upstreamContent)) {
-    process.stdout.write(`= unchanged ${unchanged.localPath}\n`);
+  if (fileReport.status === "changed") {
+    await mkdir(path.dirname(localAbsolutePath), { recursive: true });
+    await writeFile(localAbsolutePath, upstreamContent, "utf8");
+    process.stdout.write(`+ updated ${catalogFileMapping.localPath} (${fileReport.sha256.slice(0, 12)})\n`);
+  } else {
+    process.stdout.write(`= unchanged ${catalogFileMapping.localPath}\n`);
   }
 
   const report = {
@@ -759,13 +504,12 @@ async function main() {
       retryBaseMs,
       minControlRatio
     },
-    files: filesReport,
+    files: [fileReport],
     warnings,
-    profileIntegrityChecks,
     summary: {
-      trackedCount: stagedFiles.length,
-      changedCount: changedFiles.length,
-      unchangedCount: stagedFiles.length - changedFiles.length,
+      trackedCount: 1,
+      changedCount: fileReport.status === "changed" ? 1 : 0,
+      unchangedCount: fileReport.status === "changed" ? 0 : 1,
       warningCount: warnings.length,
       hardGatePassed: true
     }
@@ -777,9 +521,9 @@ async function main() {
     `Sync summary: changed=${report.summary.changedCount}, unchanged=${report.summary.unchangedCount}, tracked=${report.summary.trackedCount}, warnings=${report.summary.warningCount}\n`
   );
 
-  await appendGithubOutput("changed", changedFiles.length > 0 ? "true" : "false");
-  await appendGithubOutput("changed_count", String(changedFiles.length));
-  await appendGithubOutput("changed_files", changedFiles.map((entry) => entry.localPath).join(","));
+  await appendGithubOutput("changed", fileReport.status === "changed" ? "true" : "false");
+  await appendGithubOutput("changed_count", String(report.summary.changedCount));
+  await appendGithubOutput("changed_files", fileReport.status === "changed" ? catalogFileMapping.localPath : "");
   await appendGithubOutput("upstream_repo", upstreamRepo);
   await appendGithubOutput("upstream_ref", upstreamRef);
   await appendGithubOutput("upstream_commit", upstreamCommitSha);
@@ -803,8 +547,13 @@ main().catch(async (error) => {
     await appendGithubOutput("changed_files", "");
     await appendGithubOutput("warning_count", "0");
     await appendGithubOutput("error_kind", classified.kind);
-    await appendGithubMultilineOutput("sync_report_markdown", `### BSI catalog sync report\n\n- Hard gate: **failed**\n- Error kind: \`${classified.kind}\`\n- Message: ${classified.message}`);
-    await appendStepSummary(`### BSI catalog sync report\n\n- Hard gate: **failed**\n- Error kind: \`${classified.kind}\`\n- Message: ${classified.message}`);
+    await appendGithubMultilineOutput(
+      "sync_report_markdown",
+      `### BSI catalog sync report\n\n- Hard gate: **failed**\n- Error kind: \`${classified.kind}\`\n- Message: ${classified.message}`
+    );
+    await appendStepSummary(
+      `### BSI catalog sync report\n\n- Hard gate: **failed**\n- Error kind: \`${classified.kind}\`\n- Message: ${classified.message}`
+    );
   } catch {
     // Ignore output/summary write errors when already failing.
   }

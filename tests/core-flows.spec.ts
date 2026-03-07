@@ -19,6 +19,10 @@ function isLexicographicallySorted(ids: string[], direction: "asc" | "desc") {
   return true;
 }
 
+function escapeForRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 test.describe("Kernflows", () => {
   test("Sort-Dropdown sitzt im Filterpanel und wirkt auf Reihenfolge", async ({ page }) => {
     /* REQ: User Request Sort-Umzug Sidebar */
@@ -156,6 +160,30 @@ test.describe("Kernflows", () => {
     await expect(page.getByRole("button", { name: "Zur Ergebnisliste" })).toBeVisible({ timeout: 15000 });
     await page.getByRole("button", { name: "Zur Ergebnisliste" }).click();
     await expect(page).not.toHaveURL(/control=/);
+  });
+
+  test("Graph-Knoten-Klick wechselt in den geklickten Control-Kontext", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/#/search?q=GC.2.1");
+
+    const firstResult = page.locator(".result-card").first();
+    await expect(firstResult).toBeVisible();
+    await firstResult.click();
+
+    await expect(page).toHaveURL(/control=/);
+    const selectedControlBefore = (await page.locator(".detail-header h2 span").first().innerText()).trim();
+
+    const graphNode = page.locator(".relation-graph .graph-node").first();
+    await expect(graphNode).toBeVisible({ timeout: 15000 });
+    const targetControlId = String(await graphNode.locator("text").first().textContent()).trim();
+
+    expect(targetControlId).not.toBe("");
+    expect(targetControlId).not.toBe(selectedControlBefore);
+
+    await graphNode.dispatchEvent("click");
+
+    await expect(page.locator(".detail-header h2 span").first()).toHaveText(targetControlId, { timeout: 15000 });
+    await expect(page).toHaveURL(new RegExp(`control=${escapeForRegex(encodeURIComponent(targetControlId))}`));
   });
 
   test("CSV Export ist im Header konditional sichtbar", async ({ page }) => {

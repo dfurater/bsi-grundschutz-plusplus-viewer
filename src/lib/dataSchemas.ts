@@ -242,82 +242,6 @@ export const DetailChunkSchema = z
     }
   });
 
-export const CatalogRegistrySchema = z
-  .object({
-    generatedAt: shortString,
-    defaultDatasetId: shortString,
-    datasets: z
-      .array(
-        z
-          .object({
-            id: shortString,
-            label: mediumString,
-            title: mediumString,
-            version: NullableShortString,
-            lastModified: NullableShortString,
-            oscalVersion: NullableShortString,
-            sourceFileName: mediumString,
-            catalogFileSha256: z.string().regex(/^[a-f0-9]{64}$/i),
-            stats: StatsSchema,
-            classValues: boundedArray(shortString)
-          })
-          .strict()
-      )
-      .min(1)
-      .max(20)
-  })
-  .strict();
-
-export const ProfileAnalysisSchema = z
-  .object({
-    profile: z
-      .object({
-        title: NullableMediumString,
-        version: NullableShortString,
-        lastModified: NullableShortString,
-        oscalVersion: NullableShortString,
-        uuid: NullableShortString
-      })
-      .strict(),
-    imports: boundedArray(
-      z
-        .object({
-          href: mediumString,
-          targetUuid: NullableShortString,
-          resourceHref: NullableMediumString,
-          hashAlgorithm: NullableShortString,
-          hashValue: NullableMediumString,
-          resolvedDatasetId: NullableShortString,
-          resolvedDatasetLabel: NullableMediumString,
-          resolvedDatasetTitle: NullableMediumString
-        })
-        .strict(),
-      200
-    ),
-    setParameters: boundedArray(
-      z
-        .object({
-          paramId: NullableShortString,
-          label: NullableMediumString,
-          values: boundedArray(mediumString, 64)
-        })
-        .strict(),
-      2_000
-    ),
-    relationAudit: z
-      .object({
-        kernelControlCount: z.number().int().nonnegative().max(SECURITY_BUDGETS.maxControlCount),
-        methodikControlCount: z.number().int().nonnegative().max(SECURITY_BUDGETS.maxControlCount),
-        sourceUnionControlCount: z.number().int().nonnegative().max(SECURITY_BUDGETS.maxControlCount),
-        anwenderControlCount: z.number().int().nonnegative().max(SECURITY_BUDGETS.maxControlCount),
-        unionMissingInAnwender: z.number().int().nonnegative().max(SECURITY_BUDGETS.maxControlCount),
-        anwenderMissingInUnion: z.number().int().nonnegative().max(SECURITY_BUDGETS.maxControlCount),
-        exactUnionMatch: z.boolean()
-      })
-      .strict()
-  })
-  .strict();
-
 const UploadPropSchema = z
   .object({
     name: shortString.optional(),
@@ -459,5 +383,3 @@ export const NormalizedCatalogSchema = z
 export type CatalogIndexPayloadValidated = z.infer<typeof CatalogIndexSchema>;
 export type CatalogMetaValidated = z.infer<typeof CatalogMetaSchema>;
 export type DetailChunkValidated = z.infer<typeof DetailChunkSchema>;
-export type CatalogRegistryValidated = z.infer<typeof CatalogRegistrySchema>;
-export type ProfileAnalysisValidated = z.infer<typeof ProfileAnalysisSchema>;

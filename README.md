@@ -9,7 +9,7 @@ Die Anwendung macht maschinenlesbare Katalogdaten (OSCAL JSON) als lokale, durch
 Kernziele:
 - Volltext-/ID-Suche mit Facetten und Sortierung
 - Detailansicht je Control inkl. Relationen und Graphdarstellung
-- Multi-Dataset-Betrieb (`anwender`, `kernel`, `methodik`)
+- Primärquelle: fertiger BSI-Grundschutz++-Anwenderkatalog
 - CSV-Export ausgewählter Controls
 - lokaler JSON-Import (ohne Server)
 - statisches Deployment (GitHub Pages)
@@ -19,7 +19,6 @@ Kernziele:
 - Hash-Routing (`#/`, `#/search`, `#/group/:id`, `#/control/:id`, `#/about`, `#/about/source`, `#/impressum`, `#/datenschutz`)
 - Suche und Filter über Web Worker
 - Relations-Graph (1-Hop/2-Hop, Filter `all|required|related`)
-- Datensatzwechsel zwischen integrierten Katalogen
 - CSV-Export mit Formel-Neutralisierung und URL-Härtung
 - Service Worker für Caching/Offline-Basis
 - Validierung aller geladenen JSON-Strukturen
@@ -29,7 +28,7 @@ Kernziele:
 - Frontend: React 19 + TypeScript + Vite (CSR)
 - Suche/Indexierung: Browser Worker (`src/workers/searchWorker.ts`)
 - Datenhaltung: statische JSON-/SW-Artefakte in `public/data/**` und `public/sw.js` (werden im Build erzeugt)
-- Build-Datenpipeline: `scripts/build-catalog.mjs` erzeugt Suchindex, Detail-Chunks, Registry, Profilanalyse und Service Worker
+- Build-Datenpipeline: `scripts/build-catalog.mjs` erzeugt Suchindex, Meta, Detail-Chunks und Service Worker aus dem Anwenderkatalog
 - Deployment: statisches Hosting (CI-Workflow für GitHub Pages vorhanden)
 
 Details: siehe `docs/architecture.md`.
@@ -99,7 +98,6 @@ Zusätzliche Checks:
 ```bash
 npm run audit:prod
 npm run audit:dev
-npm run check:profile-relation-audit
 ```
 
 ## Deployment-Hinweise
@@ -120,10 +118,10 @@ npm run check:profile-relation-audit
 - Trigger: täglich per Schedule sowie manuell via `workflow_dispatch`
 - Quelle: `BSI-Bund/Stand-der-Technik-Bibliothek` (standardmäßig `main`)
 - Ablauf:
-  - `npm run sync:bsi` lädt alle vier Dateien gegen einen konsistenten Upstream-Commit-Snapshot
+  - `npm run sync:bsi` lädt den fertigen Grundschutz++-Anwenderkatalog gegen einen konsistenten Upstream-Commit-Snapshot
   - Sync erfolgt atomar (Staging + Promotion), inkl. Retry/Backoff und klassifizierten Fehlern (`network`, `api`, `schema`, `semantic`)
   - Semantik-/Driftprüfungen erzeugen einen maschinenlesbaren Sync-Report (`sync_report_json`) und Markdown-Summary (`sync_report_markdown`)
-  - nur bei Änderungen werden Build/Tests ausgeführt; zusätzlich wird `npm run check:profile-relation-audit` als Gate ausgeführt
+  - nur bei Änderungen werden Build/Tests ausgeführt
   - bei unveränderten Katalogen endet der Workflow ohne PR (No-Op)
 
 ### Hosting Scope
@@ -154,7 +152,7 @@ npm run sync:bsi
 ├─ src/                      # React-App, Worker, UI-Komponenten, Libs
 ├─ scripts/                  # Build-/Security-/Hygiene-Skripte
 ├─ tests/                    # Playwright E2E- und A11y-Tests
-├─ Kataloge/                 # OSCAL-Quellkataloge (Input für build:data)
+├─ Kataloge/                 # BSI-OSCAL-Eingabedaten (Primärquelle: Grundschutz++-Anwenderkatalog)
 ├─ public/data/              # generierte statische Datenartefakte (nicht versioniert)
 ├─ public/sw.js              # generierter Service Worker (nicht versioniert)
 ├─ .github/workflows/        # CI (quality), CD (deploy-pages), Sync-Automation (daily-bsi-sync)
