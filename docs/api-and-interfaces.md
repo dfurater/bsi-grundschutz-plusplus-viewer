@@ -7,42 +7,18 @@
 
 ## 1) Statische Daten-Schnittstellen (`public/data/**`)
 
-Hinweis: Die Dateien unter `public/data/**` sind generierte Build-Artefakte (aus `Kataloge/*.json`) und nicht versioniert.
+Hinweis: Die Dateien unter `public/data/**` sind generierte Build-Artefakte (aus `Kataloge/Grundschutz++-catalog.json`) und nicht versioniert.
 
-### Registry
+### Primäre Build-Artefakte
 
-Datei: `./data/catalog-registry.json`
-
-Verwendung:
-- verfügbare Datensätze
-- Default-Datensatz
-
-Felder:
-- `generatedAt`, `defaultDatasetId`
-- `datasets[]`: `id`, `label`, `title`, `version`, `stats`, `catalogFileSha256`, ...
-
-### Profilanalyse
-
-Datei: `./data/profile-links.json`
-
-Verwendung:
-- Importbeziehungen des Profils
-- Parameter-Setzungen
-- Mengenabgleich zwischen Datensätzen
-
-### Datensatz-Artefakte
-
-Dateien je Datensatz:
-- `./data/datasets/<datasetId>/catalog-meta.json`
-- `./data/datasets/<datasetId>/catalog-index.json`
-- `./data/datasets/<datasetId>/details/<TOPGROUP>.json`
-- `./data/datasets/<datasetId>/build-info.json`
-
-Legacy-/Default-Pfade:
+Dateien:
 - `./data/catalog-meta.json`
 - `./data/catalog-index.json`
 - `./data/details/<TOPGROUP>.json`
 - `./data/build-info.json`
+
+Quelle:
+- `Kataloge/Grundschutz++-catalog.json` (fertiger BSI-Grundschutz++-Anwenderkatalog)
 
 ### Validierung und Fehlerfälle
 

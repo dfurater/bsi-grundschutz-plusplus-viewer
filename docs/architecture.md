@@ -4,7 +4,7 @@
 
 - Clientseitige Single-Page-App (React/Vite) für Grundschutz++-Katalogdaten.
 - Kein eigener Application-Server; Daten werden als statische Dateien ausgeliefert (`public/data/**`, `public/sw.js`, im Build generiert).
-- Eingabedaten liegen als OSCAL-JSON-Dateien in `Kataloge/`.
+- Eingabedaten liegen als OSCAL-JSON-Datei in `Kataloge/Grundschutz++-catalog.json`.
 - Deployment ist auf statische Hosts ausgelegt, inklusive GitHub Pages Workflow.
 
 ## Container-/Komponentenübersicht
@@ -13,7 +13,7 @@
 
 Aufgaben:
 - Routing und Seitenzustände (`src/App.tsx`)
-- Dataset-Auswahl, Suche, Filter, Detailansichten
+- Suche, Filter, Detailansichten
 - CSV-Export und lokaler JSON-Upload
 - Quellen-/Versions- und Rechtsseiten
 
@@ -36,13 +36,11 @@ Technik:
 ### Build-/Transformationspipeline (Node)
 
 Aufgaben:
-- Normalisierung der Rohkataloge (`normalize-core.js`)
+- Normalisierung des Grundschutz++-Anwenderkatalogs (`normalize-core.js`)
 - Erzeugung von:
   - `catalog-index.json`
   - `catalog-meta.json`
   - `details/<TOPGROUP>.json`
-  - `catalog-registry.json`
-  - `profile-links.json`
   - `build-info.json`
   - `public/sw.js`
 
@@ -57,24 +55,22 @@ Aufgabe:
 - `src/workers/searchWorker.ts`: Suchkern, Worker-API, Detail-Ladepfad, Upload-Ingestion
 - `src/lib/dataSchemas.ts`: zentrale Schema-/Budget-Validierung
 - `src/lib/normalize-core.js`: Extraktion von Gruppen/Controls/Facetten/Relationen aus OSCAL
-- `scripts/build-catalog.mjs`: Datenbuild über alle integrierten Datensätze und Profilanalyse
+- `scripts/build-catalog.mjs`: Datenbuild aus dem Grundschutz++-Anwenderkatalog
 
 ## Datenflüsse
 
 ### Build-Zeit
 
-1. `scripts/build-catalog.mjs` liest Kataloge aus `Kataloge/`.
+1. `scripts/build-catalog.mjs` liest `Kataloge/Grundschutz++-catalog.json`.
 2. `normalizeCatalog` erzeugt normalisierte Strukturen.
 3. Skript schreibt statische Assets nach `public/data/**` und `public/sw.js`.
 4. Vite baut die App nach `dist/`.
 
 ### Laufzeit
 
-1. App lädt `catalog-registry.json` und `profile-links.json`.
-2. Worker lädt `catalog-index.json` des aktiven Datensatzes.
-3. App lädt `catalog-meta.json`.
-4. Worker lädt bei Bedarf `details/<TOPGROUP>.json`.
-5. UI rendert Treffer, Details, Relationen und Exporte.
+1. App lädt `catalog-index.json` und `catalog-meta.json`.
+2. Worker lädt bei Bedarf `details/<TOPGROUP>.json`.
+3. UI rendert Treffer, Details, Relationen und Exporte.
 
 ### Upload-Zeit (lokal)
 
@@ -100,7 +96,7 @@ Aufgabe:
 - Suchlogik in separatem Worker.
 - Datenschema-Validierung und Budgetgrenzen für kritische Datenpfade.
 - Hash-Routing statt History-Routing.
-- Mehrdatensatzmodell mit `catalog-registry.json` und Datensatzordnern.
+- Primärquelle ist der fertige BSI-Grundschutz++-Anwenderkatalog.
 
 ## Technische Schulden und Grenzen
 

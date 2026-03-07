@@ -34,7 +34,7 @@ npm run test:unit
 - `src/workers/searchWorker.ts`: Such-Engine und Daten-Ingestion im Worker
 - `src/lib/normalize-core.js`: OSCAL -> internes Datenmodell
 - `scripts/build-catalog.mjs`: Build-Datenpipeline
-- `scripts/sync-bsi-catalogs.mjs`: Upstream-Sync der BSI-Katalogdateien
+- `scripts/sync-bsi-catalogs.mjs`: Upstream-Sync des BSI-Grundschutz++-Anwenderkatalogs
 - `public/data/**` und `public/sw.js`: generierte Such-/Metadaten inkl. Service Worker (nicht versioniert)
 - `tests/`: Playwright E2E/A11y
 - `.github/workflows/`: CI/CD
