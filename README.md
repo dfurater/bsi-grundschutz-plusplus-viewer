@@ -99,6 +99,7 @@ Zusätzliche Checks:
 ```bash
 npm run audit:prod
 npm run audit:dev
+npm run check:profile-relation-audit
 ```
 
 ## Deployment-Hinweise
@@ -119,8 +120,10 @@ npm run audit:dev
 - Trigger: täglich per Schedule sowie manuell via `workflow_dispatch`
 - Quelle: `BSI-Bund/Stand-der-Technik-Bibliothek` (standardmäßig `main`)
 - Ablauf:
-  - `npm run sync:bsi` synchronisiert nur `Kataloge/*.json` bei Inhaltsänderung
-  - nur bei Änderungen werden Build/Tests ausgeführt und ein PR erzeugt
+  - `npm run sync:bsi` lädt alle vier Dateien gegen einen konsistenten Upstream-Commit-Snapshot
+  - Sync erfolgt atomar (Staging + Promotion), inkl. Retry/Backoff und klassifizierten Fehlern (`network`, `api`, `schema`, `semantic`)
+  - Semantik-/Driftprüfungen erzeugen einen maschinenlesbaren Sync-Report (`sync_report_json`) und Markdown-Summary (`sync_report_markdown`)
+  - nur bei Änderungen werden Build/Tests ausgeführt; zusätzlich wird `npm run check:profile-relation-audit` als Gate ausgeführt
   - bei unveränderten Katalogen endet der Workflow ohne PR (No-Op)
 
 ### Hosting Scope

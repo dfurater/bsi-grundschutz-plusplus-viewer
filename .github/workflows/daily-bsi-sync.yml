@@ -27,6 +27,7 @@ jobs:
       VITE_OPERATOR_ADDRESS_LINE1: Musterstrasse 1
       VITE_OPERATOR_ADDRESS_LINE2: 10115 Berlin
       VITE_OPERATOR_EMAIL: max.mustermann@example.invalid
+      RELATION_AUDIT_MODE: warn
 
     steps:
       - name: Checkout
@@ -80,6 +81,13 @@ jobs:
         if: steps.changes.outputs.has_changes == 'true'
         run: npm run build && npm run test:unit:raw && npm run check:release-hygiene
 
+      - name: Validate profile relation audit
+        if: steps.changes.outputs.has_changes == 'true'
+        id: relation_audit
+        env:
+          RELATION_AUDIT_MODE: ${{ env.RELATION_AUDIT_MODE }}
+        run: npm run check:profile-relation-audit
+
       - name: Create or update Pull Request
         if: steps.changes.outputs.has_changes == 'true'
         uses: peter-evans/create-pull-request@v7
@@ -96,6 +104,11 @@ jobs:
             - Upstream ref: `${{ steps.sync.outputs.upstream_ref }}`
             - Upstream commit: `${{ steps.sync.outputs.upstream_commit }}`
             - Changed catalog files: `${{ steps.sync.outputs.changed_files }}`
+            - Sync warnings: `${{ steps.sync.outputs.warning_count }}`
+
+            ${{ steps.sync.outputs.sync_report_markdown }}
+
+            ${{ steps.relation_audit.outputs.summary_markdown }}
 
             PR creation is skipped automatically if no catalog files changed.
           labels: |
