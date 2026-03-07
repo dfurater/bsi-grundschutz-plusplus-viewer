@@ -24,9 +24,8 @@
 
 ## Wartungsauffälligkeiten
 
-1. `src/components/SearchBar.tsx` ist vorhanden, aber nicht im aktuellen App-Flow eingebunden.
-2. TypeScript läuft mit `strict: false`.
-3. `build:data` erzeugt Änderungen in generierten Datenartefakten unter `public/data/**`.
+1. TypeScript läuft mit `strict: false`.
+2. `build:data` erzeugt Änderungen in generierten Datenartefakten unter `public/data/**`.
 
 ## Empfohlene nächste Schritte
 

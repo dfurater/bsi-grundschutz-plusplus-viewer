@@ -88,10 +88,10 @@ Enthält Build, Unit-Tests, Release-Hygiene, Lighthouse und Playwright-A11y.
 - Trigger: `schedule` (täglich) und `workflow_dispatch`
 - Quelle: `BSI-Bund/Stand-der-Technik-Bibliothek` (`main`, optionaler Override via `upstream_ref`)
 - Ablauf:
-  1. `npm run sync:bsi` lädt die vier relevanten Katalogdateien gegen einen aufgelösten Commit-Snapshot (`BSI_REF -> Commit SHA`), mit Retry/Backoff.
-  2. Der Sync validiert Struktur/Semantik (inkl. Profil-Importauflösung, Hash-Verifikation sofern vorhanden, Drift-/Plausibilitätswarnungen) und promoted Änderungen atomar nach `Kataloge/`.
-  3. Nur bei echten Dateidifferenzen in `Kataloge/` folgen `npm ci`, `npm run build`, `npm run test:unit:raw`, `npm run check:release-hygiene`, `npm run check:profile-relation-audit`.
-  4. Anschließend erstellt/aktualisiert `peter-evans/create-pull-request` einen PR inklusive Sync-Report und Relation-Audit-Summary.
+  1. `npm run sync:bsi` lädt den Grundschutz++-Anwenderkatalog gegen einen aufgelösten Commit-Snapshot (`BSI_REF -> Commit SHA`), mit Retry/Backoff.
+  2. Der Sync validiert Struktur/Semantik und promoted Änderungen atomar nach `Kataloge/`.
+  3. Nur bei echten Dateidifferenzen in `Kataloge/` folgen `npm ci`, `npm run build`, `npm run test:unit:raw`, `npm run check:release-hygiene`.
+  4. Anschließend erstellt/aktualisiert `peter-evans/create-pull-request` einen PR inklusive Sync-Report.
   5. Ohne Katalogdifferenzen endet der Job ohne PR.
 
 ### Main-Branch-Governance (GitHub-Einstellungen)
@@ -136,11 +136,9 @@ Hinweis zu Auto-merge:
 
 ### Datenkonfiguration
 
-- Quellkataloge: `Kataloge/`
-- Standarddatensatz: `anwender` (`public/data/catalog-registry.json`)
+- Primärquelle: `Kataloge/Grundschutz++-catalog.json`
 - `public/data/**` und `public/sw.js` sind generiertes Build-Output (nicht versioniert)
 - manueller Upstream-Sync: `npm run sync:bsi`
-- optionaler Relation-Audit-Gate-Modus: `RELATION_AUDIT_MODE=off|warn|error` (Default im Daily-Workflow: `warn`)
 
 ## Troubleshooting
 
@@ -178,7 +176,7 @@ npm run build:data
 
 ## Betriebsrisiken
 
-- Die Datenqualität hängt von den Katalogquellen in `Kataloge/` und deren Strukturkonsistenz ab.
+- Die Datenqualität hängt von der Strukturkonsistenz des Grundschutz++-Anwenderkatalogs in `Kataloge/Grundschutz++-catalog.json` ab.
 - GitHub Pages bietet nur eingeschränkte, nicht repository-lokale Steuerung von Response-Headern.
 
 ## Einstiegsvoraussetzungen für Entwickler

@@ -19,7 +19,7 @@ import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import { CONTROL_EXPORT_COLUMNS, extractControlExportRow } from "./lib/controlExport";
 import { downloadBlob, toCsv } from "./lib/csv";
-import { CatalogMetaSchema, CatalogRegistrySchema, ProfileAnalysisSchema } from "./lib/dataSchemas";
+import { CatalogMetaSchema } from "./lib/dataSchemas";
 import { fetchJsonWithValidation } from "./lib/fetchJsonSafe";
 import { SearchClient } from "./lib/searchClient";
 import {
@@ -34,10 +34,7 @@ import { sanitizeSearchText } from "./lib/searchSafety";
 import { SECURITY_BUDGETS } from "./lib/securityBudgets";
 import type {
   CatalogMeta,
-  CatalogRegistry,
   ControlDetail,
-  DatasetDescriptor,
-  ProfileAnalysis,
   RelationGraphPayload,
   SearchQuery,
   SearchResponse,
@@ -153,16 +150,7 @@ function getInitialTheme(): ThemeMode {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-function getDatasetPaths(datasetId: string | null, withRegistry: boolean) {
-  if (withRegistry && datasetId) {
-    const base = `./data/datasets/${encodeURIComponent(datasetId)}`;
-    return {
-      metaUrl: assetUrl(`${base}/catalog-meta.json`),
-      indexUrl: assetUrl(`${base}/catalog-index.json`),
-      detailsUrl: assetUrl(`${base}/details`)
-    };
-  }
-
+function getDatasetPaths() {
   return {
     metaUrl: assetUrl("./data/catalog-meta.json"),
     indexUrl: assetUrl("./data/catalog-index.json"),
@@ -176,9 +164,6 @@ export default function App() {
   const isWideDesktop = useMediaQuery("(min-width: 1280px)");
   const [route, setRoute] = useState<AppRoute>(() => parseHash(window.location.hash));
   const [meta, setMeta] = useState<CatalogMeta | null>(null);
-  const [registry, setRegistry] = useState<CatalogRegistry | null>(null);
-  const [profileAnalysis, setProfileAnalysis] = useState<ProfileAnalysis | null>(null);
-  const [selectedDatasetId, setSelectedDatasetId] = useState<string>("anwender");
   const [bootState, setBootState] = useState<"loading" | "ready" | "error">("loading");
   const [bootError, setBootError] = useState<string | null>(null);
   const [bootErrorDetails, setBootErrorDetails] = useState<string | null>(null);
@@ -271,15 +256,14 @@ export default function App() {
     }
   }
 
-  async function initializeDataset(datasetId: string, registryOverride: CatalogRegistry | null) {
-    const withRegistry = Boolean(registryOverride?.datasets?.length);
-    const paths = getDatasetPaths(datasetId, withRegistry);
+  async function initializeDataset() {
+    const paths = getDatasetPaths();
 
     setBootState("loading");
     setBootError(null);
     setBootErrorDetails(null);
     setBootProgress(8);
-    setBootStatusText("Datensatz wird vorbereitet…");
+    setBootStatusText("Katalog wird vorbereitet…");
 
     const initPromise = client.init(paths.indexUrl, paths.detailsUrl);
     setBootProgress(24);
@@ -305,7 +289,6 @@ export default function App() {
     setBootStatusText("Oberfläche wird aufgebaut…");
     setMeta(metaPayload);
     setEffortSortEnabled(Array.isArray(initPayload?.facetOptions?.effortLevel) && initPayload.facetOptions.effortLevel.length > 0);
-    setSelectedDatasetId(datasetId);
     setSearchResponse(DEFAULT_SEARCH_RESPONSE);
     setSearchError(null);
     setDetail(null);
@@ -411,41 +394,13 @@ export default function App() {
         setBootError(null);
         setBootErrorDetails(null);
         setBootProgress(4);
-        setBootStatusText("Katalogverzeichnis wird geladen…");
-        const [registryPayload, profilePayload] = (await Promise.all([
-          fetchJsonWithValidation({
-            url: assetUrl("./data/catalog-registry.json"),
-            label: "Katalog-Registry",
-            schema: CatalogRegistrySchema,
-            maxBytes: SECURITY_BUDGETS.maxRemoteJsonBytes.catalogRegistry
-          }),
-          fetchJsonWithValidation({
-            url: assetUrl("./data/profile-links.json"),
-            label: "Profilanalyse",
-            schema: ProfileAnalysisSchema,
-            maxBytes: SECURITY_BUDGETS.maxRemoteJsonBytes.profileLinks
-          })
-        ])) as [CatalogRegistry, ProfileAnalysis];
-        setBootProgress(16);
-        setBootStatusText("Datensatzbeziehungen werden geprüft…");
-
-        if (!cancelled) {
-          setProfileAnalysis(profilePayload);
-        }
+        setBootStatusText("Katalogdaten werden geladen…");
 
         if (cancelled) {
           return;
         }
 
-        if (registryPayload?.datasets?.length) {
-          setRegistry(registryPayload);
-          const hasDefault = registryPayload.datasets.some((dataset) => dataset.id === registryPayload.defaultDatasetId);
-          const initialId = hasDefault ? registryPayload.defaultDatasetId : registryPayload.datasets[0].id;
-          await initializeDataset(initialId, registryPayload);
-          return;
-        }
-
-        await initializeDataset("legacy", null);
+        await initializeDataset();
       } catch (error) {
         if (cancelled) {
           return;
@@ -772,21 +727,6 @@ export default function App() {
       setToastMessage("JSON-Import fehlgeschlagen.");
     } finally {
       setImportBusy(false);
-    }
-  }
-
-  async function handleDatasetChange(datasetId: string) {
-    if (datasetId === selectedDatasetId) {
-      return;
-    }
-
-    try {
-      await initializeDataset(datasetId, registry);
-      navigate("#/");
-    } catch (error) {
-      setBootState("error");
-      setBootError(getErrorMessage(error, "Datensatzwechsel fehlgeschlagen."));
-      setBootErrorDetails(getErrorDetails(error));
     }
   }
 
@@ -1190,13 +1130,6 @@ export default function App() {
       ? meta.groups.filter((group) => group.parentGroupId === currentGroup.id)
       : [];
 
-  const datasetOptions = registry?.datasets?.length
-    ? registry.datasets.map((dataset) => ({ id: dataset.id, label: dataset.label }))
-    : [{ id: selectedDatasetId, label: meta?.title || "Katalog" }];
-
-  const activeDataset: DatasetDescriptor | null =
-    registry?.datasets?.find((dataset) => dataset.id === selectedDatasetId) ?? null;
-
   const isLegalRoute = route.view === "impressum" || route.view === "datenschutz";
   const homeAllControlsSelected = Boolean(
     meta && meta.stats.controlCount > 0 && selectedControlCount === meta.stats.controlCount
@@ -1317,12 +1250,9 @@ export default function App() {
 
       <AppDrawer
         open={!isTabletUp && drawerOpen}
-        datasets={datasetOptions}
-        selectedDatasetId={selectedDatasetId}
         selectedControlCount={selectedControlCount}
         exportingCsv={exportCsvRunning}
         onClose={() => setDrawerOpen(false)}
-        onDatasetChange={handleDatasetChange}
         onExportCsv={handleExportCsv}
       />
 
@@ -1341,11 +1271,6 @@ export default function App() {
         {route.view === "home" ? (
           <GroupOverview
             meta={meta}
-            datasetId={selectedDatasetId}
-            datasets={datasetOptions}
-            selectedDatasetId={selectedDatasetId}
-            isTabletUp={isTabletUp}
-            onDatasetChange={handleDatasetChange}
             onOpenGroup={(groupId) => navigate(buildGroupHash(groupId))}
             onStartSearch={() => navigate(buildSearchHash(searchText, sort, filters))}
             onSelectAllControls={handleSelectAllHomeControls}
@@ -1354,11 +1279,9 @@ export default function App() {
           />
         ) : null}
 
-        {route.view === "source" ? (
-          <SourcePanel meta={meta} activeDataset={activeDataset} registry={registry} profileAnalysis={profileAnalysis} />
-        ) : null}
+        {route.view === "source" ? <SourcePanel meta={meta} /> : null}
 
-        {route.view === "about" ? <AboutPage meta={meta} activeDataset={activeDataset} /> : null}
+        {route.view === "about" ? <AboutPage meta={meta} /> : null}
 
         {route.view === "group" ? (
           <GroupPage

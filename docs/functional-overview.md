@@ -8,7 +8,7 @@ Die Anwendung stellt Grundschutz++-Katalogdaten als durchsuchbare Oberfläche be
 
 ### UC-1: Katalogüberblick und Bereichsnavigation
 
-- Startseite mit Top-Gruppen, Kennzahlen und Datensatzauswahl.
+- Startseite mit Top-Gruppen und Kennzahlen.
 
 ### UC-2: Suche nach Controls
 
@@ -27,10 +27,9 @@ Die Anwendung stellt Grundschutz++-Katalogdaten als durchsuchbare Oberfläche be
 
 - Graphansicht mit 1-/2-Hop und Typfilter (`all`, `required`, `related`).
 
-### UC-6: Datensatzwechsel
+### UC-6: Quellen- und Versions-Transparenz
 
-- Wechsel zwischen `anwender`, `kernel`, `methodik`.
-- Anzeige von Version, Build-Informationen, Hash und Profilbezügen.
+- Anzeige von Version, Build-Informationen und Hash zur aktiven Primärquelle.
 
 ### UC-7: Export und lokaler Import
 
@@ -44,8 +43,7 @@ Die Anwendung stellt Grundschutz++-Katalogdaten als durchsuchbare Oberfläche be
 - Control (ID, Titel, Klasse, Statement, Guidance, Parameter, Eigenschaften)
 - Relation (`required`/`related`)
 - Facetten (z. B. Sicherheitsniveau, Aufwand, Tags)
-- Datensatzdescriptor (ID, Label, Version, Hash, Kennzahlen)
-- Profilanalyse (Imports, Set-Parameters, Mengenabgleich)
+- Primärquelle (Anwenderkatalog, Version, Hash, Build-Zeitpunkt)
 
 ## Zentrale Geschäftslogik
 

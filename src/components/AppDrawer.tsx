@@ -3,12 +3,9 @@ import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface AppDrawerProps {
   open: boolean;
-  datasets: Array<{ id: string; label: string }>;
-  selectedDatasetId: string;
   selectedControlCount: number;
   exportingCsv: boolean;
   onClose: () => void;
-  onDatasetChange: (datasetId: string) => void;
   onExportCsv: () => void;
 }
 
@@ -18,12 +15,9 @@ interface AppDrawerProps {
  */
 export function AppDrawer({
   open,
-  datasets,
-  selectedDatasetId,
   selectedControlCount,
   exportingCsv,
   onClose,
-  onDatasetChange,
   onExportCsv
 }: AppDrawerProps) {
   const drawerRef = useRef<HTMLDivElement | null>(null);
@@ -55,21 +49,6 @@ export function AppDrawer({
 
         <section className="drawer-group" aria-label="Daten">
           <h3>Daten</h3>
-          <label className="drawer-field">
-            Datensatz
-            <select
-              value={selectedDatasetId}
-              aria-label="Datensatz auswählen"
-              onChange={(event) => onDatasetChange(event.target.value)}
-            >
-              {datasets.map((dataset) => (
-                <option key={dataset.id} value={dataset.id}>
-                  {dataset.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
           {selectedControlCount > 0 ? (
             <button
               type="button"
@@ -82,10 +61,8 @@ export function AppDrawer({
             >
               {exportingCsv ? "CSV wird erstellt" : `CSV exportieren (${selectedControlCount})`}
             </button>
-          ) : null}
-
+          ) : <p>Keine weiteren Aktionen verfügbar.</p>}
         </section>
-
       </aside>
     </div>
   );

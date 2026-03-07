@@ -1,10 +1,9 @@
-import type { CatalogMeta, DatasetDescriptor } from "../types";
+import type { CatalogMeta } from "../types";
 import { LEGAL_PLACEHOLDERS, isPlaceholderValue } from "../legal/placeholders";
 import { safeExternalUrl } from "../lib/urlSafety";
 
 interface AboutPageProps {
   meta: CatalogMeta | null;
-  activeDataset: DatasetDescriptor | null;
 }
 
 const PROJECT_REPOSITORY_URL = "https://github.com/dfurater/bsi-grundschutz-plusplus-viewer";
@@ -49,9 +48,9 @@ function renderContactEmail(value: string) {
   return <a href={`mailto:${value}`}>{value}</a>;
 }
 
-export function AboutPage({ meta, activeDataset }: AboutPageProps) {
+export function AboutPage({ meta }: AboutPageProps) {
   const buildDate = formatDateTime(meta?.buildInfo?.buildTimestamp ?? null);
-  const datasetVersion = activeDataset?.version ?? meta?.version ?? "-";
+  const datasetVersion = meta?.version ?? "-";
   const datasetHash = meta?.buildInfo?.catalogFileSha256 ?? "-";
 
   return (
@@ -79,6 +78,12 @@ export function AboutPage({ meta, activeDataset }: AboutPageProps) {
         <strong>Hash:</strong> {datasetHash}
         <br />
         (Details siehe <a href="#/about/source">„Quellen &amp; Version“</a> in der App.)
+      </p>
+
+      <p>
+        Die Anwendung nutzt als Primärquelle den fertigen BSI-Grundschutz++-Anwenderkatalog
+        {" "}
+        (<code>Anwenderkataloge/Grundschutz++/Grundschutz++-catalog.json</code>).
       </p>
 
       <h2>Warum dieser Viewer existiert</h2>
