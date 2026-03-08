@@ -1584,22 +1584,28 @@ summary:focus-visible,
   line-height: 1.35;
 }
 
-.app-footer-license-links,
 .app-footer-links {
   display: flex;
   gap: 0.3rem 0.9rem;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   font-size: 0.84rem;
   line-height: 1.3;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: thin;
 }
 
-.app-footer-license-links a,
 .app-footer-links a {
   color: var(--link);
   text-decoration: underline;
   text-underline-offset: 0.14rem;
   text-decoration-thickness: 0.08rem;
+}
+
+.app-footer-links > * {
+  flex: 0 0 auto;
 }
 
 .app-footer-link-button {
@@ -1843,7 +1849,6 @@ summary:focus-visible,
     font-size: 0.79rem;
   }
 
-  .app-footer-license-links,
   .app-footer-links {
     font-size: 0.81rem;
     gap: 0.22rem 0.72rem;

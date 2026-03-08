@@ -18,7 +18,7 @@ export function AppFooter({ importBusy, onUpload }: AppFooterProps) {
         technisch aufbereitet.
       </p>
 
-      <nav className="app-footer-license-links" aria-label="Attribution und Lizenz">
+      <nav className="app-footer-links" aria-label="Attribution, Lizenz und Footer-Navigation">
         <a href={BSI_REPOSITORY_URL} target="_blank" rel="noopener noreferrer">
           BSI-Quelle
         </a>
@@ -26,9 +26,6 @@ export function AppFooter({ importBusy, onUpload }: AppFooterProps) {
           CC BY-SA 4.0
         </a>
         <a href="#/about/license">Quellen &amp; Lizenz</a>
-      </nav>
-
-      <nav className="app-footer-links" aria-label="Footer-Navigation">
         <a href="#/about">About</a>
         <a href="#/impressum">Impressum</a>
         <a href="#/datenschutz">Datenschutz</a>
