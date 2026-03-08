@@ -40,7 +40,6 @@ import type {
   SearchResponse,
   SearchResultItem
 } from "./types";
-import { validateOrThrow } from "./lib/validation";
 
 const DEFAULT_SEARCH_RESPONSE: SearchResponse = {
   total: 0,
@@ -89,14 +88,6 @@ function toSortValue(base: SortBase, direction: "asc" | "desc"): SearchQuery["so
     return direction === "asc" ? "effort-asc" : "effort-desc";
   }
   return "relevance";
-}
-
-async function computeSha256(text: string) {
-  const encoded = new TextEncoder().encode(text);
-  const digest = await crypto.subtle.digest("SHA-256", encoded);
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -206,7 +197,6 @@ export default function App() {
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastTone, setToastTone] = useState<"info" | "success" | "error">("info");
-  const [importBusy, setImportBusy] = useState(false);
 
   const debouncedSearchText = useDebouncedValue(searchText, 300);
   const requestCounter = useRef(0);
@@ -668,68 +658,6 @@ export default function App() {
     loadGraph(detail.id, graphHops);
   }, [detail?.id, graphHops]);
 
-  async function handleUpload(file: File) {
-    setImportBusy(true);
-    try {
-      if (file.size > SECURITY_BUDGETS.maxUploadFileSizeBytes) {
-        throw new Error(
-          `Datei zu gross (${file.size} Bytes). Maximal erlaubt: ${SECURITY_BUDGETS.maxUploadFileSizeBytes} Bytes.`
-        );
-      }
-
-      setBootState("loading");
-      setBootError(null);
-      setBootErrorDetails(null);
-      setBootProgress(10);
-      setBootStatusText("Lokale Datei wird gelesen…");
-      const rawText = await file.text();
-      setBootProgress(32);
-      setBootStatusText("Datei wird validiert…");
-      const hash = await computeSha256(rawText);
-      const uploadPayload = await client.loadUpload(rawText);
-      setBootProgress(76);
-      setBootStatusText("Lokaler Datensatz wird integriert…");
-
-      const currentBuildInfo = meta?.buildInfo;
-      const nextMeta = validateOrThrow(
-        {
-          ...(meta as CatalogMeta),
-          ...(uploadPayload.meta as CatalogMeta),
-          buildInfo: {
-            buildTimestamp: new Date().toISOString(),
-            appVersion: currentBuildInfo?.appVersion ?? "0.1.0",
-            indexVersion: currentBuildInfo?.indexVersion ?? "2",
-            catalogFileName: file.name,
-            catalogFileSha256: hash,
-            catalogFileSizeBytes: file.size
-          }
-        },
-        CatalogMetaSchema,
-        "Upload-Metadaten"
-      ) as CatalogMeta;
-
-      setMeta(nextMeta);
-      setBootProgress(100);
-      setBootStatusText("Fertig");
-      setBootState("ready");
-      setGraphData(null);
-      setSelectedControlTopGroups({});
-      setExportCsvMessage(null);
-      setSelectAllRunningScope(null);
-      navigate(buildSearchHash("", "relevance", defaultFilters()));
-      setToastTone("success");
-      setToastMessage("JSON erfolgreich geladen.");
-    } catch (error) {
-      setBootState("error");
-      setBootError(getErrorMessage(error, "Upload konnte nicht verarbeitet werden."));
-      setBootErrorDetails(getErrorDetails(error));
-      setToastTone("error");
-      setToastMessage("JSON-Import fehlgeschlagen.");
-    } finally {
-      setImportBusy(false);
-    }
-  }
-
   function handleToggleControlSelection(item: SearchResultItem, selected: boolean) {
     setSelectedControlTopGroups((prev) => {
       if (selected) {
@@ -1160,7 +1088,7 @@ export default function App() {
             <small>{progress}%</small>
           </div>
         </section>
-        <AppFooter importBusy={importBusy} onUpload={handleUpload} />
+        <AppFooter />
       </main>
     );
   }
@@ -1192,7 +1120,7 @@ export default function App() {
             </button>
           </div>
         </section>
-        <AppFooter importBusy={importBusy} onUpload={handleUpload} />
+        <AppFooter />
       </main>
     );
   }
@@ -1452,7 +1380,7 @@ export default function App() {
         </FilterSheet>
       ) : null}
 
-      <AppFooter importBusy={importBusy} onUpload={handleUpload} />
+      <AppFooter />
     </main>
   );
 }

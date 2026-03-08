@@ -11,7 +11,6 @@ Kernziele:
 - Detailansicht je Control inkl. Relationen und Graphdarstellung
 - Primärquelle: fertiger BSI-Grundschutz++-Anwenderkatalog
 - CSV-Export ausgewählter Controls
-- lokaler JSON-Import (ohne Server)
 - statisches Deployment (GitHub Pages)
 
 ## Kernfunktionen

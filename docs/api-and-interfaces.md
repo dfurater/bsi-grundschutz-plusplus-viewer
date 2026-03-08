@@ -3,7 +3,7 @@
 ## Überblick
 
 - Es gibt keine serverseitige REST-/GraphQL-API.
-- Externe Schnittstellen sind statische JSON-Dateien, Browser-Routen, Worker-Nachrichten, Datei-Upload und CSV-Download.
+- Externe Schnittstellen sind statische JSON-Dateien, Browser-Routen, Worker-Nachrichten und CSV-Download.
 
 ## 1) Statische Daten-Schnittstellen (`public/data/**`)
 
@@ -47,15 +47,12 @@ Typische Fehler:
 - `get-neighborhood`
   - Payload: `{ id, hops }`
   - Antwort: `RelationGraphPayload`
-- `load-upload`
-  - Payload: `{ rawText }`
-  - Antwort: `{ meta, facetOptions, stats }`
 - `cancel`
   - Payload: vorherige `requestId`
 
 ### Fehlerfälle
 
-- Worker-Timeouts je Operation (10s-45s je Typ)
+- Worker-Timeouts je Operation (10s-30s je Typ)
 - Abgebrochene Requests liefern einen Fehlerpfad
 - Unbekannte Request-Typen werden abgelehnt
 
@@ -80,21 +77,7 @@ Routing-Härtung:
 - Sanitizing für Suchtext/Filter/Routentoken
 - Limits auf Länge und Anzahl
 
-## 4) Upload-Schnittstelle
-
-### Input
-
-- Lokaler Dateiupload (`application/json`)
-- Größenlimit: `8 MiB`
-- Struktur: OSCAL-Katalog (`UploadCatalogSchema`)
-
-### Verhalten
-
-- Validierung und Normalisierung im Worker
-- Bei Erfolg: In-Memory-Ersatz des Suchindex
-- Bei Fehler: keine Teilübernahme
-
-## 5) CSV-Export-Schnittstelle
+## 4) CSV-Export-Schnittstelle
 
 ### Output
 
@@ -114,7 +97,7 @@ Spalten:
 - Spreadsheet-Formel-Präfixe (`=,+,-,@`) werden neutralisiert.
 - Exportiert werden nur `http/https`-Links.
 
-## 6) Security-/Berechtigungsaspekte
+## 5) Security-/Berechtigungsaspekte
 
 - Es gibt keine Authentifizierung/Autorisierung.
 - Fokus liegt auf Eingabehärtung, Budgetgrenzen und sicherer URL-Verarbeitung.

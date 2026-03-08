@@ -142,14 +142,6 @@ export class SearchClient {
     return this.request<RelationGraphPayload>("get-neighborhood", { id, hops }, 15000);
   }
 
-  loadUpload(rawText: string) {
-    return this.request<{
-      meta: Partial<CatalogMeta>;
-      facetOptions: any;
-      stats: CatalogMeta["stats"];
-    }>("load-upload", { rawText }, 45000);
-  }
-
   destroy() {
     this.rejectAllPending(new Error("Worker wurde beendet."));
     this.worker.terminate();

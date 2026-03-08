@@ -20,7 +20,7 @@ const BuildInfoSchema = z
     datasetLabel: mediumString.optional(),
     catalogFileName: shortString,
     catalogFileSha256: z.string().regex(/^[a-f0-9]{64}$/i),
-    catalogFileSizeBytes: z.number().int().nonnegative().max(SECURITY_BUDGETS.maxUploadFileSizeBytes)
+    catalogFileSizeBytes: z.number().int().nonnegative().max(SECURITY_BUDGETS.maxCatalogFileSizeBytes)
   })
   .strict();
 
@@ -241,114 +241,6 @@ export const DetailChunkSchema = z
       });
     }
   });
-
-const UploadPropSchema = z
-  .object({
-    name: shortString.optional(),
-    ns: mediumString.optional(),
-    value: z.union([shortString, mediumString, longString, z.number(), z.boolean(), z.null()]).optional()
-  })
-  .passthrough();
-
-const UploadLinkSchema = z
-  .object({
-    href: mediumString,
-    rel: shortString.optional()
-  })
-  .passthrough();
-
-const UploadPartSchema: z.ZodTypeAny = z.lazy(() =>
-  z
-    .object({
-      id: shortString.optional(),
-      name: shortString,
-      prose: longString.optional(),
-      props: boundedArray(UploadPropSchema, SECURITY_BUDGETS.maxPropsPerControl).optional(),
-      parts: boundedArray(UploadPartSchema, SECURITY_BUDGETS.maxPartsPerControl).optional()
-    })
-    .passthrough()
-);
-
-const UploadParamSchema = z
-  .object({
-    id: shortString.optional(),
-    label: mediumString.optional(),
-    values: boundedArray(mediumString, 128).optional(),
-    props: boundedArray(UploadPropSchema, SECURITY_BUDGETS.maxPropsPerControl).optional()
-  })
-  .passthrough();
-
-const UploadControlSchema: z.ZodTypeAny = z.lazy(() =>
-  z
-    .object({
-      id: shortString,
-      title: mediumString.optional(),
-      class: shortString.optional(),
-      props: boundedArray(UploadPropSchema, SECURITY_BUDGETS.maxPropsPerControl).optional(),
-      params: boundedArray(UploadParamSchema, SECURITY_BUDGETS.maxParamsPerControl).optional(),
-      parts: boundedArray(UploadPartSchema, SECURITY_BUDGETS.maxPartsPerControl).optional(),
-      links: boundedArray(UploadLinkSchema, SECURITY_BUDGETS.maxLinksPerControl).optional(),
-      controls: boundedArray(UploadControlSchema, SECURITY_BUDGETS.maxControlCount).optional()
-    })
-    .passthrough()
-);
-
-const UploadGroupSchema: z.ZodTypeAny = z.lazy(() =>
-  z
-    .object({
-      id: shortString,
-      title: mediumString,
-      props: boundedArray(UploadPropSchema, SECURITY_BUDGETS.maxPropsPerControl).optional(),
-      controls: boundedArray(UploadControlSchema, SECURITY_BUDGETS.maxControlCount).optional(),
-      groups: boundedArray(UploadGroupSchema, SECURITY_BUDGETS.maxGroupCount).optional()
-    })
-    .passthrough()
-);
-
-const UploadCatalogBodySchema = z
-  .object({
-    uuid: shortString.optional(),
-    metadata: z
-      .object({
-        title: mediumString.optional(),
-        version: shortString.optional(),
-        remarks: longString.optional(),
-        "last-modified": shortString.optional(),
-        "oscal-version": shortString.optional(),
-        props: boundedArray(UploadPropSchema, SECURITY_BUDGETS.maxPropsPerControl).optional(),
-        links: boundedArray(
-          z
-            .object({
-              href: mediumString,
-              rel: shortString.optional()
-            })
-            .passthrough(),
-          SECURITY_BUDGETS.maxLinksPerControl
-        ).optional(),
-        parties: boundedArray(z.unknown(), 64).optional(),
-        "responsible-parties": boundedArray(z.unknown(), 64).optional()
-      })
-      .passthrough()
-      .optional(),
-    "back-matter": z
-      .object({
-        resources: boundedArray(z.unknown(), 2_000).optional()
-      })
-      .passthrough()
-      .optional(),
-    groups: z.array(UploadGroupSchema).min(1).max(SECURITY_BUDGETS.maxGroupCount)
-  })
-  .passthrough();
-
-const UploadCatalogRootSchema = z
-  .object({
-    catalog: UploadCatalogBodySchema
-  })
-  .strict();
-
-const UploadCatalogDirectSchema = UploadCatalogBodySchema;
-
-export const UploadCatalogSchema = z.union([UploadCatalogRootSchema, UploadCatalogDirectSchema]);
 
 export const NormalizedCatalogSchema = z
   .object({
