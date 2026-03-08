@@ -9,13 +9,11 @@ describe("AppHeader", () => {
         isTabletUp
         isShrunk={false}
         searchOverlayOpen={false}
-        secondaryActionsOpen={false}
         theme="light"
         selectedControlCount={0}
         exportingCsv={false}
         onOpenSearchOverlay={vi.fn()}
         onExportCsv={vi.fn()}
-        onToggleSecondaryActions={vi.fn()}
         onToggleTheme={vi.fn()}
         onGoHome={vi.fn()}
         onGoBack={vi.fn()}
@@ -36,19 +34,17 @@ describe("AppHeader", () => {
     expect(html).toContain("app-bar-end");
   });
 
-  it("rendert unter 768px Suche als Icon und Theme weiterhin im Header", () => {
+  it("rendert unter 768px Suche als Icon und blendet den Aktionen-Button ohne Auswahl aus", () => {
     const html = renderToStaticMarkup(
       <AppHeader
         isTabletUp={false}
         isShrunk={false}
         searchOverlayOpen={false}
-        secondaryActionsOpen={true}
         theme="dark"
         selectedControlCount={0}
         exportingCsv={false}
         onOpenSearchOverlay={vi.fn()}
         onExportCsv={vi.fn()}
-        onToggleSecondaryActions={vi.fn()}
         onToggleTheme={vi.fn()}
         onGoHome={vi.fn()}
         onGoBack={vi.fn()}
@@ -58,9 +54,7 @@ describe("AppHeader", () => {
 
     expect(html).toContain("Suche öffnen");
     expect(html).not.toContain("Katalog durchsuchen");
-    expect(html).toContain("Weitere Aktionen");
-    expect(html).toContain('aria-haspopup="dialog"');
-    expect(html).toContain('aria-expanded="true"');
+    expect(html).not.toContain("Weitere Aktionen");
     expect(html).not.toContain("Datensatz auswählen");
     expect(html).toContain("Hellmodus");
   });
@@ -71,13 +65,11 @@ describe("AppHeader", () => {
         isTabletUp
         isShrunk={false}
         searchOverlayOpen={false}
-        secondaryActionsOpen={false}
         theme="light"
         selectedControlCount={3}
         exportingCsv={false}
         onOpenSearchOverlay={vi.fn()}
         onExportCsv={vi.fn()}
-        onToggleSecondaryActions={vi.fn()}
         onToggleTheme={vi.fn()}
         onGoHome={vi.fn()}
         onGoBack={vi.fn()}
