@@ -4,9 +4,9 @@
 
 ### Eingabe- und Datenvalidierung
 
-- Zod-Schemas für Index, Meta, Detail-Chunks, Registry, Profilanalyse und Upload-Daten.
+- Zod-Schemas für Index, Meta, Detail-Chunks, Registry und Profilanalyse.
 - Bei Parse-/Schema-/Budgetfehlern wird Verarbeitung abgebrochen.
-- Byte-/Mengen-/Zeitbudgets (`SECURITY_BUDGETS`) für Suche und Upload-Ingestion.
+- Byte-/Mengen-/Zeitbudgets (`SECURITY_BUDGETS`) für Suche und Datenverarbeitung.
 
 ### Such- und Routing-Härtung
 

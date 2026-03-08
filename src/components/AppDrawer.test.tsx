@@ -23,6 +23,5 @@ describe("AppDrawer", () => {
     expect(html).not.toContain("Impressum");
     expect(html).not.toContain("Datenschutz");
     expect(html).not.toContain("CSV exportieren");
-    expect(html).not.toContain("JSON laden");
   });
 });

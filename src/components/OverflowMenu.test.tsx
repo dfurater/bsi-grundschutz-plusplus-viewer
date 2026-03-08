@@ -17,7 +17,6 @@ describe("OverflowMenu", () => {
     expect(html).toContain("Daten");
     expect(html).not.toContain("Info");
     expect(html).not.toContain("CSV exportieren");
-    expect(html).not.toContain("JSON laden");
     expect(html).not.toContain("Quellen &amp; Version");
     expect(html).not.toContain("About");
     expect(html).not.toContain("Dunkelmodus");

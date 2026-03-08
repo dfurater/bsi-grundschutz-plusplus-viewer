@@ -5,8 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   CatalogIndexSchema,
   CatalogMetaSchema,
-  DetailChunkSchema,
-  UploadCatalogSchema
+  DetailChunkSchema
 } from "./dataSchemas";
 import { validateOrThrow } from "./validation";
 import { SECURITY_BUDGETS } from "./securityBudgets";
@@ -42,21 +41,6 @@ describe("schema validation", () => {
     expect(() => validateOrThrow(index, CatalogIndexSchema, "index")).not.toThrow();
     expect(() => validateOrThrow(meta, CatalogMetaSchema, "meta")).not.toThrow();
     expect(() => validateOrThrow(detailChunk, DetailChunkSchema, "detail")).not.toThrow();
-  });
-
-  it("lehnt ungueltigen Upload ab", () => {
-    const invalidUpload = { catalog: { groups: "not-an-array" } };
-    expect(() => validateOrThrow(invalidUpload, UploadCatalogSchema, "upload")).toThrow();
-  });
-
-  it("lehnt Upload ohne Kernfelder fail-closed ab", () => {
-    const missingGroupTitle = {
-      catalog: {
-        metadata: { title: "Test" },
-        groups: [{ id: "G-1" }]
-      }
-    };
-    expect(() => validateOrThrow(missingGroupTitle, UploadCatalogSchema, "upload-missing-title")).toThrow();
   });
 
   it("lehnt uebergrossen Index fail-closed ab", () => {

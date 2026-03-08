@@ -31,7 +31,7 @@ npm run test:unit
 ## Repository-Struktur verstehen
 
 - `src/App.tsx`: App-Orchestrierung, Routing, Such-/Detail-/Export-Flow
-- `src/workers/searchWorker.ts`: Such-Engine und Daten-Ingestion im Worker
+- `src/workers/searchWorker.ts`: Such-Engine und Worker-API
 - `src/lib/normalize-core.js`: OSCAL -> internes Datenmodell
 - `scripts/build-catalog.mjs`: Build-Datenpipeline
 - `scripts/sync-bsi-catalogs.mjs`: Upstream-Sync des BSI-Grundschutz++-Anwenderkatalogs

@@ -1,5 +1,5 @@
 export const SECURITY_BUDGETS = {
-  maxUploadFileSizeBytes: 8 * 1024 * 1024,
+  maxCatalogFileSizeBytes: 8 * 1024 * 1024,
   maxRemoteJsonBytes: {
     catalogIndex: 3 * 1024 * 1024,
     catalogMeta: 1 * 1024 * 1024,
@@ -23,6 +23,5 @@ export const SECURITY_BUDGETS = {
   maxRelationsPerControl: 512,
   maxPathDepth: 64,
   searchTimeBudgetMs: 2_500,
-  uploadIngestionBudgetMs: 8_000,
   searchCheckpointInterval: 100
 } as const;

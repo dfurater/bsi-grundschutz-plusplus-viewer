@@ -4,7 +4,7 @@ interface StatusToastProps {
 }
 
 /**
- * Lightweight status toast for connectivity and import/export feedback.
+ * Lightweight status toast for connectivity and export feedback.
  * REQ: PD-09, PERF-04, C-08
  */
 export function StatusToast({ message, tone = "info" }: StatusToastProps) {

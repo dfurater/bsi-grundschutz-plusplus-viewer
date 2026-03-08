@@ -14,7 +14,7 @@
 Aufgaben:
 - Routing und Seitenzustände (`src/App.tsx`)
 - Suche, Filter, Detailansichten
-- CSV-Export und lokaler JSON-Upload
+- CSV-Export
 - Quellen-/Lizenz-/Versions- und Rechtsseiten
 
 Wichtige Komponenten:
@@ -27,10 +27,9 @@ Aufgaben:
 - Suchausführung inkl. Ranking, Filterung, Facettenzählung
 - Nachladen von Detail-Chunks
 - Graph-Berechnung (1-/2-Hop)
-- Ingestion von lokal hochgeladenem OSCAL-JSON
 
 Technik:
-- Worker-Protokoll (`init`, `search`, `get-control`, `get-neighborhood`, `load-upload`, `cancel`)
+- Worker-Protokoll (`init`, `search`, `get-control`, `get-neighborhood`, `cancel`)
 - Zod-Schema-Validierung und Budgets
 
 ### Build-/Transformationspipeline (Node)
@@ -52,7 +51,7 @@ Aufgabe:
 ## Hauptmodule
 
 - `src/App.tsx`: Zustands- und Flow-Orchestrierung
-- `src/workers/searchWorker.ts`: Suchkern, Worker-API, Detail-Ladepfad, Upload-Ingestion
+- `src/workers/searchWorker.ts`: Suchkern, Worker-API, Detail-Ladepfad
 - `src/lib/dataSchemas.ts`: zentrale Schema-/Budget-Validierung
 - `src/lib/normalize-core.js`: Extraktion von Gruppen/Controls/Facetten/Relationen aus OSCAL
 - `scripts/build-catalog.mjs`: Datenbuild aus dem Grundschutz++-Anwenderkatalog
@@ -72,12 +71,6 @@ Aufgabe:
 2. Worker lädt bei Bedarf `details/<TOPGROUP>.json`.
 3. UI rendert Treffer, Details, Relationen und Exporte.
 
-### Upload-Zeit (lokal)
-
-1. Nutzer lädt eine JSON-Datei im Browser.
-2. Worker validiert und normalisiert Upload-JSON.
-3. In-Memory-Index ersetzt den statischen Index bis zum Reload.
-
 ## Schnittstellen
 
 - Interne Schnittstellen:
@@ -87,7 +80,6 @@ Aufgabe:
 
 - Externe Schnittstellen:
   - Statische JSON-Dateien unter `./data/**`
-  - Datei-Upload (`application/json`)
   - CSV-Dateidownload als Browser-Blob
 
 ## Zentrale Architekturentscheidungen

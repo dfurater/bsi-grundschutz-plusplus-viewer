@@ -129,11 +129,10 @@ export function DatenschutzPage() {
         </li>
       </ul>
 
-      <h2>6. Lokale Upload-Verarbeitung (CSV/JSON)</h2>
+      <h2>6. Lokale Verarbeitung (CSV-Export)</h2>
       <p>
-        Wenn Nutzer in der Anwendung CSV- oder JSON-Dateien auswählen/hochladen, werden diese nach aktuellem Stand
-        ausschließlich lokal im Browser verarbeitet. Es erfolgt keine Übertragung der hochgeladenen Inhalte an einen
-        Server der Anwendung.
+        Wenn Nutzer in der Anwendung CSV-Dateien exportieren, erfolgt die Erstellung der Datei ausschließlich lokal im
+        Browser. Es werden keine Inhaltsdaten des Exports an einen Server der Anwendung übertragen.
       </p>
       <p>
         <strong>Zweck:</strong> Bereitstellung der vom Nutzer angeforderten Viewer-Funktion.
