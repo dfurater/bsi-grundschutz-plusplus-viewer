@@ -97,7 +97,7 @@ export function parseHash(hash: string): AppRoute {
     };
   }
 
-  if (path === "/about/source") {
+  if (path === "/about/license" || path === "/about/source") {
     return { view: "source" };
   }
 

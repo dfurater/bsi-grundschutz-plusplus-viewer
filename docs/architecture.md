@@ -15,7 +15,7 @@ Aufgaben:
 - Routing und Seitenzustände (`src/App.tsx`)
 - Suche, Filter, Detailansichten
 - CSV-Export und lokaler JSON-Upload
-- Quellen-/Versions- und Rechtsseiten
+- Quellen-/Lizenz-/Versions- und Rechtsseiten
 
 Wichtige Komponenten:
 - `AppHeader`, `SearchOverlay`, `FacetPanel`, `ResultList`, `ControlDetailPanel`, `RelationGraphLite`, `GroupOverview`, `GroupPage`, `SourcePanel`, `AppFooter`
