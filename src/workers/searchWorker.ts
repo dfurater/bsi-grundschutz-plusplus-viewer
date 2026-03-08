@@ -3,18 +3,14 @@
 import {
   CatalogIndexSchema,
   DetailChunkSchema,
-  NormalizedCatalogSchema,
-  UploadCatalogSchema,
   type CatalogIndexPayloadValidated
 } from "../lib/dataSchemas";
 import { fetchJsonWithValidation } from "../lib/fetchJsonSafe";
-import { normalizeCatalog } from "../lib/normalize-core.js";
 import { limitQueryTokens, sanitizeSearchText } from "../lib/searchSafety";
 import { SECURITY_BUDGETS } from "../lib/securityBudgets";
 import { makeSnippet, normalizeGerman, tokenize } from "../lib/text";
-import { assertByteBudget, parseJsonOrThrow, validateOrThrow } from "../lib/validation";
+import { validateOrThrow } from "../lib/validation";
 import type {
-  CatalogMeta as CatalogMetaType,
   ControlDetail,
   RelationGraphPayload,
   SearchDoc,
@@ -36,7 +32,7 @@ type IndexedDoc = SearchDoc & {
 };
 
 type WorkerRequest = {
-  type: "init" | "search" | "get-control" | "get-neighborhood" | "load-upload" | "cancel";
+  type: "init" | "search" | "get-control" | "get-neighborhood" | "cancel";
   requestId: string;
   payload?: any;
 };
@@ -597,50 +593,6 @@ async function handleRequest(request: WorkerRequest): Promise<any> {
       throw new Error("Control-ID fehlt.");
     }
     return buildNeighborhoodGraph(controlId, hops, request.requestId);
-  }
-
-  if (request.type === "load-upload") {
-    const startedAt = performance.now();
-    assertRequestNotCancelled(request.requestId);
-    const rawText = String(request.payload?.rawText ?? "");
-    assertByteBudget(rawText, SECURITY_BUDGETS.maxUploadFileSizeBytes, "Upload-Datei");
-
-    const parsed = parseJsonOrThrow(rawText, "Upload-Datei");
-    const validatedInput = validateOrThrow(parsed, UploadCatalogSchema, "Upload-Katalogstruktur");
-
-    await checkpoint(request.requestId, startedAt, "Upload-Validierung", SECURITY_BUDGETS.uploadIngestionBudgetMs);
-    const normalized = normalizeCatalog(validatedInput);
-    await checkpoint(request.requestId, startedAt, "Upload-Normalisierung", SECURITY_BUDGETS.uploadIngestionBudgetMs);
-    const validatedNormalized = validateOrThrow(normalized, NormalizedCatalogSchema, "Upload-Kataloginhalt");
-
-    setIndexedDocs(validatedNormalized.docs as SearchDoc[]);
-    facetOptions = computeFacetOptions(validatedNormalized.docs as SearchDoc[]);
-    detailChunks.clear();
-    inlineDetails.clear();
-
-    let importedControls = 0;
-    for (const chunk of Object.values(validatedNormalized.detailsByTopGroup) as Array<{ controls: Record<string, ControlDetail> }>) {
-      for (const [id, detail] of Object.entries(chunk.controls)) {
-        inlineDetails.set(id, detail);
-        importedControls += 1;
-        if (importedControls % SECURITY_BUDGETS.searchCheckpointInterval === 0) {
-          await checkpoint(request.requestId, startedAt, "Upload-Indexierung", SECURITY_BUDGETS.uploadIngestionBudgetMs);
-        }
-      }
-    }
-
-    const meta = {
-      ...validatedNormalized.meta,
-      stats: validatedNormalized.stats as CatalogMetaType["stats"],
-      groups: validatedNormalized.groups as CatalogMetaType["groups"],
-      groupTree: validatedNormalized.groupTree as CatalogMetaType["groupTree"]
-    } as Partial<CatalogMetaType>;
-
-    return {
-      facetOptions,
-      meta,
-      stats: validatedNormalized.stats
-    };
   }
 
   throw new Error(`Unbekannter Request-Typ: ${request.type}`);

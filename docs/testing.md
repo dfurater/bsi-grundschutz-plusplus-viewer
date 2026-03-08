@@ -84,7 +84,7 @@ Workflow `.github/workflows/quality.yml` führt aus:
 
 ### Should-have
 
-1. E2E-Tests für Upload + Graph-Klickpfade erweitern.
+1. E2E-Tests für Graph-Klickpfade erweitern.
 2. Zusätzliche Integrationsprüfungen für Host-spezifisches Laufzeitverhalten ergänzen.
 
 ### Nice-to-have

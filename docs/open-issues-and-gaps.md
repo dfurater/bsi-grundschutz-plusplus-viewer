@@ -14,7 +14,7 @@
 ## Qualitäts-/Testgaps
 
 1. Es gibt keine Coverage-Metriken.
-2. Es gibt keinen dedizierten Last-/Soak-Test für Worker und große Uploads.
+2. Es gibt keinen dedizierten Last-/Soak-Test für Worker unter hoher Last.
 3. Es gibt keinen dedizierten automationsgestützten Test für reale Response-Header auf dem Produktiv-Host.
 
 ## Betriebsgaps

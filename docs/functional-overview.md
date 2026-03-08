@@ -31,10 +31,9 @@ Die Anwendung stellt Grundschutz++-Katalogdaten als durchsuchbare Oberfläche be
 
 - Anzeige von Version, Build-Informationen und Hash zur aktiven Primärquelle.
 
-### UC-7: Export und lokaler Import
+### UC-7: Export
 
 - CSV-Export ausgewählter Controls.
-- Lokaler JSON-Upload mit Validierung.
 
 ## Fachliche Domänenobjekte
 
@@ -57,5 +56,4 @@ Die Anwendung stellt Grundschutz++-Katalogdaten als durchsuchbare Oberfläche be
 
 - Keine Schreib-/Mutationsoperationen gegen externe Systeme.
 - Kein User-/Rechtemodell.
-- Kein persistenter Upload-Speicher; Upload gilt bis zum Seitenreload.
 - Kein Workflow-Engine-/Freigabeprozess in der Anwendung.
