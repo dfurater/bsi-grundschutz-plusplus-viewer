@@ -67,7 +67,7 @@ Routen:
 - `#/group/:id`
 - `#/control/:id`
 - `#/about`
-- `#/about/source`
+- `#/about/license` (Legacy-Alias: `#/about/source`)
 - `#/impressum`
 - `#/datenschutz`
 

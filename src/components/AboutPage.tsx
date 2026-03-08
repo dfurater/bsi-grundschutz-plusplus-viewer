@@ -77,13 +77,14 @@ export function AboutPage({ meta }: AboutPageProps) {
         <strong>Stand (Build):</strong> {buildDate} · <strong>Datensatz/Version:</strong> {datasetVersion} ·{" "}
         <strong>Hash:</strong> {datasetHash}
         <br />
-        (Details siehe <a href="#/about/source">„Quellen &amp; Version“</a> in der App.)
+        (Details siehe <a href="#/about/license">„Quellen &amp; Lizenz“</a> in der App.)
       </p>
 
       <p>
         Die Anwendung nutzt als Primärquelle den fertigen BSI-Grundschutz++-Anwenderkatalog
         {" "}
-        (<code>Anwenderkataloge/Grundschutz++/Grundschutz++-catalog.json</code>).
+        (<code>Anwenderkataloge/Grundschutz++/Grundschutz++-catalog.json</code>). Hinweise zu Quelle, Lizenz und
+        technischer Aufbereitung findest du unter <a href="#/about/license">„Quellen &amp; Lizenz“</a>.
       </p>
 
       <h2>Warum dieser Viewer existiert</h2>
@@ -129,7 +130,7 @@ export function AboutPage({ meta }: AboutPageProps) {
           Auswahl <strong>exportieren</strong> (z. B. CSV)
         </li>
         <li>
-          Datenstand transparent prüfen unter <strong>„Quellen &amp; Version“</strong> (Version/Build/Metadaten)
+          Datenstand transparent prüfen unter <strong>„Quellen &amp; Lizenz“</strong> (Version/Build/Metadaten)
         </li>
       </ul>
 

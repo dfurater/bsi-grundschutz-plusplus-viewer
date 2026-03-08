@@ -27,7 +27,7 @@ Die Anwendung stellt Grundschutz++-Katalogdaten als durchsuchbare Oberfläche be
 
 - Graphansicht mit 1-/2-Hop und Typfilter (`all`, `required`, `related`).
 
-### UC-6: Quellen- und Versions-Transparenz
+### UC-6: Quellen-, Lizenz- und Versions-Transparenz
 
 - Anzeige von Version, Build-Informationen und Hash zur aktiven Primärquelle.
 
