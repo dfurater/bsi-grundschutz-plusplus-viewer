@@ -86,5 +86,8 @@ describe("AppHeader", () => {
     );
 
     expect(html).toContain("Export CSV (3)");
+    expect(html).toContain("Exportierte Daten basieren auf Inhalten aus der Stand-der-Technik-Bibliothek des BSI");
+    expect(html).toContain("Quellen &amp; Lizenz");
+    expect(html).toContain('href="#/about/license"');
   });
 });

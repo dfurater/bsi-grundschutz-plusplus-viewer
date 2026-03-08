@@ -16,7 +16,7 @@ Kernziele:
 
 ## Kernfunktionen
 
-- Hash-Routing (`#/`, `#/search`, `#/group/:id`, `#/control/:id`, `#/about`, `#/about/source`, `#/impressum`, `#/datenschutz`)
+- Hash-Routing (`#/`, `#/search`, `#/group/:id`, `#/control/:id`, `#/about`, `#/about/license` (Legacy-Alias: `#/about/source`), `#/impressum`, `#/datenschutz`)
 - Suche und Filter über Web Worker
 - Relations-Graph (1-Hop/2-Hop, Filter `all|required|related`)
 - CSV-Export mit Formel-Neutralisierung und URL-Härtung

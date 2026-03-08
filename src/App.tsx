@@ -1130,7 +1130,7 @@ export default function App() {
       ? meta.groups.filter((group) => group.parentGroupId === currentGroup.id)
       : [];
 
-  const isLegalRoute = route.view === "impressum" || route.view === "datenschutz";
+  const isLegalRoute = route.view === "impressum" || route.view === "datenschutz" || route.view === "source";
   const homeAllControlsSelected = Boolean(
     meta && meta.stats.controlCount > 0 && selectedControlCount === meta.stats.controlCount
   );

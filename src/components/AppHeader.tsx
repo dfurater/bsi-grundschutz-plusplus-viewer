@@ -165,6 +165,13 @@ export function AppHeader({
           </button>
         </div>
       </div>
+
+      {selectedControlCount > 0 ? (
+        <p className="app-header-export-note">
+          Exportierte Daten basieren auf Inhalten aus der Stand-der-Technik-Bibliothek des BSI (CC BY-SA 4.0).
+          Details unter <a href="#/about/license">„Quellen &amp; Lizenz“</a>.
+        </p>
+      ) : null}
     </header>
   );
 }

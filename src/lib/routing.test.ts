@@ -32,6 +32,7 @@ describe("parseHash hardening", () => {
 
   it("parst About-Routen", () => {
     expect(parseHash("#/about")).toEqual({ view: "about" });
+    expect(parseHash("#/about/license")).toEqual({ view: "source" });
     expect(parseHash("#/about/source")).toEqual({ view: "source" });
   });
 

@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-const ROUTES = ["#/", "#/search?q=KONF.12.4", "#/about/source"];
+const ROUTES = ["#/", "#/search?q=KONF.12.4", "#/about/license"];
 
 test.describe("A11y smoke", () => {
   for (const route of ROUTES) {
