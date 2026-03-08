@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AppDrawer } from "./components/AppDrawer";
 import { AppHeader } from "./components/AppHeader";
 import { ControlDetailPanel } from "./components/ControlDetailPanel";
 import { FacetPanel, type ActiveFilters } from "./components/FacetPanel";
 import { FilterSheet } from "./components/FilterSheet";
 import { GroupOverview } from "./components/GroupOverview";
 import { GroupPage } from "./components/GroupPage";
-import { OverflowMenu } from "./components/OverflowMenu";
 import { ResultList } from "./components/ResultList";
 import { SearchOverlay } from "./components/SearchOverlay";
 import { SourcePanel } from "./components/SourcePanel";
@@ -190,8 +188,6 @@ export default function App() {
 
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
   const [headerShrunk, setHeaderShrunk] = useState(false);
-  const [overflowOpen, setOverflowOpen] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
   const [pendingSearchResultsFocusQuery, setPendingSearchResultsFocusQuery] = useState<string | null>(null);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
@@ -339,8 +335,6 @@ export default function App() {
   useEffect(() => {
     const onHash = () => {
       setRoute(parseHash(window.location.hash));
-      setOverflowOpen(false);
-      setDrawerOpen(false);
       setFilterSheetOpen(false);
     };
     window.addEventListener("hashchange", onHash);
@@ -350,16 +344,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (isTabletUp) {
-      setDrawerOpen(false);
-      return;
-    }
-    setOverflowOpen(false);
-  }, [isTabletUp]);
-
-  useEffect(() => {
     const detailSheetOpen = route.view === "search" && !isWideDesktop && Boolean(route.controlId);
-    const shouldLockScroll = searchOverlayOpen || drawerOpen || filterSheetOpen || detailSheetOpen;
+    const shouldLockScroll = searchOverlayOpen || filterSheetOpen || detailSheetOpen;
     if (!shouldLockScroll) {
       return;
     }
@@ -373,7 +359,7 @@ export default function App() {
       document.body.style.overflow = previousBodyOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
     };
-  }, [drawerOpen, filterSheetOpen, isWideDesktop, route.view, route.view === "search" ? route.controlId : null, searchOverlayOpen]);
+  }, [filterSheetOpen, isWideDesktop, route.view, route.view === "search" ? route.controlId : null, searchOverlayOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -904,8 +890,6 @@ export default function App() {
     setPendingSearchResultsFocusQuery(hashWillChange ? nextSearch : null);
     navigate(nextHash);
     setSearchOverlayOpen(false);
-    setOverflowOpen(false);
-    setDrawerOpen(false);
 
     if (!hashWillChange) {
       window.requestAnimationFrame(() => {
@@ -1136,26 +1120,11 @@ export default function App() {
         isTabletUp={isTabletUp}
         isShrunk={headerShrunk}
         searchOverlayOpen={searchOverlayOpen}
-        secondaryActionsOpen={isTabletUp ? overflowOpen : drawerOpen}
         theme={theme}
         selectedControlCount={selectedControlCount}
         exportingCsv={exportCsvRunning}
-        onOpenSearchOverlay={() => {
-          setSearchOverlayOpen(true);
-          setOverflowOpen(false);
-          setDrawerOpen(false);
-        }}
+        onOpenSearchOverlay={() => setSearchOverlayOpen(true)}
         onExportCsv={handleExportCsv}
-        onToggleSecondaryActions={() => {
-          setSearchOverlayOpen(false);
-          if (isTabletUp) {
-            setDrawerOpen(false);
-            setOverflowOpen((prev) => !prev);
-            return;
-          }
-          setOverflowOpen(false);
-          setDrawerOpen((prev) => !prev);
-        }}
         onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onGoHome={() => navigate("#/")}
         onGoBack={() => {
@@ -1166,22 +1135,6 @@ export default function App() {
           navigate("#/");
         }}
         showBack={route.view !== "home"}
-      />
-
-      <OverflowMenu
-        open={isTabletUp && overflowOpen}
-        selectedControlCount={selectedControlCount}
-        exportingCsv={exportCsvRunning}
-        onClose={() => setOverflowOpen(false)}
-        onExportCsv={handleExportCsv}
-      />
-
-      <AppDrawer
-        open={!isTabletUp && drawerOpen}
-        selectedControlCount={selectedControlCount}
-        exportingCsv={exportCsvRunning}
-        onClose={() => setDrawerOpen(false)}
-        onExportCsv={handleExportCsv}
       />
 
       <SearchOverlay
