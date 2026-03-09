@@ -40,6 +40,31 @@ describe("toCsv", () => {
     expect(csv).toBe(`value\r\n"'=HYPERLINK(""https://evil"")"`);
   });
 
+  it("neutralisiert gefaehrliche Praefixe auch nach Whitespace und Unicode-Normalisierung", () => {
+    const csv = toCsv(
+      [{ value: "   =1+1" }, { value: "|cmd" }, { value: "＝1+1" }, { value: "'=SAFE" }],
+      [{ key: "value", header: "value" }],
+      { withBom: false }
+    );
+
+    const lines = csv.split("\r\n");
+    expect(lines[1]).toBe("'   =1+1");
+    expect(lines[2]).toBe("'|cmd");
+    expect(lines[3]).toBe("'＝1+1");
+    expect(lines[4]).toBe("'=SAFE");
+  });
+
+  it("neutralisiert Tab- und Carriage-Return-Praefixe", () => {
+    const csv = toCsv(
+      [{ value: "\t=1+1" }, { value: "\r=1+1" }],
+      [{ key: "value", header: "value" }],
+      { withBom: false }
+    );
+
+    expect(csv).toContain("value\r\n'\t=1+1\r\n");
+    expect(csv).toContain(`\r\n"'\r=1+1"`);
+  });
+
   it("unterstuetzt Semikolon als Delimiter fuer Excel-DE-Import", () => {
     const csv = toCsv(
       [
