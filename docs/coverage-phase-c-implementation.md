@@ -1,6 +1,7 @@
 # Coverage Phase C Implementation (2026-03-09)
 
-> Historisches Umsetzungsprotokoll. Maßgeblicher Endstand: `docs/qa-coverage-finalization.md`.
+> Historisches Umsetzungsprotokoll (Snapshot vor der erweiterten Phase-B-Orchestrierungswelle).
+> Maßgeblicher Endstand: `docs/qa-coverage-finalization.md`.
 
 ## 1. Kurzueberblick der umgesetzten Phase-C-Massnahmen
 
@@ -83,8 +84,9 @@ Diese E2E-Erweiterungen wurden bewusst klein gehalten und decken benoetigte Syst
 
 ## 6. Welche Risiken weiterhin offen bleiben
 
-- `src/App.tsx` als zentrale Orchestrierung bleibt weiterhin ohne dedizierte domnahe Integrationstests.
-- Service-Worker-Laufzeitpfade in `src/main.tsx` sind weiterhin nicht direkt getestet.
+- Die folgenden zwei Punkte wurden im späteren Phase-B-Update substanziell adressiert:
+  - `src/App.tsx` als zentrale Orchestrierung
+  - Service-Worker-Laufzeitpfade in `src/main.tsx`
 - Build-/Sync-Skripte (`scripts/build-catalog.mjs`, `scripts/sync-bsi-catalogs.mjs`) haben weiterhin keine eigenen Integrationstests.
 
 ## 7. Welche Themen bewusst nicht umgesetzt wurden
@@ -106,6 +108,7 @@ Diese E2E-Erweiterungen wurden bewusst klein gehalten und decken benoetigte Syst
 
 - `npm run test:unit:coverage`
   - erfolgreich
+  - Hinweis: Die unten stehenden Kennzahlen sind ein historischer Zwischenstand und wurden später deutlich erhöht.
   - Coverage-Schwellen eingehalten
   - Summary:
     - Statements: `42.17%`
@@ -130,3 +133,19 @@ Diese E2E-Erweiterungen wurden bewusst klein gehalten und decken benoetigte Syst
 - `npm run qa:browser`
   - erfolgreich (ausserhalb Sandbox ausgefuehrt)
   - Lighthouse + Playwright/Axe bestanden
+
+## 9. Nachgelagerter Update-Hinweis
+
+Nach diesem Phase-C-Snapshot wurde eine erweiterte Phase-B-Welle umgesetzt. Der aktuelle Stand liegt bei:
+
+- `25` Testdateien / `117` Tests
+- Coverage (`npm run test:unit:coverage`):
+  - Statements: `64.14%`
+  - Branches: `53.16%`
+  - Functions: `60.00%`
+  - Lines: `64.58%`
+
+Die normativen Referenzen bleiben:
+
+- `docs/qa-coverage-finalization.md`
+- `docs/testing.md`

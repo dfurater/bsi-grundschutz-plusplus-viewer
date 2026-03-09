@@ -15,7 +15,7 @@
 
 1. Es gibt keinen dedizierten Last-/Soak-Test für Worker unter hoher Last.
 2. Es gibt keinen dedizierten automationsgestützten Test für reale Response-Header auf dem Produktiv-Host.
-3. `src/App.tsx` und `src/main.tsx` bleiben im Vergleich zu Kern-Libs unterdurchschnittlich unit-/integrationsgetestet.
+3. Branch-Abdeckung in `src/components/RelationGraphLite.tsx` und Teilbereichen von `src/components/ControlDetailPanel.tsx` ist weiterhin ausbaufähig.
 
 ## Betriebsgaps
 

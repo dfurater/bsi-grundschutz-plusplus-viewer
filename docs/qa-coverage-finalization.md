@@ -2,8 +2,8 @@
 
 ## 1. Executive Summary
 
-Die in Phase A, B und C integrierten Maßnahmen wurden auf `main` konsolidiert und auf einen einheitlichen Endstand gebracht.
-Der technische Endstand für QA/Coverage ist jetzt konsistent dokumentiert, widersprüchliche Alt-Aussagen wurden bereinigt, und historische Zwischenstands-Dokumente sind klar als nicht maßgeblich markiert.
+Die in Phase A, B und C integrierten Maßnahmen wurden um eine zusätzliche Phase-B-Testwelle für Orchestrierungs- und Interaktionspfade erweitert.
+Der technische Endstand für QA/Coverage ist konsistent dokumentiert; widersprüchliche Alt-Aussagen wurden bereinigt, und historische Zwischenstands-Dokumente sind klar als nicht maßgeblich markiert.
 
 Maßgeblich für den Endstand sind:
 
@@ -18,6 +18,7 @@ Maßgeblich für den Endstand sind:
 - Browser-QA ist getrennt in Lighthouse + Playwright/Axe abgebildet.
 - Unit-Coverage ist aktiv und gate-relevant (global thresholds in `vitest.config.ts`).
 - Release-Hygiene und Dependency-Audits sind im schnellen CI-Gate enthalten.
+- Die größten bisherigen Lücken (`src/App.tsx`, `src/main.tsx`, `src/hooks/useFocusTrap.ts`, zentrale Worker-Branches) sind substanziell adressiert.
 - Historische Phasenprotokolle bleiben zur Nachvollziehbarkeit erhalten, definieren aber nicht mehr den aktuellen Sollzustand.
 
 ## 3. Finaler Zuschnitt der Testpyramide im Repo
@@ -89,7 +90,7 @@ Bewusste Excludes:
 
 Nicht-Ziele dieser Finalisierung:
 
-- Keine neue Phase D / keine neue Testoffensive.
+- Keine neue Phase D; es wurde nur eine gezielte, risikobasierte Phase-B-Erweiterung umgesetzt.
 - Keine großflächigen Refactorings von `App.tsx` oder Worker-Architektur.
 - Keine neuen fachlichen Produktfeatures.
 
@@ -113,43 +114,39 @@ Diese Dokumente bleiben für Verlauf und Reviewbarkeit erhalten, sind aber nicht
 
 ## 8. Verbleibende Restlücken / Risiken
 
-1. `src/App.tsx` und `src/main.tsx` sind weiterhin unterdurchschnittlich fein granular abgesichert.
-2. Kein dedizierter Last-/Soak-Test für Worker unter hoher Last.
-3. Kein automatisierter Testpfad für reale Produktiv-Header außerhalb der Repository-CI.
+1. Kein dedizierter Last-/Soak-Test für Worker unter hoher Last.
+2. Kein automatisierter Testpfad für reale Produktiv-Header außerhalb der Repository-CI.
+3. `src/components/RelationGraphLite.tsx` und Teilpfade von `src/components/ControlDetailPanel.tsx` sind branch-seitig unterdurchschnittlich abgesichert.
 4. TypeScript bleibt bei `strict: false`; potenzielle Typregressionen werden nicht maximal früh erkannt.
 
 Diese Punkte sind bekannt, akzeptiert und bewusst nicht im Rahmen dieser Finalisierung erweitert worden.
 
 ## 9. Ausgeführte Validierungsschritte und Ergebnis
 
-Lokal ausgeführt auf Branch `chore/qa-coverage-finalization`:
+Lokal ausgeführt auf Branch `test/phase-b-orchestration-interactions`:
 
 1. `npm run test:unit:coverage`
    - Ergebnis: erfolgreich
-   - Testdateien: 22
-   - Tests: 95 (alle grün)
+   - Testdateien: 25
+   - Tests: 117 (alle grün)
    - Coverage Summary:
-     - Statements: 42.17%
-     - Branches: 37.31%
-     - Functions: 39.95%
-     - Lines: 42.35%
+     - Statements: 64.14%
+     - Branches: 53.16%
+     - Functions: 60.00%
+     - Lines: 64.58%
    - Schwellen eingehalten: ja
 
-2. `npm run qa`
+2. `npm run test:unit`
    - Ergebnis: erfolgreich
    - Enthält erfolgreich:
      - `npm run build`
      - `npm run test:unit:raw`
-     - `npm run check:release-hygiene`
-     - `npm run qa:browser` (Lighthouse + Playwright/Axe)
-   - Browser-QA:
-     - Lighthouse: erfolgreich
-     - Playwright/Axe: 18/18 Tests bestanden
+   - Unit-Ergebnis:
+     - 25/25 Testdateien bestanden
+     - 117/117 Tests bestanden
 
-3. `npm run audit:prod && npm run audit:dev`
+3. `npm run check:release-hygiene`
    - Ergebnis: erfolgreich
-   - `audit:prod`: 0 vulnerabilities
-   - `audit:dev`: keine kritischen/hohen Befunde (Hinweise für low/moderate vorhanden)
 
 Nebenbefunde:
 

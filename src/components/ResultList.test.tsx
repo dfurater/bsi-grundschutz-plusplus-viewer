@@ -1,7 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
-import { renderToStaticMarkup } from "react-dom/server";
+// @vitest-environment jsdom
+
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ResultList } from "./ResultList";
 import type { SearchResultItem } from "../types";
+import type { ComponentProps } from "react";
 
 function createItem(id: string, snippet = "Firewall Härtung erforderlich"): SearchResultItem {
   return {
@@ -25,130 +29,254 @@ function createItems(count: number): SearchResultItem[] {
   return Array.from({ length: count }, (_, index) => createItem(`APP.${index + 1}`));
 }
 
-describe("ResultList", () => {
-  it("zeigt einen Ladezustand waehrend laufender Suche", () => {
-    const html = renderToStaticMarkup(
-      <ResultList
-        items={[]}
-        total={0}
-        query=""
-        selectedId={null}
-        selectedControlIds={new Set<string>()}
-        loading
-        error={null}
-        onSelect={vi.fn()}
-        onToggleSelection={vi.fn()}
-        onSelectAllControls={vi.fn()}
-        selectingAllControls={false}
-        allControlsSelected={false}
-        hasActiveFilters={false}
-      />
-    );
+function buildProps(overrides: Partial<ComponentProps<typeof ResultList>> = {}): ComponentProps<typeof ResultList> {
+  return {
+    items: [],
+    total: 0,
+    query: "",
+    selectedId: null,
+    selectedControlIds: new Set<string>(),
+    loading: false,
+    error: null,
+    onSelect: vi.fn(),
+    onToggleSelection: vi.fn(),
+    onSelectAllControls: vi.fn(),
+    selectingAllControls: false,
+    allControlsSelected: false,
+    hasActiveFilters: false,
+    ...overrides
+  };
+}
 
-    expect(html).toContain("Index wird abgefragt…");
-    expect(html).toContain('data-search-results-focus="loading"');
+let root: Root | null = null;
+let container: HTMLDivElement | null = null;
+
+async function renderResultList(props: ComponentProps<typeof ResultList>) {
+  if (!container) {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+  }
+
+  await act(async () => {
+    root?.render(<ResultList {...props} />);
+  });
+}
+
+async function cleanupRender() {
+  if (root) {
+    await act(async () => {
+      root?.unmount();
+    });
+  }
+  root = null;
+  if (container?.isConnected) {
+    container.remove();
+  }
+  container = null;
+}
+
+function findButtonByExactText(text: string) {
+  const button = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+    (entry) => entry.textContent?.trim() === text
+  );
+  if (!button) {
+    throw new Error(`Button nicht gefunden: ${text}`);
+  }
+  return button;
+}
+
+async function clickElement(element: HTMLElement) {
+  await act(async () => {
+    element.click();
+  });
+}
+
+beforeEach(() => {
+  Reflect.set(globalThis as Record<string, unknown>, "IS_REACT_ACT_ENVIRONMENT", true);
+  document.body.innerHTML = "";
+});
+
+afterEach(async () => {
+  await cleanupRender();
+  vi.restoreAllMocks();
+});
+
+describe("ResultList interactions", () => {
+  it("zeigt Lade- und Fehlerzustand mit Fokusankern", async () => {
+    await renderResultList(buildProps({ loading: true }));
+    expect(document.body.textContent).toContain("Index wird abgefragt…");
+    expect(document.querySelector('[data-search-results-focus="loading"]')).not.toBeNull();
+
+    await renderResultList(buildProps({ loading: false, error: "Worker ist nicht erreichbar." }));
+    expect(document.body.textContent).toContain("Worker ist nicht erreichbar.");
+    expect(document.querySelector('[data-search-results-focus="status"]')).not.toBeNull();
   });
 
-  it("zeigt Fehlerzustand fuer fehlgeschlagene Suche", () => {
-    const html = renderToStaticMarkup(
-      <ResultList
-        items={[]}
-        total={0}
-        query=""
-        selectedId={null}
-        selectedControlIds={new Set<string>()}
-        loading={false}
-        error="Worker ist nicht erreichbar."
-        onSelect={vi.fn()}
-        onToggleSelection={vi.fn()}
-        onSelectAllControls={vi.fn()}
-        selectingAllControls={false}
-        allControlsSelected={false}
-        hasActiveFilters={false}
-      />
+  it("löst Auswahl-Callbacks für Card-Klick und Checkbox aus", async () => {
+    const onSelect = vi.fn();
+    const onToggleSelection = vi.fn();
+    const item = createItem("APP.1");
+
+    await renderResultList(
+      buildProps({
+        items: [item],
+        total: 1,
+        onSelect,
+        onToggleSelection
+      })
     );
 
-    expect(html).toContain("Worker ist nicht erreichbar.");
-    expect(html).toContain('role="alert"');
+    const checkbox = document.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    if (!checkbox) {
+      throw new Error("Checkbox fehlt");
+    }
+
+    await clickElement(checkbox);
+
+    const cardButton = document.querySelector<HTMLButtonElement>("button.result-card");
+    if (!cardButton) {
+      throw new Error("Result-Card fehlt");
+    }
+
+    await clickElement(cardButton);
+
+    expect(onToggleSelection).toHaveBeenCalledWith(item, true);
+    expect(onSelect).toHaveBeenCalledWith(item);
   });
 
-  it("zeigt Empty-State inkl. Filter-Reset nur bei aktiven Filtern", () => {
-    const html = renderToStaticMarkup(
-      <ResultList
-        items={[]}
-        total={0}
-        query="  Firewall  "
-        selectedId={null}
-        selectedControlIds={new Set<string>()}
-        loading={false}
-        error={null}
-        onSelect={vi.fn()}
-        onToggleSelection={vi.fn()}
-        onSelectAllControls={vi.fn()}
-        selectingAllControls={false}
-        allControlsSelected={false}
-        hasActiveFilters
-        onResetFilters={vi.fn()}
-      />
-    );
-
-    expect(html).toContain("Keine Treffer");
-    expect(html).toContain("Keine Ergebnisse für „Firewall“.");
-    expect(html).toContain("Filter zurücksetzen");
-  });
-
-  it("rendert Ergebnisliste mit initialem Paging und Treffer-Markierung", () => {
+  it("paginiert über Mehr laden und setzt Pagination bei Query-/Item-Wechsel zurück", async () => {
     const items = createItems(30);
-    const html = renderToStaticMarkup(
-      <ResultList
-        items={items}
-        total={30}
-        query="firewall"
-        selectedId="APP.2"
-        selectedControlIds={new Set<string>(["APP.1"])}
-        loading={false}
-        error={null}
-        onSelect={vi.fn()}
-        onToggleSelection={vi.fn()}
-        onSelectAllControls={vi.fn()}
-        selectingAllControls={false}
-        allControlsSelected={false}
-        hasActiveFilters={false}
-      />
+
+    await renderResultList(
+      buildProps({
+        items,
+        total: 30,
+        query: "firewall"
+      })
     );
 
-    expect(html).toContain("30 Treffer");
-    expect(html).toContain("APP.1");
-    expect(html).toContain("APP.25");
-    expect(html).not.toContain("APP.26");
-    expect(html).toContain("Mehr laden");
-    expect(html).toContain("<mark>Firewall</mark>");
-    expect(html).toContain("export-selected");
+    expect(document.body.textContent).toContain("APP.25");
+    expect(document.body.textContent).not.toContain("APP.26");
+
+    const loadMore = findButtonByExactText("Mehr laden");
+    await clickElement(loadMore);
+
+    expect(document.body.textContent).toContain("APP.26");
+
+    await renderResultList(
+      buildProps({
+        items,
+        total: 30,
+        query: "netz"
+      })
+    );
+
+    expect(document.body.textContent).not.toContain("APP.26");
   });
 
-  it("zeigt korrekte Label fuer Select-All-Aktionen", () => {
-    const baseProps = {
-      items: [createItem("APP.1")],
-      total: 1,
-      query: "",
-      selectedId: null,
-      selectedControlIds: new Set<string>(),
-      loading: false,
-      error: null,
-      onSelect: vi.fn(),
-      onToggleSelection: vi.fn(),
-      onSelectAllControls: vi.fn(),
-      hasActiveFilters: false
+  it("zeigt Empty-State mit Filter-Reset und ruft Reset-Callback auf", async () => {
+    const onResetFilters = vi.fn();
+
+    await renderResultList(
+      buildProps({
+        items: [],
+        total: 0,
+        query: "  Firewall  ",
+        hasActiveFilters: true,
+        onResetFilters
+      })
+    );
+
+    expect(document.body.textContent).toContain("Keine Treffer");
+    expect(document.body.textContent).toContain("Keine Ergebnisse für „Firewall“.");
+
+    const resetButton = findButtonByExactText("Filter zurücksetzen");
+    await clickElement(resetButton);
+
+    expect(onResetFilters).toHaveBeenCalledTimes(1);
+  });
+
+  it("zeigt generischen Empty-State ohne Reset-Aktion bei inaktiven Filtern", async () => {
+    await renderResultList(
+      buildProps({
+        items: [],
+        total: 0,
+        query: "   ",
+        hasActiveFilters: false
+      })
+    );
+
+    expect(document.body.textContent).toContain("Keine Ergebnisse. Passe Suche oder Filter an.");
+    const resetButton = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find((entry) =>
+      entry.textContent?.includes("Filter zurücksetzen")
+    );
+    expect(resetButton).toBeUndefined();
+  });
+
+  it("rendert Selektionszustände und optionale Chip-Branches in Ergebnis-Karten", async () => {
+    const item: SearchResultItem = {
+      ...createItem("APP.1", ""),
+      secLevel: null,
+      effortLevel: null,
+      modalverbs: []
     };
 
-    const selectingHtml = renderToStaticMarkup(
-      <ResultList {...baseProps} selectingAllControls allControlsSelected={false} />
-    );
-    const selectedHtml = renderToStaticMarkup(
-      <ResultList {...baseProps} selectingAllControls={false} allControlsSelected />
+    await renderResultList(
+      buildProps({
+        items: [item],
+        total: 1,
+        selectedId: "APP.1",
+        selectedControlIds: new Set<string>(["APP.1"])
+      })
     );
 
-    expect(selectingHtml).toContain("Alles auswählen...");
-    expect(selectedHtml).toContain("Alles abwählen");
+    const selectedCard = document.querySelector<HTMLButtonElement>("button.result-card.selected");
+    expect(selectedCard).not.toBeNull();
+    expect(document.querySelector(".result-card-shell.export-selected")).not.toBeNull();
+    expect(document.querySelectorAll(".chip").length).toBe(0);
+  });
+
+  it("steuert Select-all-Zustände und ruft den Callback aus", async () => {
+    const onSelectAllControls = vi.fn();
+    const item = createItem("APP.1");
+
+    await renderResultList(
+      buildProps({
+        items: [item],
+        total: 1,
+        onSelectAllControls,
+        selectingAllControls: false,
+        allControlsSelected: false
+      })
+    );
+
+    const selectAllButton = findButtonByExactText("Alles auswählen");
+    await clickElement(selectAllButton);
+    expect(onSelectAllControls).toHaveBeenCalledTimes(1);
+
+    await renderResultList(
+      buildProps({
+        items: [item],
+        total: 1,
+        onSelectAllControls,
+        selectingAllControls: false,
+        allControlsSelected: true
+      })
+    );
+    expect(document.body.textContent).toContain("Alles abwählen");
+
+    await renderResultList(
+      buildProps({
+        items: [item],
+        total: 1,
+        onSelectAllControls,
+        selectingAllControls: true,
+        allControlsSelected: false
+      })
+    );
+
+    const busyButton = findButtonByExactText("Alles auswählen...");
+    expect(busyButton.disabled).toBe(true);
   });
 });
