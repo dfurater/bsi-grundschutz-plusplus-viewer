@@ -104,6 +104,7 @@ npm run audit:dev
 ### GitHub Pages
 
 - Workflow: `.github/workflows/deploy-pages.yml`
+- Trigger: automatisch nach erfolgreichem `quality`-Run auf `main` sowie manuell via `workflow_dispatch`
 - setzt `VITE_BASE_PATH=/${{ github.event.repository.name }}/`
 - benötigt folgende Secrets:
   - `VITE_OPERATOR_NAME`
