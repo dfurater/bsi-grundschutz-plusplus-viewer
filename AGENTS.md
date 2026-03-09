@@ -10,7 +10,7 @@ Key architecture facts:
 - Search/index logic: Web Worker
 - Source inputs: `Kataloge/*.json`
 - Generated artifacts: `public/data/**` and `public/sw.js`
-- Hosting targets: GitHub Pages and Netlify/static hosts
+- Hosting targets: GitHub Pages and other static hosts
 - CI/CD and automation exist in `.github/workflows/*`
 
 ## Environment and toolchain
@@ -138,7 +138,6 @@ Key architecture facts:
 - `npm run preview`
 - `npm run test:unit`
 - `npm run check:release-hygiene`
-- `npm run check:headers`
 - `npm run audit:prod`
 - `npm run audit:dev`
 - `npm run qa:lighthouse`

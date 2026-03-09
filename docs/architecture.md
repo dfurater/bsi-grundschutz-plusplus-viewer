@@ -2,99 +2,84 @@
 
 ## Systemkontext
 
-- Clientseitige Single-Page-App (React/Vite) für Grundschutz++-Katalogdaten.
-- Kein eigener Application-Server; Daten werden als statische Dateien ausgeliefert (`public/data/**`, `public/sw.js`, im Build generiert).
-- Eingabedaten liegen als OSCAL-JSON-Datei in `Kataloge/Grundschutz++-catalog.json`.
-- Deployment ist auf statische Hosts ausgelegt, inklusive GitHub Pages Workflow.
+Die Anwendung ist eine rein statische Client-Side-React-App (CSR) ohne eigenes Backend.
 
-## Container-/Komponentenübersicht
+- Runtime: Browser (React + TypeScript + Vite-Bundle)
+- Datenquelle zur Build-Zeit: `Kataloge/Grundschutz++-catalog.json`
+- Generierte Runtime-Artefakte: `public/data/**`, `public/sw.js`
+- Hostingziel: statische Hosts (primär GitHub Pages)
 
-### Browser UI (React)
+## Informationsarchitektur und Routing
 
-Aufgaben:
-- Routing und Seitenzustände (`src/App.tsx`)
-- Suche, Filter, Detailansichten
-- CSV-Export
-- Quellen-/Lizenz-/Versions- und Rechtsseiten
+Hash-Routing ist bewusst gewählt (kein History-Rewrite erforderlich):
 
-Wichtige Komponenten:
-- `AppHeader`, `SearchOverlay`, `FacetPanel`, `ResultList`, `ControlDetailPanel`, `RelationGraphLite`, `GroupOverview`, `GroupPage`, `SourcePanel`, `AppFooter`
+- `#/` Startseite mit Top-Gruppen
+- `#/search` Suche, Filter, Sortierung, Ergebnisliste
+- `#/group/:id` Gruppenansicht mit Untergruppen und Controls
+- `#/control/:id` direkter Control-Deep-Link
+- `#/about` Kontext/Projektseite
+- `#/about/license` Quellen/Lizenz (Alias: `#/about/source`)
+- `#/impressum`, `#/datenschutz` rechtliche Seiten
 
-### Search Worker (Web Worker)
+## Hauptbausteine
 
-Aufgaben:
-- Laden und Validieren des Suchindex
-- Suchausführung inkl. Ranking, Filterung, Facettenzählung
-- Nachladen von Detail-Chunks
-- Graph-Berechnung (1-/2-Hop)
+### 1) UI-Orchestrierung (`src/App.tsx`)
 
-Technik:
-- Worker-Protokoll (`init`, `search`, `get-control`, `get-neighborhood`, `cancel`)
-- Zod-Schema-Validierung und Budgets
+- bootstrapped Metadaten + Worker-Index
+- hält Routing-/UI-Zustand (Suche, Filter, Sortierung, Selektion)
+- steuert Detail-/Graph-Laden und CSV-Export-Flows
 
-### Build-/Transformationspipeline (Node)
+### 2) Search Worker (`src/workers/searchWorker.ts`)
 
-Aufgaben:
-- Normalisierung des Grundschutz++-Anwenderkatalogs (`normalize-core.js`)
-- Erzeugung von:
-  - `catalog-index.json`
-  - `catalog-meta.json`
-  - `details/<TOPGROUP>.json`
-  - `build-info.json`
-  - `public/sw.js`
+- lädt/validiert den Suchindex
+- verarbeitet Suchanfragen inkl. Ranking, Filterung, Facettenzählung
+- lädt Detail-Chunks bei Bedarf
+- berechnet Nachbarschaftsgraphen (1/2 Hops)
+- unterstützt Request-Cancel und Zeitbudgets
 
-### Statisches Hosting
+### 3) Datennormalisierung (`src/lib/normalize-core.js` + `scripts/build-catalog.mjs`)
 
-Aufgabe:
-- Auslieferung der generierten Assets aus `dist/`
+- normalisiert OSCAL-Strukturen in UI-/Worker-taugliche Artefakte
+- erzeugt `catalog-meta.json`, `catalog-index.json`, `details/<TOPGROUP>.json`, `build-info.json`
+- rendert Service Worker aus Template (`scripts/sw.template.js` -> `public/sw.js`)
+- bereinigt Legacy-Output-Pfade aktiv (`public/data/datasets`, alte Registry/Profile)
 
-## Hauptmodule
+### 4) Service Worker (`public/sw.js`)
 
-- `src/App.tsx`: Zustands- und Flow-Orchestrierung
-- `src/workers/searchWorker.ts`: Suchkern, Worker-API, Detail-Ladepfad
-- `src/lib/dataSchemas.ts`: zentrale Schema-/Budget-Validierung
-- `src/lib/normalize-core.js`: Extraktion von Gruppen/Controls/Facetten/Relationen aus OSCAL
-- `scripts/build-catalog.mjs`: Datenbuild aus dem Grundschutz++-Anwenderkatalog
+- wird im Build generiert
+- lokal (localhost/127.0.0.1) deaktiviert bzw. deregistriert
+- in Production registriert
+- Caching-Strategien:
+  - Navigation/HTML und JSON: Network First mit Cache-Fallback
+  - Assets: Stale-While-Revalidate
 
 ## Datenflüsse
 
 ### Build-Zeit
 
-1. `scripts/build-catalog.mjs` liest `Kataloge/Grundschutz++-catalog.json`.
-2. `normalizeCatalog` erzeugt normalisierte Strukturen.
-3. Skript schreibt statische Assets nach `public/data/**` und `public/sw.js`.
-4. Vite baut die App nach `dist/`.
+1. `scripts/build-catalog.mjs` liest den Anwenderkatalog.
+2. `normalizeCatalog` erzeugt normalisierte Gruppen/Controls/Relationen.
+3. Skript schreibt `public/data/**` und `public/sw.js`.
+4. Vite erzeugt `dist/`.
 
 ### Laufzeit
 
-1. App lädt `catalog-index.json` und `catalog-meta.json`.
-2. Worker lädt bei Bedarf `details/<TOPGROUP>.json`.
-3. UI rendert Treffer, Details, Relationen und Exporte.
+1. UI lädt `./data/catalog-meta.json`.
+2. `SearchClient` initialisiert Worker mit `./data/catalog-index.json` und `./data/details`.
+3. Worker beantwortet `search`/`get-control`/`get-neighborhood`.
+4. UI rendert Treffer, Detailinformationen, Relationsgraph und CSV-Export.
 
-## Schnittstellen
+## Architekturgrenzen und Nicht-Ziele
 
-- Interne Schnittstellen:
-  - Worker Message API (`SearchClient` <-> `searchWorker`)
-  - Hash-Routing API (URL-Parameter für Suche/Sortierung/Filter/Control-Kontext)
-  - Typgrenzen über `src/types.ts`
+- kein Backend, keine serverseitige Session
+- keine Authentifizierung/Autorisierung
+- keine Multi-User-Funktionen
+- keine serverseitige Persistenz
 
-- Externe Schnittstellen:
-  - Statische JSON-Dateien unter `./data/**`
-  - CSV-Dateidownload als Browser-Blob
+## Technische Leitplanken
 
-## Zentrale Architekturentscheidungen
-
-- Rein statisches CSR-Deployment ohne Backend.
-- Suchlogik in separatem Worker.
-- Datenschema-Validierung und Budgetgrenzen für kritische Datenpfade.
-- Hash-Routing statt History-Routing.
-- Primärquelle ist der fertige BSI-Grundschutz++-Anwenderkatalog.
-
-## Technische Schulden und Grenzen
-
-- TypeScript `strict` ist `false`.
-- Keine dedizierte Linting-/Formatting-Pipeline im `package.json`.
-- Unit-Coverage ist als Vitest-Gate konfiguriert (`vitest --coverage` via `test:unit:coverage`) mit globalen Mindestschwellen.
-- GitHub Pages bietet nur eingeschränkte, nicht repository-lokale Steuerung von Response-Headern.
-- Keine serverseitigen APIs oder Datenbanken.
-- Keine Authentifizierung/Autorisierung implementiert.
+- Hash-Routing statt History-Routing
+- Fail-closed-Validierung mit Zod + Budgets auf kritischen Datenpfaden
+- Sicherheitsrelevante Logik (URL-Härtung, CSV-Neutralisierung, Routing-/Query-Sanitizing) in dedizierten Lib-Modulen
+- TypeScript `strict` ist derzeit `false`
+- keine dedizierte Lint-/Format-Pipeline in `package.json`

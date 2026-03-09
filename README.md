@@ -1,178 +1,109 @@
 # Grundschutz++ Katalog-App
 
-Statische React/Vite-Webanwendung zur Suche, Navigation und lokalen Auswertung von BSI-Grundschutz++-OSCAL-Katalogen.
+Statische React/Vite-Webanwendung zur Suche, Navigation und lokalen Auswertung des BSI-Grundschutz++-Anwenderkatalogs (OSCAL JSON).
 
-## Projektzweck
+## Was die App ist
 
-Die Anwendung macht maschinenlesbare Katalogdaten (OSCAL JSON) als lokale, durchsuchbare Weboberfläche nutzbar.
-
-Kernziele:
+Die App macht den Katalog im Browser nutzbar, ohne eigenes Backend:
 - Volltext-/ID-Suche mit Facetten und Sortierung
-- Detailansicht je Control inkl. Relationen und Graphdarstellung
-- Primärquelle: fertiger BSI-Grundschutz++-Anwenderkatalog
+- Navigation über Bereiche, Gruppen und Controls
+- Control-Detailansicht inkl. Relationen (1-Hop/2-Hop)
 - CSV-Export ausgewählter Controls
-- statisches Deployment (GitHub Pages)
+- Quellen-, Versions- und Lizenztransparenz in der Oberfläche
 
-## Kernfunktionen
+## Zielgruppe
 
-- Hash-Routing (`#/`, `#/search`, `#/group/:id`, `#/control/:id`, `#/about`, `#/about/license` (Legacy-Alias: `#/about/source`), `#/impressum`, `#/datenschutz`)
-- Suche und Filter über Web Worker
-- Relations-Graph (1-Hop/2-Hop, Filter `all|required|related`)
-- CSV-Export mit Formel-Neutralisierung und URL-Härtung
-- Service Worker für Caching/Offline-Basis
-- Validierung aller geladenen JSON-Strukturen
+- Teams, die Grundschutz++-Controls schnell durchsuchen und einordnen wollen
+- Entwickler/Architekten, die OSCAL-Katalogdaten lokal auswerten möchten
 
-## Architektur (Kurzüberblick)
+## Bewusste Nicht-Ziele
 
-- Frontend: React 19 + TypeScript + Vite (CSR)
-- Suche/Indexierung: Browser Worker (`src/workers/searchWorker.ts`)
-- Datenhaltung: statische JSON-/SW-Artefakte in `public/data/**` und `public/sw.js` (werden im Build erzeugt)
-- Build-Datenpipeline: `scripts/build-catalog.mjs` erzeugt Suchindex, Meta, Detail-Chunks und Service Worker aus dem Anwenderkatalog
-- Deployment: statisches Hosting (CI-Workflow für GitHub Pages vorhanden)
+- Keine serverseitige API, keine Datenbank, kein Login
+- Keine Schreiboperationen gegen externe Systeme
+- Kein Compliance- oder Zertifizierungsversprechen durch die Anwendung selbst
 
-Details: siehe `docs/architecture.md`.
+## Routing (Hash-basiert)
 
-## Tech Stack
-
-- Runtime: Node.js `>=20.19.0`, npm `>=10`
-- Frontend: `react`, `react-dom`
-- Validierung: `zod`
-- Tooling: `vite`, `typescript`, `vitest`, `playwright`, `@axe-core/playwright`, `@lhci/cli`
+- `#/`
+- `#/search`
+- `#/group/:id`
+- `#/control/:id`
+- `#/about`
+- `#/about/license` (Legacy-Alias: `#/about/source`)
+- `#/impressum`
+- `#/datenschutz`
 
 ## Voraussetzungen
 
-- Node.js 20.19.0 oder neuer (`.nvmrc` = `20.19.0`)
-- npm 10 oder neuer
+- Node.js `>=20.19.0` (`.nvmrc` ist maßgeblich)
+- npm `>=10`
 
-## Installation
+## Lokaler Start
 
 ```bash
-git clone https://github.com/dfurater/bsi-grundschutz-plusplus-viewer.git
-cd bsi-grundschutz-plusplus-viewer
 npm install
 cp .env.example .env.local
+npm run dev
 ```
 
-`.env.local` mit Betreiberdaten befüllen:
-
+Erforderliche Betreibervariablen (für produktionsnahe Builds):
 - `VITE_OPERATOR_NAME`
 - `VITE_OPERATOR_ADDRESS_LINE1`
 - `VITE_OPERATOR_ADDRESS_LINE2`
 - `VITE_OPERATOR_EMAIL`
 
-## Lokaler Start
-
-```bash
-npm run dev
-```
-
-`npm run dev` führt zuerst `npm run build:data` aus.
-
-## Build
+## Build, Test, QA
 
 ```bash
 npm run build
-```
-
-Build-Pipeline:
-1. Release-Artefakte bereinigen
-2. Daten-Artefakte erzeugen (`build:data`)
-3. TypeScript-Build (`tsc -b`)
-4. Legal-Placeholder-Check
-5. Vite Production Build (`dist/`)
-
-## Test und Qualität
-
-```bash
 npm run test:unit
 npm run check:release-hygiene
 npm run qa
 ```
 
-`public/data/**` und `public/sw.js` sind generiertes Build-Output und werden nicht versioniert.
-`npm run test:unit` führt daher intern zuerst `npm run build` aus.
+Wichtige Hinweise:
+- `npm run build` erzeugt Datenartefakte und den Service Worker neu.
+- `npm run test:unit` führt intern zuerst `npm run build` aus.
+- `public/data/**` und `public/sw.js` sind generierte Artefakte und in Git ignoriert.
 
-Zusätzliche Checks:
+## Wichtige Skripte
 
-```bash
-npm run audit:prod
-npm run audit:dev
-```
+| Skript | Zweck |
+|---|---|
+| `npm run dev` | `build:data` + Vite Dev-Server |
+| `npm run sync:bsi` | BSI-Quellkatalog aus Upstream synchronisieren |
+| `npm run build:data` | Suchindex/Meta/Detail-Chunks + `public/sw.js` generieren |
+| `npm run build` | Release-Build inkl. Legal-Placeholder-Check |
+| `npm run test:unit` | Build + Vitest |
+| `npm run test:unit:coverage` | Build + Vitest inkl. Coverage-Gate |
+| `npm run qa` | Build + Unit-Tests + Release-Hygiene + Browser-QA |
 
-## Deployment-Hinweise
+## Deployment
 
 ### GitHub Pages
 
-- Workflow: `.github/workflows/deploy-pages.yml`
-- Trigger: automatisch nach erfolgreichem `quality`-Run auf `main` sowie manuell via `workflow_dispatch`
+Workflow: `.github/workflows/deploy-pages.yml`
+- Trigger: nach erfolgreichem `quality`-Workflow auf `main` (`workflow_run`) oder manuell (`workflow_dispatch`)
 - setzt `VITE_BASE_PATH=/${{ github.event.repository.name }}/`
-- benötigt folgende Secrets:
-  - `VITE_OPERATOR_NAME`
-  - `VITE_OPERATOR_ADDRESS_LINE1`
-  - `VITE_OPERATOR_ADDRESS_LINE2`
-  - `VITE_OPERATOR_EMAIL`
+- erwartet Secrets für `VITE_OPERATOR_*`
 
-### Daily BSI Sync + Auto-PR
+### Daily Catalog Sync
 
-- Workflow: `.github/workflows/daily-bsi-sync.yml`
-- Trigger: täglich per Schedule sowie manuell via `workflow_dispatch`
-- Quelle: `BSI-Bund/Stand-der-Technik-Bibliothek` (standardmäßig `main`)
-- Ablauf:
-  - `npm run sync:bsi` lädt den fertigen Grundschutz++-Anwenderkatalog gegen einen konsistenten Upstream-Commit-Snapshot
-  - Sync erfolgt atomar (Staging + Promotion), inkl. Retry/Backoff und klassifizierten Fehlern (`network`, `api`, `schema`, `semantic`)
-  - Semantik-/Driftprüfungen erzeugen einen maschinenlesbaren Sync-Report (`sync_report_json`) und Markdown-Summary (`sync_report_markdown`)
-  - nur bei Änderungen werden Build/Tests ausgeführt
-  - bei unveränderten Katalogen endet der Workflow ohne PR (No-Op)
+Workflow: `.github/workflows/daily-bsi-sync.yml`
+- Trigger: täglich (`cron: 23 4 * * *`, UTC) und manuell
+- synchronisiert `Kataloge/Grundschutz++-catalog.json` aus `BSI-Bund/Stand-der-Technik-Bibliothek`
+- erstellt nur bei Katalogänderung einen PR
 
-### Hosting Scope
-
-- Produktiv-Deployment ist auf GitHub Pages ausgerichtet.
-- Es gibt in diesem Repository keine hostspezifischen Header-Policy-Dateien mehr.
-
-### Manueller Katalog-Sync lokal
-
-```bash
-npm run sync:bsi
-```
-
-## Konfiguration / Umgebungsvariablen
-
-| Variable | Zweck | Pflicht |
-|---|---|---|
-| `VITE_OPERATOR_NAME` | Impressum/Datenschutz Betreibername | ja (Build-Check) |
-| `VITE_OPERATOR_ADDRESS_LINE1` | Impressum/Datenschutz Adresse Zeile 1 | ja (Build-Check) |
-| `VITE_OPERATOR_ADDRESS_LINE2` | Impressum/Datenschutz Adresse Zeile 2 | ja (Build-Check) |
-| `VITE_OPERATOR_EMAIL` | Impressum/Datenschutz Kontakt-E-Mail | ja (Build-Check) |
-| `VITE_BASE_PATH` | Vite Base Path für Hosting-Unterpfade | nein (optional, je Hosting) |
-
-## Projektstruktur
-
-```text
-.
-├─ src/                      # React-App, Worker, UI-Komponenten, Libs
-├─ scripts/                  # Build-/Security-/Hygiene-Skripte
-├─ tests/                    # Playwright E2E- und A11y-Tests
-├─ Kataloge/                 # BSI-OSCAL-Eingabedaten (Primärquelle: Grundschutz++-Anwenderkatalog)
-├─ public/data/              # generierte statische Datenartefakte (nicht versioniert)
-├─ public/sw.js              # generierter Service Worker (nicht versioniert)
-├─ .github/workflows/        # CI (quality), CD (deploy-pages), Sync-Automation (daily-bsi-sync)
-└─ docs/                     # vertiefende technische Dokumentation
-```
-
-## Vertiefende Dokumentation
+## Dokumentation
 
 - [Architektur](docs/architecture.md)
-- [Fachliche Einordnung](docs/functional-overview.md)
+- [API- und Schnittstellen](docs/api-and-interfaces.md)
 - [Setup und Betrieb](docs/setup-and-operations.md)
-- [Schnittstellen](docs/api-and-interfaces.md)
+- [Testing und QA](docs/testing.md)
 - [Security Review](docs/security-review.md)
-- [Teststrategie](docs/testing.md)
-- [QA/Coverage Finalisierung](docs/qa-coverage-finalization.md)
-- [QA/Coverage Maintenance Summary](docs/qa-coverage-maintenance-summary.md)
-- [Developer Onboarding](docs/developer-onboarding.md)
-- [ADR-Zusammenfassung](docs/adr-summary.md)
-- [Offene Punkte / Gaps](docs/open-issues-and-gaps.md)
+- [Recht, Lizenz und Attribution](docs/legal-and-attribution.md)
 
 ## Lizenz
 
-MIT, siehe `LICENSE`.
+- Code: MIT (`LICENSE`)
+- Eingebundene BSI-Inhalte: CC BY-SA 4.0 (siehe In-App-Seite „Quellen & Lizenz“ und `docs/legal-and-attribution.md`)
