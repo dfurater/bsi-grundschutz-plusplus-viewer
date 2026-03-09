@@ -1,188 +1,141 @@
 # Setup und Betrieb
 
-## Lokales Setup
+## 1) Voraussetzungen
 
-### Voraussetzungen
+- Node.js `>=20.19.0`
+- npm `>=10`
+- `.nvmrc` ist die lokale Referenzversion
 
-- Node.js `>= 20.19.0` (`package.json`, `.nvmrc`)
-- npm `>= 10`
-
-### Installation
+## 2) Lokales Setup
 
 ```bash
 npm install
 cp .env.example .env.local
 ```
 
-`.env.local` enthält:
+Erforderliche Werte in `.env.local`:
 - `VITE_OPERATOR_NAME`
 - `VITE_OPERATOR_ADDRESS_LINE1`
 - `VITE_OPERATOR_ADDRESS_LINE2`
 - `VITE_OPERATOR_EMAIL`
 
-### Entwicklungsstart
+Hinweis: Der Produktionsbuild prüft diese Variablen fail-closed.
+
+## 3) Entwicklung
 
 ```bash
 npm run dev
 ```
 
-`npm run dev` führt zuerst `build:data` aus und startet anschließend den Vite-Dev-Server.
+`npm run dev` führt zuerst `npm run build:data` aus und startet dann Vite.
 
-## Build / Run / Test
-
-### Produktionsbuild
+## 4) Build- und Release-Pipeline
 
 ```bash
 npm run build
 ```
 
-Buildkette:
+Ablauf:
 1. `clean:release-artifacts`
 2. `build:data`
 3. `tsc -b`
 4. `check-legal-placeholders`
 5. `vite build`
 
-### Lokale Produktionsvorschau
+Generierte Artefakte:
+- `public/data/**`
+- `public/sw.js`
+- `dist/**`
 
-```bash
-npm run preview
-```
+`public/data/**` und `public/sw.js` sind Build-Output und in `.gitignore` ausgenommen.
 
-Läuft auf `http://127.0.0.1:4173` mit `--strictPort`.
+## 5) Tests und QA lokal
 
-### Unit-Tests
+Relevante Befehle:
 
 ```bash
 npm run test:unit
-```
-
-Vitest testet `src/**/*.test.ts(x)` im Node-Environment.
-`npm run test:unit` führt intern zuerst `npm run build` aus, damit die generierten Artefakte unter `public/data/**` und `public/sw.js` verfügbar sind.
-
-### Erweiterte QA
-
-```bash
+npm run test:unit:coverage
+npm run check:release-hygiene
 npm run qa
 ```
 
-Enthält Build, Unit-Tests, Release-Hygiene, Lighthouse und Playwright-A11y.
+`npm run qa` umfasst:
+- Build
+- Unit-Tests (`test:unit:raw`)
+- Release-Hygiene
+- Browser-QA (`qa:browser` = Lighthouse + Playwright A11y)
 
-## Benötigte Services
+## 6) Deployment
 
-- Für lokale Kernfunktion sind keine externen Laufzeitservices erforderlich.
-- Für `npm audit` und CI-Installationsschritte wird Netzwerkzugriff auf npm/GitHub benötigt.
+### GitHub Pages (`.github/workflows/deploy-pages.yml`)
 
-## Deployment-Grundlagen
+- Trigger:
+  - `workflow_run` nach erfolgreichem `quality` auf `main`
+  - `workflow_dispatch`
+- setzt `VITE_BASE_PATH=/${repository-name}/`
+- baut und deployt `dist/`
 
-### GitHub Pages
+### Qualitätsworkflow (`.github/workflows/quality.yml`)
 
-- Workflow: `.github/workflows/deploy-pages.yml`
-- Trigger: `workflow_run` nach erfolgreichem `quality`-Run auf `main` sowie `workflow_dispatch`
-- Build-Artefakt: `dist/`
-- Secrets: `VITE_OPERATOR_*`
+- Trigger: `push` auf `main/master`, `pull_request`, `merge_group`
+- Jobs:
+  - `qa` (Audit + Unit-Coverage + Release-Hygiene)
+  - `browser-qa` (Build + Browser-QA), nachgelagert zu `qa`
 
-### Daily BSI Sync + Auto-PR
+### Daily Sync (`.github/workflows/daily-bsi-sync.yml`)
 
-- Workflow: `.github/workflows/daily-bsi-sync.yml`
-- Trigger: `schedule` (täglich) und `workflow_dispatch`
-- Quelle: `BSI-Bund/Stand-der-Technik-Bibliothek` (`main`, optionaler Override via `upstream_ref`)
-- Ablauf:
-  1. `npm run sync:bsi` lädt den Grundschutz++-Anwenderkatalog gegen einen aufgelösten Commit-Snapshot (`BSI_REF -> Commit SHA`), mit Retry/Backoff.
-  2. Der Sync validiert Struktur/Semantik und promoted Änderungen atomar nach `Kataloge/`.
-  3. Nur bei echten Dateidifferenzen in `Kataloge/` folgen `npm ci`, `npm run build`, `npm run test:unit:raw`, `npm run check:release-hygiene`.
-  4. Anschließend erstellt/aktualisiert `peter-evans/create-pull-request` einen PR inklusive Sync-Report.
-  5. Ohne Katalogdifferenzen endet der Job ohne PR.
+- Trigger: täglich (`23 4 * * *`, UTC) und manuell
+- lädt den aktuellen Grundschutz++-Anwenderkatalog aus dem BSI-Upstream
+- erstellt/aktualisiert nur bei Änderungen einen PR
 
-### Main-Branch-Governance (GitHub-Einstellungen)
+## 7) Datenpflege und Update-Pfade
 
-Diese Einstellungen werden in GitHub manuell im Repository gesetzt (z. B. Ruleset für `main`):
+### Manueller Upstream-Sync
 
-- Require a pull request before merging
-- Require status checks to pass before merging
-- Require merge queue
-- Disallow force pushes
-- Disallow deletions
-- Optional: Require linear history
+```bash
+npm run sync:bsi
+```
 
-Empfohlene Merge-Methode:
-- Squash merge aktivieren und als Standard verwenden
+Das Sync-Skript:
+- resolved Upstream-Ref auf Commit-SHA
+- lädt den Anwenderkatalog mit Retry/Backoff
+- validiert Struktur/Semantik (inkl. Drift-/Regressionswarnungen)
+- schreibt bei Änderung nach `Kataloge/Grundschutz++-catalog.json`
 
-Empfohlener Required Status Check:
-- Job `qa` aus Workflow `.github/workflows/quality.yml` (in der GitHub-UI typischerweise als `quality / qa` sichtbar)
+### Daten neu erzeugen
 
-Merge-Queue-Kompatibilität:
-- Der Qualitätsworkflow triggert auf `pull_request` und `merge_group`.
-- `deploy-pages.yml` ist absichtlich kein Required PR-Check, da Deployment erst nach Merge auf `main` läuft und auf einen erfolgreichen `quality`-Run wartet.
-- `daily-bsi-sync.yml` ist eine Automationspipeline und ebenfalls kein Required PR-Check für Feature-PRs.
+```bash
+npm run build:data
+```
 
-Hinweis zu Auto-merge:
-- Auto-merge nur aktivieren, wenn es im Teamprozess nicht redundant zur Merge Queue ist.
+Erwartbar bei:
+- Änderungen an `Kataloge/Grundschutz++-catalog.json`
+- Änderungen an `src/lib/normalize-core.js`
+- Änderungen an `scripts/build-catalog.mjs` oder `scripts/sw.template.js`
 
-### Hosting
+## 8) Betriebshinweise
 
-- Produktiv-Deployment ist auf GitHub Pages ausgerichtet.
-- Es gibt keine hostspezifischen Header-Policy-Dateien im Repository.
+- Service Worker ist auf localhost deaktiviert/deregistriert, in Production aktiv.
+- GitHub Pages kann Header-Policies nicht vollständig repository-lokal abbilden.
+- Es gibt keine integrierte Runtime-Observability/Alerting-Pipeline in diesem Repo.
 
-## Konfiguration
+## 9) Troubleshooting
 
-### Build-/Runtime-Variablen
-
-- `VITE_BASE_PATH`
-- `VITE_OPERATOR_NAME`
-- `VITE_OPERATOR_ADDRESS_LINE1`
-- `VITE_OPERATOR_ADDRESS_LINE2`
-- `VITE_OPERATOR_EMAIL`
-
-### Datenkonfiguration
-
-- Primärquelle: `Kataloge/Grundschutz++-catalog.json`
-- `public/data/**` und `public/sw.js` sind generiertes Build-Output (nicht versioniert)
-- manueller Upstream-Sync: `npm run sync:bsi`
-
-## Troubleshooting
-
-### Build bricht mit Legal-Placeholder-Fehler ab
+### Build bricht mit Legal-Fehler ab
 
 Ursache:
-- `VITE_OPERATOR_*` fehlt, ist leer oder enthält Platzhalter.
+- fehlende/leere Platzhalterwerte in `VITE_OPERATOR_*`
 
 Lösung:
-- `.env.local` prüfen und reale Werte setzen.
+- `.env.local` bzw. CI-Secrets korrigieren
 
-### Such-/Detaildaten fehlen
+### Suche lädt keine Daten
 
 Ursache:
-- `public/data/**` ist nicht aktuell.
+- veraltete/fehlende generierte Artefakte
 
 Lösung:
 ```bash
 npm run build:data
 ```
-
-## Betriebsaspekte
-
-- Service Worker wird auf localhost deregistriert.
-- Service Worker wird in Production auf Nicht-Localhost registriert.
-- Caching im SW:
-  - Navigation/Data: Network First mit Fallback
-  - Assets: Stale-While-Revalidate
-
-## Monitoring / Logging
-
-- Es gibt kein dediziertes Application-Monitoring im Repository.
-- Fehlerzustände werden in der UI angezeigt.
-- CI enthält Qualitätskontrollen (Tests, Lighthouse, A11y, Dependency-Audit).
-
-## Betriebsrisiken
-
-- Die Datenqualität hängt von der Strukturkonsistenz des Grundschutz++-Anwenderkatalogs in `Kataloge/Grundschutz++-catalog.json` ab.
-- GitHub Pages bietet nur eingeschränkte, nicht repository-lokale Steuerung von Response-Headern.
-
-## Einstiegsvoraussetzungen für Entwickler
-
-- Passende Node/npm-Version
-- React/TypeScript-Grundlagen
-- Verständnis der statischen Build-/Deploy-Pipeline
-
-Siehe auch `docs/developer-onboarding.md`.

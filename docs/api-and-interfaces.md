@@ -1,62 +1,40 @@
 # API und Schnittstellen
 
-## Überblick
+Die Anwendung hat keine serverseitige REST-/GraphQL-API. Maßgebliche Schnittstellen sind statische Datenartefakte, Worker-Messages, Hash-Routen und CSV-Export.
 
-- Es gibt keine serverseitige REST-/GraphQL-API.
-- Externe Schnittstellen sind statische JSON-Dateien, Browser-Routen, Worker-Nachrichten und CSV-Download.
+## 1) Statische Datenartefakte (`public/data/**`)
 
-## 1) Statische Daten-Schnittstellen (`public/data/**`)
+Generiert aus `Kataloge/Grundschutz++-catalog.json`:
 
-Hinweis: Die Dateien unter `public/data/**` sind generierte Build-Artefakte (aus `Kataloge/Grundschutz++-catalog.json`) und nicht versioniert.
-
-### Primäre Build-Artefakte
-
-Dateien:
 - `./data/catalog-meta.json`
 - `./data/catalog-index.json`
 - `./data/details/<TOPGROUP>.json`
 - `./data/build-info.json`
 
-Quelle:
-- `Kataloge/Grundschutz++-catalog.json` (fertiger BSI-Grundschutz++-Anwenderkatalog)
+Eigenschaften:
+- Build-Output, nicht als handgepflegte Quelle behandeln
+- wird bei `npm run build:data` / `npm run build` neu erzeugt
+- wird per `src/lib/dataSchemas.ts` (Zod) validiert
 
-### Validierung und Fehlerfälle
+## 2) Worker-Protokoll (`SearchClient` <-> `searchWorker`)
 
-- JSON-Responses werden mit Byte-Budget, JSON-Parsing und Zod-Schema validiert.
-- Bei Verstoß wird der Ladevorgang abgebrochen.
+Requests:
+- `init`: `{ indexUrl, detailBasePath }`
+- `search`: `SearchQuery`
+- `get-control`: `{ id, topGroupId }`
+- `get-neighborhood`: `{ id, hops }`
+- `cancel`: `{ requestId }`
 
-Typische Fehler:
-- HTTP-Fehler
-- Content-Length/Budget überschritten
-- JSON ungültig
-- Schema ungültig
+Antwortformat:
+- `{ type: "response", requestId, ok, data?, error? }`
 
-## 2) Worker-Schnittstelle (`SearchClient` <-> `searchWorker`)
+Sicherheits-/Robustheitsaspekte:
+- Request-Timeouts im Client
+- Abbruch laufender Suchrequests
+- Zeit-/Mengenbudgets im Worker
+- Validierung externer JSON-Payloads
 
-### Request-Typen
-
-- `init`
-  - Payload: `{ indexUrl, detailBasePath }`
-  - Antwort: `{ stats, facetOptions }`
-- `search`
-  - Payload: `SearchQuery`
-  - Antwort: `SearchResponse`
-- `get-control`
-  - Payload: `{ id, topGroupId }`
-  - Antwort: `ControlDetail`
-- `get-neighborhood`
-  - Payload: `{ id, hops }`
-  - Antwort: `RelationGraphPayload`
-- `cancel`
-  - Payload: vorherige `requestId`
-
-### Fehlerfälle
-
-- Worker-Timeouts je Operation (10s-30s je Typ)
-- Abgebrochene Requests liefern einen Fehlerpfad
-- Unbekannte Request-Typen werden abgelehnt
-
-## 3) Routing-Schnittstelle (Hash Routing)
+## 3) Routing-Schnittstelle
 
 Routen:
 - `#/`
@@ -64,22 +42,16 @@ Routen:
 - `#/group/:id`
 - `#/control/:id`
 - `#/about`
-- `#/about/license` (Legacy-Alias: `#/about/source`)
+- `#/about/license` (Alias: `#/about/source`)
 - `#/impressum`
 - `#/datenschutz`
 
-Such-Query-Parameter (`#/search?...`):
-- `q`, `sort`
-- Facettenparameter: `tg`, `gid`, `sec`, `eff`, `cls`, `mod`, `tgt`, `tag`, `rel`
-- optional: `control`, `top`
-
-Routing-Härtung:
-- Sanitizing für Suchtext/Filter/Routentoken
-- Limits auf Länge und Anzahl
+`#/search` Query-Parameter:
+- Text/Sort: `q`, `sort`
+- Facetten: `tg`, `gid`, `sec`, `eff`, `cls`, `mod`, `tgt`, `tag`, `rel`
+- Detailkontext: `control`, `top`
 
 ## 4) CSV-Export-Schnittstelle
-
-### Output
 
 Dateiname:
 - `grundschutz-controls_<YYYY-MM-DD>_<count>.csv`
@@ -87,17 +59,21 @@ Dateiname:
 Format:
 - UTF-8 BOM
 - Delimiter `;`
-- Zeilenende `CRLF`
+- Zeilenenden `CRLF`
 
 Spalten:
 - `control_id`, `control_title`, `group_path`, `class`, `sec_level`, `effort_level`, `modalverb`, `handlungsworte`, `tags`, `statement`, `guidance`, `params`, `links`, `source_version`, `source_last_modified`
 
-### Härtung
+Härtung:
+- Neutralisierung spreadsheet-gefährlicher Zellpräfixe
+- Export von Links nur bei sicheren `http/https`-URLs
 
-- Spreadsheet-Formel-Präfixe (`=,+,-,@`) werden neutralisiert.
-- Exportiert werden nur `http/https`-Links.
+## 5) Rechtliche Konfigurationsschnittstelle
 
-## 5) Security-/Berechtigungsaspekte
+Build-relevante Variablen:
+- `VITE_OPERATOR_NAME`
+- `VITE_OPERATOR_ADDRESS_LINE1`
+- `VITE_OPERATOR_ADDRESS_LINE2`
+- `VITE_OPERATOR_EMAIL`
 
-- Es gibt keine Authentifizierung/Autorisierung.
-- Fokus liegt auf Eingabehärtung, Budgetgrenzen und sicherer URL-Verarbeitung.
+`npm run build` schlägt fehl, wenn diese Werte fehlen/leer sind oder Platzhalter enthalten (`scripts/check-legal-placeholders.mjs`).
