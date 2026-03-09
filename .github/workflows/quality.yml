@@ -34,11 +34,51 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Chromium for Playwright
-        run: npx playwright install --with-deps chromium
-
       - name: Run Dependency Audit Policy
         run: npm run audit:prod && npm run audit:dev
 
-      - name: Run QA checks
-        run: npm run qa
+      - name: Run Unit Coverage Gate
+        run: npm run test:unit:coverage
+
+      - name: Run Release Hygiene Check
+        run: npm run check:release-hygiene
+
+      - name: Upload Unit Coverage Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-coverage
+          path: coverage/unit
+          if-no-files-found: error
+
+  browser-qa:
+    needs: qa
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      VITE_OPERATOR_NAME: Max Mustermann
+      VITE_OPERATOR_ADDRESS_LINE1: Musterstrasse 1
+      VITE_OPERATOR_ADDRESS_LINE2: 10115 Berlin
+      VITE_OPERATOR_EMAIL: max.mustermann@example.invalid
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Build app
+        run: npm run build
+
+      - name: Run Browser QA checks
+        run: npm run qa:browser

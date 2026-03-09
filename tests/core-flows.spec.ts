@@ -162,6 +162,32 @@ test.describe("Kernflows", () => {
     await expect(page).not.toHaveURL(/control=/);
   });
 
+  test("Direkter Control-Deep-Link oeffnet die Detailansicht stabil", async ({ page }) => {
+    await page.goto("/#/search?q=KONF");
+    await page.locator(".result-card").first().click();
+    await expect(page).toHaveURL(/control=/);
+
+    const currentUrl = new URL(page.url());
+    const hashQuery = currentUrl.hash.split("?")[1] ?? "";
+    const params = new URLSearchParams(hashQuery);
+    const controlId = params.get("control");
+    const topGroupId = params.get("top");
+
+    expect(controlId).toBeTruthy();
+    expect(topGroupId).toBeTruthy();
+    if (!controlId || !topGroupId) {
+      throw new Error("Control-Deep-Link konnte nicht aus der URL gelesen werden.");
+    }
+
+    await page.goto(`/#/control/${encodeURIComponent(controlId)}?top=${encodeURIComponent(topGroupId)}`);
+    await expect(page.locator(".detail-header h2 span").first()).toHaveText(controlId, { timeout: 15000 });
+  });
+
+  test("Ungueltige Control-Route faellt robust auf die Startansicht zurueck", async ({ page }) => {
+    await page.goto("/#/control/%E0%A4%A?top=GC");
+    await expect(page.getByRole("heading", { name: "Bereiche" })).toBeVisible({ timeout: 15000 });
+  });
+
   test("Graph-Knoten-Klick wechselt in den geklickten Control-Kontext", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/#/search?q=GC.2.1");
@@ -194,6 +220,18 @@ test.describe("Kernflows", () => {
     await page.getByRole("checkbox", { name: "Für CSV auswählen" }).first().check();
     await expect(page.getByRole("button", { name: "Export CSV (1)" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Export CSV (1)" })).toBeEnabled();
+  });
+
+  test("CSV Export laeuft aus dem Suchkontext erfolgreich durch", async ({ page }) => {
+    await page.goto("/#/search?q=KONF");
+    await page.getByRole("checkbox", { name: "Für CSV auswählen" }).first().check();
+
+    const exportButton = page.getByRole("button", { name: "Export CSV (1)" });
+    await expect(exportButton).toBeVisible();
+    await exportButton.click();
+
+    await expect(page.getByText(/CSV erfolgreich exportiert/)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("button", { name: /Export CSV/ })).toHaveCount(0);
   });
 
   test("Mobile: kein Overflow-Trigger, CSV-Export bleibt über Header erreichbar", async ({ page }) => {

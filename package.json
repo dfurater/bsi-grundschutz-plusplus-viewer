@@ -16,12 +16,14 @@
     "preview": "vite preview --strictPort --host 127.0.0.1 --port 4173",
     "test:unit:raw": "vitest run",
     "test:unit": "npm run build && npm run test:unit:raw",
+    "test:unit:coverage": "npm run build && vitest run --coverage",
     "check:release-hygiene": "npm run clean:release-artifacts && node scripts/check-release-hygiene.mjs",
     "audit:prod": "npm audit --omit=dev --audit-level=high",
     "audit:dev": "node scripts/audit-dev-policy.mjs",
     "qa:lighthouse": "lhci autorun --config=./lighthouserc.json",
     "qa:a11y": "playwright test --config=playwright.a11y.config.ts",
-    "qa": "npm run build && npm run test:unit:raw && npm run check:release-hygiene && start-server-and-test preview http://127.0.0.1:4173 \"npm run qa:lighthouse && npm run qa:a11y\""
+    "qa:browser": "start-server-and-test preview http://127.0.0.1:4173 \"npm run qa:lighthouse && npm run qa:a11y\"",
+    "qa": "npm run build && npm run test:unit:raw && npm run check:release-hygiene && npm run qa:browser"
   },
   "dependencies": {
     "react": "^19.2.4",
@@ -32,6 +34,7 @@
     "@axe-core/playwright": "^4.11.1",
     "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.58.2",
+    "@vitest/coverage-v8": "^4.0.18",
     "@types/node": "^25.3.4",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
