@@ -1,5 +1,7 @@
 # Coverage Phase B Implementation (2026-03-09)
 
+> Historisches Umsetzungsprotokoll. Maßgeblicher Endstand: `docs/qa-coverage-finalization.md`.
+
 ## 1. Kurzueberblick der umgesetzten Phase-B-Massnahmen
 
 Phase B erweitert die Testtiefe gezielt in drei Bereichen:

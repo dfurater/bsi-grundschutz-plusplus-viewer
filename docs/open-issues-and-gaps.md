@@ -13,9 +13,9 @@
 
 ## Qualitäts-/Testgaps
 
-1. Es gibt keine Coverage-Metriken.
-2. Es gibt keinen dedizierten Last-/Soak-Test für Worker unter hoher Last.
-3. Es gibt keinen dedizierten automationsgestützten Test für reale Response-Header auf dem Produktiv-Host.
+1. Es gibt keinen dedizierten Last-/Soak-Test für Worker unter hoher Last.
+2. Es gibt keinen dedizierten automationsgestützten Test für reale Response-Header auf dem Produktiv-Host.
+3. `src/App.tsx` und `src/main.tsx` bleiben im Vergleich zu Kern-Libs unterdurchschnittlich unit-/integrationsgetestet.
 
 ## Betriebsgaps
 
@@ -33,7 +33,7 @@
 
 1. Security-Header-Strategie für produktives Hosting festlegen.
 2. Secret-/Env-Hygiene absichern und CI um Secret-Scanning ergänzen.
-3. Coverage-Messung und Mindestschwellen einführen.
+3. Coverage-Baseline halten und Schwellen nur bei stabil nachgewiesenem Testzuwachs anheben.
 
 ### Should-have
 
