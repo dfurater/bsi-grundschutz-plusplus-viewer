@@ -10,6 +10,7 @@ class MockWorker {
 
   messages: Array<{ type: string; requestId: string; payload?: unknown }> = [];
   terminated = false;
+  throwOnPostMessage: Error | null = null;
 
   private listeners: Record<WorkerEventType, Array<(event: any) => void>> = {
     message: [],
@@ -30,6 +31,9 @@ class MockWorker {
   }
 
   postMessage(message: { type: string; requestId: string; payload?: unknown }) {
+    if (this.throwOnPostMessage) {
+      throw this.throwOnPostMessage;
+    }
     this.messages.push(message);
   }
 
@@ -45,6 +49,12 @@ class MockWorker {
           ...data
         }
       });
+    }
+  }
+
+  emitRawMessage(data: unknown) {
+    for (const listener of this.listeners.message) {
+      listener({ data });
     }
   }
 
@@ -243,6 +253,55 @@ describe("SearchClient", () => {
     client.destroy();
   });
 
+  it("rejects requests when worker returns an explicit error response", async () => {
+    const client = new SearchClient();
+    const promise = client.getControl("APP.1", "APP");
+    const worker = getWorkerInstance();
+    const request = worker.messages.find((message) => message.type === "get-control");
+    expect(request).toBeDefined();
+    if (!request) {
+      throw new Error("Expected get-control request.");
+    }
+
+    worker.emitResponse({
+      requestId: request.requestId,
+      ok: false,
+      error: "Control konnte nicht geladen werden."
+    });
+
+    await expect(promise).rejects.toThrow("Control konnte nicht geladen werden.");
+    client.destroy();
+  });
+
+  it("ignores non-response worker messages and resolves on the matching response", async () => {
+    const client = new SearchClient();
+    const promise = client.search({
+      text: "APP",
+      sort: "relevance",
+      filters: defaultFilters()
+    });
+    const worker = getWorkerInstance();
+    const request = worker.messages.find((message) => message.type === "search");
+    expect(request).toBeDefined();
+    if (!request) {
+      throw new Error("Expected search request.");
+    }
+
+    worker.emitRawMessage({
+      type: "progress",
+      requestId: request.requestId,
+      percent: 50
+    });
+    worker.emitResponse({
+      requestId: request.requestId,
+      ok: true,
+      data: createSearchResponse(3)
+    });
+
+    await expect(promise).resolves.toEqual(createSearchResponse(3));
+    client.destroy();
+  });
+
   it("rejects timed out worker requests", async () => {
     vi.useFakeTimers();
 
@@ -256,6 +315,22 @@ describe("SearchClient", () => {
       throw new Error("Expected timeout to reject with Error.");
     }
     expect(timeoutError.message).toBe("Worker-Timeout bei 'get-neighborhood' nach 15000ms.");
+    client.destroy();
+  });
+
+  it("rejects when worker postMessage throws synchronously", async () => {
+    const client = new SearchClient();
+    const worker = getWorkerInstance();
+    worker.throwOnPostMessage = new Error("post failed");
+
+    await expect(
+      client.search({
+        text: "APP",
+        sort: "relevance",
+        filters: defaultFilters()
+      })
+    ).rejects.toThrow("post failed");
+
     client.destroy();
   });
 
