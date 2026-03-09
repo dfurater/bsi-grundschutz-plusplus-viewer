@@ -166,6 +166,8 @@ npm run sync:bsi
 - [Schnittstellen](docs/api-and-interfaces.md)
 - [Security Review](docs/security-review.md)
 - [Teststrategie](docs/testing.md)
+- [QA/Coverage Finalisierung](docs/qa-coverage-finalization.md)
+- [QA/Coverage Maintenance Summary](docs/qa-coverage-maintenance-summary.md)
 - [Developer Onboarding](docs/developer-onboarding.md)
 - [ADR-Zusammenfassung](docs/adr-summary.md)
 - [Offene Punkte / Gaps](docs/open-issues-and-gaps.md)

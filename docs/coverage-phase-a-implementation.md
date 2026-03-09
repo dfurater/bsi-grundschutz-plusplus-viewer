@@ -1,5 +1,7 @@
 # Coverage Phase A Implementation (2026-03-09)
 
+> Historisches Umsetzungsprotokoll. Maßgeblicher Endstand: `docs/qa-coverage-finalization.md`.
+
 ## 1. Kurzueberblick der umgesetzten Phase-A-Massnahmen
 
 Auf Basis der vorhandenen Analyse (`docs/qa-coverage-gap-analysis.md`) wurden die priorisierten, schnell umsetzbaren Unit-Tests fuer kritische pure Logik und fail-closed Fehlerpfade umgesetzt. Fokus war auf:

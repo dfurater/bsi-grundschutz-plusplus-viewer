@@ -1,5 +1,7 @@
 # Coverage Phase C Implementation (2026-03-09)
 
+> Historisches Umsetzungsprotokoll. Maßgeblicher Endstand: `docs/qa-coverage-finalization.md`.
+
 ## 1. Kurzueberblick der umgesetzten Phase-C-Massnahmen
 
 Phase C wurde auf die risikostaerksten Restluecken fokussiert umgesetzt:

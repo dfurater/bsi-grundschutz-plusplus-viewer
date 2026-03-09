@@ -94,7 +94,7 @@ Aufgabe:
 
 - TypeScript `strict` ist `false`.
 - Keine dedizierte Linting-/Formatting-Pipeline im `package.json`.
-- Keine Coverage-Messung konfiguriert.
+- Unit-Coverage ist als Vitest-Gate konfiguriert (`vitest --coverage` via `test:unit:coverage`) mit globalen Mindestschwellen.
 - GitHub Pages bietet nur eingeschränkte, nicht repository-lokale Steuerung von Response-Headern.
 - Keine serverseitigen APIs oder Datenbanken.
 - Keine Authentifizierung/Autorisierung implementiert.
