@@ -3,57 +3,93 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./styles.css";
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+interface ServiceWorkerBootstrapOptions {
+  navigatorObject?: Navigator;
+  windowObject?: Window;
+  isProd?: boolean;
+}
 
-if ("serviceWorker" in navigator) {
-  const isLocalHost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+export function mountApp() {
+  ReactDOM.createRoot(document.getElementById("root")!).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+}
+
+export function bootstrapServiceWorker(options: ServiceWorkerBootstrapOptions = {}) {
+  const navigatorObject = options.navigatorObject ?? navigator;
+  const windowObject = options.windowObject ?? window;
+  const isProd = options.isProd ?? import.meta.env.PROD;
+
+  if (!("serviceWorker" in navigatorObject)) {
+    return;
+  }
+
+  const serviceWorker = navigatorObject.serviceWorker;
+  if (!serviceWorker) {
+    return;
+  }
+
+  const isLocalHost = windowObject.location.hostname === "localhost" || windowObject.location.hostname === "127.0.0.1";
 
   if (isLocalHost) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
+    windowObject.addEventListener("load", () => {
+      if (typeof serviceWorker.getRegistrations !== "function") {
+        return;
+      }
+      serviceWorker.getRegistrations().then((registrations) => {
         registrations.forEach((registration) => {
           registration.unregister();
         });
       });
     });
-  } else if (import.meta.env.PROD) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker
-        .register("./sw.js")
-        .then((registration) => {
-          if (registration.waiting) {
-            registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    return;
+  }
+
+  if (!isProd) {
+    return;
+  }
+
+  windowObject.addEventListener("load", () => {
+    if (typeof serviceWorker.register !== "function") {
+      return;
+    }
+
+    serviceWorker
+      .register("./sw.js")
+      .then((registration) => {
+        if (registration.waiting) {
+          registration.waiting.postMessage({ type: "SKIP_WAITING" });
+        }
+
+        registration.addEventListener("updatefound", () => {
+          const worker = registration.installing;
+          if (!worker) {
+            return;
           }
 
-          registration.addEventListener("updatefound", () => {
-            const worker = registration.installing;
-            if (!worker) {
-              return;
+          worker.addEventListener("statechange", () => {
+            if (worker.state === "installed" && serviceWorker.controller) {
+              worker.postMessage({ type: "SKIP_WAITING" });
             }
-
-            worker.addEventListener("statechange", () => {
-              if (worker.state === "installed" && navigator.serviceWorker.controller) {
-                worker.postMessage({ type: "SKIP_WAITING" });
-              }
-            });
           });
-
-          let refreshed = false;
-          navigator.serviceWorker.addEventListener("controllerchange", () => {
-            if (refreshed) {
-              return;
-            }
-            refreshed = true;
-            window.location.reload();
-          });
-        })
-        .catch(() => {
-          // Offline support is best-effort for static hosting targets.
         });
-    });
-  }
+
+        let refreshed = false;
+        serviceWorker.addEventListener("controllerchange", () => {
+          if (refreshed) {
+            return;
+          }
+          refreshed = true;
+          windowObject.location.reload();
+        });
+      })
+      .catch(() => {
+        // Offline support is best-effort for static hosting targets.
+      });
+  });
 }
+
+mountApp();
+bootstrapServiceWorker();

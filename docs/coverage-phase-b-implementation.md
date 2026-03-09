@@ -1,85 +1,95 @@
-# Coverage Phase B Implementation (2026-03-09)
+# Coverage Phase B Implementation (Update: 2026-03-09)
 
 > Historisches Umsetzungsprotokoll. Maßgeblicher Endstand: `docs/qa-coverage-finalization.md`.
 
-## 1. Kurzueberblick der umgesetzten Phase-B-Massnahmen
+## 1. Kurzüberblick der umgesetzten Phase-B-Maßnahmen
 
-Phase B erweitert die Testtiefe gezielt in drei Bereichen:
+Die erweiterte Phase-B-Welle wurde auf fünf priorisierte Bereiche umgesetzt:
 
-- Worker-nahe Integrationspfade im Request-Lifecycle (`SearchClient`)
-- Routing-/Navigationshärtung fuer Hash-Routen und Route-Parameter
-- UI-Zustandsdarstellung fuer relevante Interaktions- und Fehlerpfade in Ergebnis-/Gruppenlisten
+1. `src/App.tsx` (Orchestrierung)
+2. `src/hooks/useFocusTrap.ts` (DOM-/Keyboard-Fokuslogik)
+3. `src/workers/searchWorker.ts` (zusätzliche Branch-Pfade)
+4. `src/main.tsx` (Startup-/Service-Worker-Lifecycle)
+5. `src/components/ResultList.tsx` und `src/components/GroupPage.tsx` (echte Interaktion statt statischem Rendering)
 
-Es wurden keine breit angelegten E2E-Erweiterungen umgesetzt. Der Fokus lag auf stabilen, schnellen und fachlich aussagekraeftigen Unit-/Integrationstests im bestehenden Vitest-Setup.
+Neben neuen Tests wurde ein kleiner funktional-neutraler Refactor in `src/main.tsx` vorgenommen (exportierbare Bootstrap-Funktionen für deterministische Lifecycle-Tests).
 
-## 2. Welche Komponenten/Module getestet wurden
+## 2. Umgesetzte Tests nach Bereich
 
-- `src/lib/searchClient.ts` -> `src/lib/searchClient.test.ts`
-- `src/lib/routing.ts` -> Erweiterung in `src/lib/routing.test.ts`
-- `src/components/ResultList.tsx` -> `src/components/ResultList.test.tsx`
-- `src/components/GroupPage.tsx` -> `src/components/GroupPage.test.tsx`
+### App-Orchestrierung (`src/App.test.tsx`)
 
-## 3. Welche Integrationsszenarien abgedeckt wurden
+- Boot-Loading- und Boot-Error-Pfade
+- Hash-Routing mit Such-/Detailkontext und Back-to-results-Navigation
+- Suchfehlerpfad bei Worker-Fehler
+- CSV-Export Erfolgs- und Fehlerpfad
+- Fallback-Verhalten bei ungültigem Gruppenkontext
 
-### Worker-/Datenintegration (`SearchClient`)
+### Focus Trap (`src/hooks/useFocusTrap.test.tsx`)
 
-- Erfolgsfall: `search` liefert Worker-Response korrekt zurueck.
-- Zustandstransition: neue Suche bricht vorherige Suche kontrolliert ab (`cancel` + definierter Fehlerpfad).
-- Fehlerpfade: `messageerror` und Worker-Runtime-Error verwerfen alle offenen Requests fail-closed.
-- Timeout-Verhalten: Request wird nach Ablauf der Zeitgrenze mit klarer Fehlermeldung beendet.
-- Lifecycle-Ende: `destroy()` beendet Worker und rejectet offene Requests.
+- Tab-Zyklus (letztes -> erstes Fokusziel)
+- Shift+Tab-Zyklus (erstes/Container -> letztes)
+- Escape-Handling inkl. aktualisiertem Callback
+- Fallback ohne fokussierbare Elemente
+- Fokus-Restore bei Deaktivierung/Unmount und Listener-Cleanup
 
-### Routing-/Navigation
+### Search Worker (`src/workers/searchWorker.test.ts`)
 
-- Ungueltige `sort`-Werte fallen auf `relevance` zurueck.
-- Ungueltige/leere Route-Parameter in `#/group/...` und `#/control/...` fallen auf Home zurueck.
-- Optionalparameter (`control`, `top`) werden sanitiziert.
-- Hash-Builder fuer Search/Group/Control (inkl. Encodings) wird abgesichert.
-- Parse/Build-Roundtrip fuer Search-Routen mit Query, Sortierung, Filtern und Detailkontext.
+- `effort-asc` / `effort-desc` inkl. fehlender Werte am Ende
+- Filterkombinationen mit Facet-Berechnung auf gefilterter Ergebnismenge
+- Offset-/Limit-Pfade
+- Fail-closed bei fehlender `indexUrl` / fehlender `controlId`
+- Zeitbudget-/Timeout-Fehlerpfad
 
-### UI-/Zustandsdarstellung (komponentennah)
+### Main Lifecycle (`src/main.test.tsx`)
 
-- `ResultList`:
-  - Laden, Fehler, Empty-State mit/ohne aktive Filter
-  - Label-Logik fuer Select-All-Zustand
-  - initiales Paging (25 Items) inkl. "Mehr laden"-CTA
-  - Treffer-Markierung (`<mark>`) im Snippet
-- `GroupPage`:
-  - Fallback "Gruppe nicht gefunden"
-  - Ladezustand der Controls
-  - Untergruppen-/Controls-Rendering inkl. initialem Paging
-  - Label-Logik fuer Select-All-Zustand
+- App-Mount in `#root`
+- SW-Unregister auf localhost
+- SW-Register in PROD inkl. `updatefound`/`statechange`/`controllerchange`-Reload
+- Robustheit bei fehlenden Browser-SW-APIs
 
-## 4. Welche Refactorings durchgefuehrt wurden und warum
+### ResultList / GroupPage Interaktionen
 
-- Keine produktiven Refactorings notwendig.
-- Es wurden ausschliesslich Testdateien hinzugefuegt und bestehende Routing-Tests erweitert.
+- Checkbox-/Card-Klicks und Callback-Auslösung
+- Pagination (`Mehr laden`) inkl. Reset-Verhalten bei Kontextwechsel
+- Select-all-Transitions (default/busy/all-selected)
+- Empty-State-/Reset-Interaktionen
+- zustandsabhängige UI-Transitions (selected/export-selected/chips)
 
-## 5. Welche Risiken und Luecken weiterhin offen bleiben
+## 3. Coverage-Wirkung der Phase-B-Erweiterung
 
-- `src/App.tsx` als zentrale Orchestrierung bleibt weiterhin ohne dedizierte Integrationstests mit echten UI-Events.
-- Worker-Implementierung `src/workers/searchWorker.ts` selbst ist weiterhin nicht direkt getestet (nur Client-seitiger Protokollpfad).
-- Hook-basierte Interaktionslogik (`useFocusTrap`, `useMediaQuery`, `useDebouncedValue`) ist weiterhin nicht domnah abgesichert.
-- Echte Browser-Interaktionen (Keyboard/Fokus/Modal-Trapping) liegen weiterhin primaer bei Playwright/A11y.
+Gemessen mit `npm run test:unit:coverage`:
 
-## 6. Welche Themen in Phase C folgen sollten
+- Global:
+  - Statements: `42.17% -> 64.14%`
+  - Branches: `37.31% -> 53.16%`
+  - Functions: `39.95% -> 60.00%`
+  - Lines: `42.35% -> 64.58%`
+- Wichtige Zielmodule:
+  - `src/App.tsx`: `0% -> 50.79%` Statements
+  - `src/main.tsx`: `0% -> 90.24%` Statements
+  - `src/hooks/useFocusTrap.ts`: `13.11% -> 96.72%` Statements, Branches `0% -> 77.77%`
+  - `src/workers/searchWorker.ts`: Statements `70.56% -> 80.49%`, Branches `47.38% -> 61.32%`
+  - `src/components/ResultList.tsx`: `100%` über alle vier Metriken
+  - `src/components/GroupPage.tsx`: Statements/Lines/Functions `100%`, Branches `86.36%`
 
-1. Direkte Tests fuer `src/workers/searchWorker.ts` (Search/Filter/Sort/Neighborhood/Cancel).
-2. App-Orchestrierungsnahe Integrationstests fuer Hash-Sync, Boot-Fehlerpfade, Back-to-results und CSV-Flow in `src/App.tsx`.
-3. Hook-/DOM-nahe Tests fuer Fokus- und Keyboard-Verhalten (`useFocusTrap`, Overlay/Sheets).
-4. Erweiterte Worker-Protokolltests fuer Last-/Abbruch-Szenarien (inkl. race conditions).
+## 4. Ausgeführte Validierung
 
-## 7. Welche Testkommandos ausgefuehrt wurden und mit welchem Ergebnis
+- `npm run test:unit` ✅
+- `npm run test:unit:coverage` ✅
+- `npm run check:release-hygiene` ✅
 
-- `npm run test:unit:raw`
-  - Ergebnis: erfolgreich
-  - 21 Testdateien, 86 Tests, alle gruen
-- `npm run test:unit`
-  - Ergebnis: erfolgreich
-  - beinhaltet `npm run build` + `npm run test:unit:raw`
-  - Build inkl. `build:data`, TypeScript-Build, Legal-Placeholder-Check und Vite-Build erfolgreich
+Ergebnisstand:
+- Testdateien: `25`
+- Tests: `117`
+- Alle grün
 
-## Zusatz: Artefakte/Hosting
+## 5. Verbleibende Restlücken nach Phase B
 
-- `public/data/**` wurden zur Laufzeit des Build-Schritts lokal neu generiert, aber nicht versionierte Build-Artefakte und daher ohne Git-Diff.
-- Keine Aenderung am GitHub-Pages-Verhalten.
+1. Kein dedizierter Last-/Soak-Test für den Worker unter hoher Last.
+2. Kein automatisierter Produktiv-Header-Testpfad außerhalb der Repository-CI.
+3. Branch-seitige Lücken vor allem in `src/components/RelationGraphLite.tsx` und Teilen von `src/components/ControlDetailPanel.tsx`.
+
+## 6. Hinweise zu Artefakten/Hosting
+
+- `public/data/**` und `public/sw.js` werden bei Builds erwartungsgemäß lokal generiert, ohne versionierte Artefaktänderungen.
+- Keine Änderung am GitHub-Pages-Verhalten.

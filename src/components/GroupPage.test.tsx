@@ -1,5 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
-import { renderToStaticMarkup } from "react-dom/server";
+// @vitest-environment jsdom
+
+import { act, type ComponentProps } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GroupPage } from "./GroupPage";
 import type { GroupNode, SearchResultItem } from "../types";
 
@@ -12,7 +15,7 @@ function createGroup(overrides?: Partial<GroupNode>): GroupNode {
     parentGroupId: "APP",
     topGroupId: "APP",
     pathIds: ["APP", "APP.1"],
-    pathTitles: ["Applikation", "Applikationssicherheit"],
+    pathTitles: ["Root", "Applikationssicherheit"],
     depth: 2,
     ...overrides
   };
@@ -40,95 +43,194 @@ function createControls(count: number): SearchResultItem[] {
   return Array.from({ length: count }, (_, index) => createControl(`APP.${index + 1}`));
 }
 
-describe("GroupPage", () => {
-  it("zeigt Fehlerzustand wenn die Gruppe nicht aufgeloest werden kann", () => {
-    const html = renderToStaticMarkup(
-      <GroupPage
-        group={null}
-        subgroups={[]}
-        controls={[]}
-        selectedControlIds={new Set<string>()}
-        loading={false}
-        selectingAllControls={false}
-        allControlsSelected={false}
-        onOpenSubgroup={vi.fn()}
-        onOpenControl={vi.fn()}
-        onToggleControlSelection={vi.fn()}
-        onSelectAllControls={vi.fn()}
-      />
-    );
+function buildProps(overrides: Partial<ComponentProps<typeof GroupPage>> = {}): ComponentProps<typeof GroupPage> {
+  return {
+    group: createGroup(),
+    subgroups: [],
+    controls: [],
+    selectedControlIds: new Set<string>(),
+    loading: false,
+    selectingAllControls: false,
+    allControlsSelected: false,
+    onOpenSubgroup: vi.fn(),
+    onOpenControl: vi.fn(),
+    onToggleControlSelection: vi.fn(),
+    onSelectAllControls: vi.fn(),
+    ...overrides
+  };
+}
 
-    expect(html).toContain("Gruppe nicht gefunden.");
-    expect(html).toContain("status-box error");
+let root: Root | null = null;
+let container: HTMLDivElement | null = null;
+
+async function renderGroupPage(props: ComponentProps<typeof GroupPage>) {
+  if (!container) {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+  }
+
+  await act(async () => {
+    root?.render(<GroupPage {...props} />);
+  });
+}
+
+async function cleanupRender() {
+  if (root) {
+    await act(async () => {
+      root?.unmount();
+    });
+  }
+  root = null;
+  if (container?.isConnected) {
+    container.remove();
+  }
+  container = null;
+}
+
+function findButtonByExactText(text: string) {
+  const button = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+    (entry) => entry.textContent?.trim() === text
+  );
+  if (!button) {
+    throw new Error(`Button nicht gefunden: ${text}`);
+  }
+  return button;
+}
+
+async function clickElement(element: HTMLElement) {
+  await act(async () => {
+    element.click();
+  });
+}
+
+beforeEach(() => {
+  Reflect.set(globalThis as Record<string, unknown>, "IS_REACT_ACT_ENVIRONMENT", true);
+  document.body.innerHTML = "";
+});
+
+afterEach(async () => {
+  await cleanupRender();
+  vi.restoreAllMocks();
+});
+
+describe("GroupPage interactions", () => {
+  it("zeigt Fehlerzustand wenn Gruppe fehlt", async () => {
+    await renderGroupPage(buildProps({ group: null }));
+
+    expect(document.body.textContent).toContain("Gruppe nicht gefunden.");
   });
 
-  it("rendert Untergruppen, Controls und initiales Paging", () => {
-    const html = renderToStaticMarkup(
-      <GroupPage
-        group={createGroup()}
-        subgroups={[createGroup({ id: "APP.1.1", title: "Sichere Konfiguration", depth: 3 })]}
-        controls={createControls(30)}
-        selectedControlIds={new Set<string>(["APP.1"])}
-        loading={false}
-        selectingAllControls={false}
-        allControlsSelected={false}
-        onOpenSubgroup={vi.fn()}
-        onOpenControl={vi.fn()}
-        onToggleControlSelection={vi.fn()}
-        onSelectAllControls={vi.fn()}
-      />
-    );
-
-    expect(html).toContain("APP.1 - Applikationssicherheit");
-    expect(html).toContain("Untergruppen");
-    expect(html).toContain("Sichere Konfiguration");
-    expect(html).toContain("APP.25");
-    expect(html).not.toContain("APP.26");
-    expect(html).toContain("Mehr laden");
-    expect(html).toContain("export-selected");
+  it("zeigt Ladehinweis während Gruppen-Controls nachgeladen werden", async () => {
+    await renderGroupPage(buildProps({ loading: true }));
+    expect(document.body.textContent).toContain("Controls werden geladen…");
   });
 
-  it("zeigt den Ladehinweis fuer Controls waehrend Gruppenabfrage", () => {
-    const html = renderToStaticMarkup(
-      <GroupPage
-        group={createGroup()}
-        subgroups={[]}
-        controls={[]}
-        selectedControlIds={new Set<string>()}
-        loading
-        selectingAllControls={false}
-        allControlsSelected={false}
-        onOpenSubgroup={vi.fn()}
-        onOpenControl={vi.fn()}
-        onToggleControlSelection={vi.fn()}
-        onSelectAllControls={vi.fn()}
-      />
+  it("löst Callback-Flows für Breadcrumbs, Untergruppen, Controls und Checkboxen aus", async () => {
+    const onOpenSubgroup = vi.fn();
+    const onOpenControl = vi.fn();
+    const onToggleControlSelection = vi.fn();
+    const controls = [createControl("APP.1")];
+
+    await renderGroupPage(
+      buildProps({
+        subgroups: [createGroup({ id: "APP.1.1", title: "Untergruppe A", depth: 3 })],
+        controls,
+        onOpenSubgroup,
+        onOpenControl,
+        onToggleControlSelection
+      })
     );
 
-    expect(html).toContain("Controls werden geladen…");
+    const breadcrumbButton = document.querySelector<HTMLButtonElement>(".breadcrumb-link");
+    if (!breadcrumbButton) {
+      throw new Error("Breadcrumb-Button fehlt");
+    }
+    await clickElement(breadcrumbButton);
+
+    const subgroupTile = document.querySelector<HTMLButtonElement>("button.group-tile");
+    if (!subgroupTile) {
+      throw new Error("Untergruppen-Button fehlt");
+    }
+    await clickElement(subgroupTile);
+
+    const checkbox = document.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    if (!checkbox) {
+      throw new Error("Checkbox fehlt");
+    }
+    await clickElement(checkbox);
+
+    const controlButton = document.querySelector<HTMLButtonElement>(".group-control-row button");
+    if (!controlButton) {
+      throw new Error("Control-Button fehlt");
+    }
+    await clickElement(controlButton);
+
+    expect(onOpenSubgroup).toHaveBeenCalledWith("APP");
+    expect(onOpenSubgroup).toHaveBeenCalledWith("APP.1.1");
+    expect(onToggleControlSelection).toHaveBeenCalledWith(controls[0], true);
+    expect(onOpenControl).toHaveBeenCalledWith(controls[0]);
   });
 
-  it("zeigt korrekte Label fuer Select-All in Gruppen", () => {
-    const baseProps = {
-      group: createGroup(),
-      subgroups: [],
-      controls: [createControl("APP.1")],
-      selectedControlIds: new Set<string>(),
-      loading: false,
-      onOpenSubgroup: vi.fn(),
-      onOpenControl: vi.fn(),
-      onToggleControlSelection: vi.fn(),
-      onSelectAllControls: vi.fn()
-    };
+  it("paginiert Controls und setzt Pagination beim Gruppenwechsel zurück", async () => {
+    const controls = createControls(30);
 
-    const selectingHtml = renderToStaticMarkup(
-      <GroupPage {...baseProps} selectingAllControls allControlsSelected={false} />
-    );
-    const selectedHtml = renderToStaticMarkup(
-      <GroupPage {...baseProps} selectingAllControls={false} allControlsSelected />
+    await renderGroupPage(buildProps({ controls }));
+
+    expect(document.body.textContent).toContain("APP.25");
+    expect(document.body.textContent).not.toContain("APP.26");
+
+    const loadMore = findButtonByExactText("Mehr laden");
+    await clickElement(loadMore);
+
+    expect(document.body.textContent).toContain("APP.26");
+
+    await renderGroupPage(
+      buildProps({
+        group: createGroup({ id: "APP.2", title: "Neue Gruppe", pathIds: ["APP", "APP.2"], pathTitles: ["Root", "Neue Gruppe"] }),
+        controls
+      })
     );
 
-    expect(selectingHtml).toContain("Alles auswählen...");
-    expect(selectedHtml).toContain("Alles abwählen");
+    expect(document.body.textContent).not.toContain("APP.26");
+  });
+
+  it("steuert Select-all-Transitions und ruft den Callback aus", async () => {
+    const onSelectAllControls = vi.fn();
+
+    await renderGroupPage(
+      buildProps({
+        controls: [createControl("APP.1")],
+        onSelectAllControls,
+        selectingAllControls: false,
+        allControlsSelected: false
+      })
+    );
+
+    const selectAll = findButtonByExactText("Alles auswählen");
+    await clickElement(selectAll);
+    expect(onSelectAllControls).toHaveBeenCalledTimes(1);
+
+    await renderGroupPage(
+      buildProps({
+        controls: [createControl("APP.1")],
+        onSelectAllControls,
+        selectingAllControls: false,
+        allControlsSelected: true
+      })
+    );
+    expect(document.body.textContent).toContain("Alles abwählen");
+
+    await renderGroupPage(
+      buildProps({
+        controls: [createControl("APP.1")],
+        onSelectAllControls,
+        selectingAllControls: true,
+        allControlsSelected: false
+      })
+    );
+
+    const busy = findButtonByExactText("Alles auswählen...");
+    expect(busy.disabled).toBe(true);
   });
 });
