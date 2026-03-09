@@ -1,72 +1,59 @@
 # Security Review
 
-## Vorhandene Sicherheitsmechanismen
+## Scope und Einordnung
 
-### Eingabe- und Datenvalidierung
+Dieses Dokument beschreibt die im Repository sichtbar umgesetzten Sicherheitsmechanismen und bekannten Restrisiken.
 
-- Zod-Schemas für Index, Meta, Detail-Chunks, Registry und Profilanalyse.
-- Bei Parse-/Schema-/Budgetfehlern wird Verarbeitung abgebrochen.
-- Byte-/Mengen-/Zeitbudgets (`SECURITY_BUDGETS`) für Suche und Datenverarbeitung.
+Es ist kein externes Penetrationstest-Zertifikat und kein Compliance-Nachweis.
+
+## 1) Umgesetzte Sicherheitsmechanismen
+
+### Daten- und Eingabevalidierung
+
+- Zod-Schemas für Meta/Index/Detail-Daten (`src/lib/dataSchemas.ts`)
+- Fail-closed bei Schema-/Budgetverstößen
+- Größen-/Zeit-/Mengenbudgets (`src/lib/securityBudgets.ts`)
 
 ### Such- und Routing-Härtung
 
-- Suchtext-/Filter-Sanitizing mit Längen- und Token-Limits.
-- Route-Token-Sanitizing und robustes URL-Decoding.
+- Suchtext- und Filter-Sanitizing (`src/lib/searchSafety.ts`)
+- robustes URL-Decoding und Routentoken-Sanitizing (`src/lib/routing.ts`, `src/lib/safeDecode.ts`)
 
 ### URL-/Link-Sicherheit
 
-- Externe URLs nur mit `http/https`.
-- URLs mit Userinfo oder Control-Zeichen werden blockiert.
-- Unsichere Links werden in UI und Export nicht verwendet.
+- externe Links nur mit sicheren Schemes (`http/https`)
+- Blockieren unsicherer URL-Varianten (`src/lib/urlSafety.ts`)
 
 ### CSV-Export-Härtung
 
-- Neutralisierung potenzieller Spreadsheet-Formeln.
-- Entfernung unsicherer Link-Schemes.
+- Neutralisierung spreadsheet-gefährlicher Zellinhalte
+- Linkfilterung auf sichere URLs (`src/lib/csv.ts`, `src/lib/controlExport.ts`)
 
-### Browser- und Hosting-Schutz
+### Service-Worker-Betrieb
 
-- Service Worker auf localhost deaktiviert, in Production registriert.
+- localhost: Deregistrierung statt Registrierung
+- Production: kontrollierte Registrierung + Update-Handling (`src/main.tsx`)
 
 ### CI-/Supply-Chain-Kontrollen
 
-- `npm audit --omit=dev --audit-level=high` im QA-Workflow.
-- `audit:dev`-Policy-Skript (critical blockierend).
-- Dependabot für npm-Dependencies und GitHub Actions.
+- Audit-Checks in `quality.yml` (`audit:prod`, `audit:dev`)
+- Dependabot-Konfiguration für npm und Actions vorhanden
 
-## Repository-sichtbare Sicherheitslücken und Risiken
+## 2) Rechtliche/konfigurationsbezogene Schutzmechanismen
 
-1. GitHub Pages bietet nur eingeschränkte, nicht repository-lokale Steuerung von Response-Headern.
-2. Es gibt keine Authentifizierung/Autorisierung.
-3. Es gibt keine SAST-/Lint-Sicherheitsregeln im Build.
-4. TypeScript ist nicht im Strict-Modus (`strict: false`).
+- verpflichtende Betreiberdaten per `VITE_OPERATOR_*`
+- Build-Gate gegen fehlende/platzhalterhafte Werte (`scripts/check-legal-placeholders.mjs`)
 
-## Geheimnisse / Credential-Themen
+## 3) Bekannte Restrisiken und Grenzen
 
-- Build-/Deploy-Workflows verwenden `VITE_OPERATOR_*` als Secrets/Umgebungsvariablen.
-- `.env.example` enthält Platzhalterwerte.
-- Im aktuellen Arbeitsverzeichnis existiert eine `.env.local` Datei.
+- keine Authentifizierung/Autorisierung (bewusste Architekturgrenze)
+- GitHub Pages erlaubt keine vollständige, repository-lokale Headersteuerung
+- keine dedizierte SAST-/Lint-Sicherheits-Pipeline in `package.json`
+- TypeScript läuft mit `strict: false`
 
-## Auth-/Session-Themen
+## 4) Operative Empfehlungen
 
-- Es gibt keine Benutzer-Session und keinen Login-Flow.
-- `localStorage` wird für `gspp-theme` verwendet.
-
-## Konkrete Härtungsempfehlungen
-
-### Must-have
-
-1. Produktive Header-Strategie für das gewählte Hosting verbindlich festlegen.
-2. Secret-/Env-Hygiene absichern (kein Tracking lokaler Env-Dateien).
-3. Secret-Scanning in CI ergänzen.
-
-### Should-have
-
-1. TypeScript schrittweise auf `strict: true` migrieren.
-2. Linting/SAST in die CI-Pipeline ergänzen.
-3. Host-bezogene Sicherheitsprüfungen außerhalb des Repositories ergänzen (z. B. vorgelagertes Gateway/CDN).
-
-### Nice-to-have
-
-1. Threat-Model-Dokument ergänzen.
-2. SBOM/Dependency-Transparenz automatisieren.
+- Hosting-seitig explizite Security-Header/CSP prüfen und dokumentieren
+- Secret-Scanning als zusätzlichen CI-Baustein ergänzen
+- TypeScript-Strict-Migration schrittweise planen
+- Sicherheitsrelevante Änderungen an Worker/Parsing/Export besonders streng reviewen

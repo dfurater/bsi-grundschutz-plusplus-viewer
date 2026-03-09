@@ -1,105 +1,72 @@
-# Testing
+# Testing und QA
 
-## Maßgeblicher Stand
+## Ziel
 
-Der maßgebliche QA-/Coverage-Endstand ist in `docs/qa-coverage-finalization.md` beschrieben.
-Diese Datei (`docs/testing.md`) beschreibt die laufende Teststrategie und verweist auf die dafür gültigen Konfigurationsquellen.
+Die Qualitätssicherung deckt drei Ebenen ab:
+- modulnahe Unit-/Integrationstests
+- browsernahe Smoke-/A11y-Prüfungen
+- Build-/Release-Hygiene und Dependency-Audit
 
-## Testpyramide im Repository
-
-### 1) Unit- und modulnahe Integrationstests (Vitest)
+## 1) Unit- und modulnahe Tests (Vitest)
 
 - Konfiguration: `vitest.config.ts`
 - Testquellen: `src/**/*.test.ts`, `src/**/*.test.tsx`
-- Standard-Environment: `node` (DOM-nahe Tests nutzen explizit `jsdom` pro Testdatei)
 - Schwerpunkt:
-  - Sicherheits- und Validierungslogik (`csv`, `urlSafety`, `searchSafety`, `validation`, `fetchJsonSafe`, `dataSchemas`)
-  - Routing- und Worker-Client-Vertragsgrenzen (`routing`, `searchClient`)
-  - Worker-Contract-Grenzen (`searchWorker`)
-  - zentrale UI-Zustandspfade auf Komponentenebene (`ResultList`, `GroupPage`, `App`, `main`, `useFocusTrap`, weitere Kernkomponenten)
+  - Datenvalidierung und Sicherheitslogik (`dataSchemas`, `fetchJsonSafe`, `searchSafety`, `csv`, `urlSafety`)
+  - Routing-/Worker-Grenzen (`routing`, `searchClient`, `searchWorker`)
+  - zentrale UI-Zustandspfade (`App`, Kernkomponenten)
 
-### 2) Browser-E2E (Playwright)
+### Coverage-Gate
 
-- Konfiguration: `playwright.a11y.config.ts`
-- Kernflüsse: `tests/core-flows.spec.ts`
-- Fokus: Navigation, Suche/Filter/Sortierung, Deep-Link-Fallbacks, CSV-Flow
+`npm run test:unit:coverage` nutzt `v8`-Coverage mit globalen Mindestschwellen:
+- `lines: 30`
+- `functions: 34`
+- `branches: 24`
+- `statements: 30`
 
-### 3) Accessibility (Playwright + Axe)
+## 2) Browser-QA
 
-- Datei: `tests/a11y.spec.ts`
-- Fokus: kritische/ernsthafte Violations auf relevanten Routen und Overlay-Zuständen
+- Playwright-Konfiguration: `playwright.a11y.config.ts`
+- E2E-Kernflüsse: `tests/core-flows.spec.ts`
+- A11y-Smoketests: `tests/a11y.spec.ts` (Playwright + Axe)
+- Lighthouse-Konfiguration: `lighthouserc.json`
 
-### 4) Performance-/Qualitätsgates (Lighthouse)
-
-- Konfiguration: `lighthouserc.json`
-- Fokus: Performance, Accessibility, Best Practices sowie ausgewählte Budgets
-
-### 5) Release-Hygiene
+## 3) Release-Hygiene
 
 - Skript: `scripts/check-release-hygiene.mjs`
-- Prüft verbotene Artefakte in `dist/` (z. B. `.DS_Store`, `.map`)
+- prüft verbotene Release-Artefakte in `dist/` (z. B. `.DS_Store`, Source Maps)
 
-## Finale Coverage-Konfiguration (Unit)
+## 4) Sicherheitsrelevante QA-Checks
 
-Konfiguriert in `vitest.config.ts`:
+- `npm run audit:prod` (blockiert bei High/Critical in Prod-Dependencies)
+- `npm run audit:dev` (Policy: Critical blockierend, restliche Findings als Hinweis)
 
-- Provider: `v8`
-- Reports: `text`, `text-summary`, `json-summary`, `lcov`
-- Ausgabepfad: `coverage/unit`
-- Include: `src/**/*.{ts,tsx,js}`
-- Excludes:
-  - `src/**/*.test.ts`
-  - `src/**/*.test.tsx`
-  - `src/**/*.d.ts`
-  - `src/vite-env.d.ts`
-  - `src/types.ts`
-  - `src/styles.css`
-- Aktive Mindestschwellen (global):
-  - `lines: 30`
-  - `functions: 34`
-  - `branches: 24`
-  - `statements: 30`
-
-Hinweis: Generierte Artefakte (`public/data/**`, `public/sw.js`) liegen bewusst außerhalb der Unit-Coverage-Messung.
-
-## CI-/Gate-Strategie
+## 5) CI-Abbildung
 
 Workflow: `.github/workflows/quality.yml`
 
-1. `qa` (schneller, PR-pflichtiger Gate):
-   - `npm run audit:prod && npm run audit:dev`
-   - `npm run test:unit:coverage`
-   - `npm run check:release-hygiene`
-   - Upload des Coverage-Artefakts (`coverage/unit`)
-2. `browser-qa` (schwerer Lauf, nach `qa`):
-   - Build
-   - Lighthouse
-   - Playwright/Axe
+- Job `qa`:
+  - `npm run audit:prod && npm run audit:dev`
+  - `npm run test:unit:coverage`
+  - `npm run check:release-hygiene`
+- Job `browser-qa` (nach `qa`):
+  - Build + `npm run qa:browser`
 
-Diese Trennung hält den Pflicht-Gate schnell und verschiebt browsernahe, langsamere Prüfungen in einen separaten Lauf.
+## 6) Empfohlene lokale Check-Stufen
 
-## Relevante lokale Kommandos
-
+Schneller Mindestcheck:
 ```bash
 npm run test:unit
-npm run test:unit:coverage
-npm run build
 npm run check:release-hygiene
+```
+
+Merge-nahe Prüfung:
+```bash
 npm run qa
 ```
 
-Hinweis: `npm run test:unit` und `npm run test:unit:coverage` führen intern zuerst `npm run build` aus, damit generierte Datenartefakte lokal verfügbar sind.
+## 7) Bekannte Grenzen
 
-## Verbleibende bekannte Lücken
-
-1. Kein dedizierter Last-/Soak-Test für Worker unter hoher Last.
-2. Kein automatisierter Produktiv-Header-Testpfad außerhalb der Repository-CI.
-3. `src/components/RelationGraphLite.tsx` und Teile von `src/components/ControlDetailPanel.tsx` bleiben branch-seitig unterdurchschnittlich getestet.
-
-## Historische Dokumente
-
-- `docs/coverage-phase-a-implementation.md`
-- `docs/coverage-phase-b-implementation.md`
-- `docs/coverage-phase-c-implementation.md`
-
-Diese Dateien sind Implementierungsprotokolle der Zwischenstände und nicht die maßgebliche Endstandsdefinition.
+- kein dedizierter Last-/Soak-Test für Worker unter extremer Last
+- kein automatisierter Test realer Response-Header des Produktivhostings
+- TypeScript ist nicht in `strict`-Mode
