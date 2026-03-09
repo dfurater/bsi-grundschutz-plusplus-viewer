@@ -9,6 +9,9 @@ export interface CsvOptions {
   withBom?: boolean;
 }
 
+const DANGEROUS_FORMULA_PREFIXES = new Set(["=", "+", "-", "@", "|"]);
+const LEADING_IGNORED_CHARACTERS = /^[\uFEFF\s\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]*/u;
+
 function normalizeCell(value: unknown): string {
   if (value == null) {
     return "";
@@ -26,7 +29,23 @@ function neutralizeSpreadsheetFormula(value: string): string {
   if (!value) {
     return value;
   }
-  return /^[=+\-@]/.test(value) ? `'${value}` : value;
+
+  // SEC-FIX: FINDING-001 — Neutralize spreadsheet formulas with leading whitespace/control chars and Unicode variants.
+  if (value.startsWith("\t") || value.startsWith("\r")) {
+    return `'${value}`;
+  }
+
+  const leadingStripped = value.replace(LEADING_IGNORED_CHARACTERS, "");
+  if (!leadingStripped) {
+    return value;
+  }
+
+  const normalized = leadingStripped.normalize("NFKC");
+  if (normalized.startsWith("'")) {
+    return value;
+  }
+
+  return DANGEROUS_FORMULA_PREFIXES.has(normalized[0]) ? `'${value}` : value;
 }
 
 function escapeCsvCell(value: string, delimiter: string): string {
