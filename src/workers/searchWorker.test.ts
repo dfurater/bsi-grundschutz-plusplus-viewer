@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ControlDetail, SearchDoc } from "../types";
+import type { ControlDetail, SearchDoc, SearchResponse } from "../types";
 import { defaultFilters } from "../lib/routing";
+import { SECURITY_BUDGETS } from "../lib/securityBudgets";
 
 const fetchJsonWithValidationMock = vi.fn();
 
@@ -140,6 +141,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   if (originalSelf === undefined) {
     Reflect.deleteProperty(globalThis as Record<string, unknown>, "self");
   } else {
@@ -240,6 +242,326 @@ describe("searchWorker contract", () => {
     const response = findResponse(scope, "req-unknown");
     expect(response.ok).toBe(false);
     expect(response.error).toContain("Unbekannter Request-Typ");
+  });
+
+  it("sorts effort ascending/descending and keeps missing effort values at the end", async () => {
+    const effortDoc = (id: string, effort: string | null) =>
+      createDoc(id, {
+        facets: {
+          topGroupId: "APP",
+          groupId: "APP.1",
+          secLevel: "hoch",
+          effortLevel: effort,
+          class: null,
+          tags: [],
+          modalverbs: [],
+          targetObjects: [],
+          relationTypes: [],
+          hasRelations: false
+        }
+      });
+
+    fetchJsonWithValidationMock.mockResolvedValue({
+      stats: {
+        topGroupCount: 1,
+        groupCount: 1,
+        controlCount: 4,
+        relationCount: 0,
+        controlsWithRelations: 0
+      },
+      facetOptions: {
+        topGroupId: ["APP"],
+        secLevel: ["hoch"],
+        effortLevel: ["1", "2"],
+        class: [],
+        modalverbs: [],
+        targetObjects: [],
+        tags: [],
+        relationTypes: []
+      },
+      docs: [effortDoc("APP.1", "2"), effortDoc("APP.2", "1"), effortDoc("APP.3", ""), effortDoc("APP.4", null)]
+    });
+
+    const scope = new MockWorkerScope();
+    await loadWorker(scope);
+
+    await scope.dispatch({
+      type: "init",
+      requestId: "init-effort-sort",
+      payload: {
+        indexUrl: "/data/catalog-index.json",
+        detailBasePath: "/data/details"
+      }
+    });
+
+    await scope.dispatch({
+      type: "search",
+      requestId: "search-effort-asc",
+      payload: {
+        text: "",
+        sort: "effort-asc",
+        filters: defaultFilters(),
+        limit: 20,
+        offset: 0
+      }
+    });
+    await scope.dispatch({
+      type: "search",
+      requestId: "search-effort-desc",
+      payload: {
+        text: "",
+        sort: "effort-desc",
+        filters: defaultFilters(),
+        limit: 20,
+        offset: 0
+      }
+    });
+
+    const ascResponse = findResponse(scope, "search-effort-asc");
+    const descResponse = findResponse(scope, "search-effort-desc");
+    expect(ascResponse.ok).toBe(true);
+    expect(descResponse.ok).toBe(true);
+
+    expect((ascResponse.data as SearchResponse).items.map((item) => item.id)).toEqual(["APP.2", "APP.1", "APP.3", "APP.4"]);
+    expect((descResponse.data as SearchResponse).items.map((item) => item.id)).toEqual(["APP.1", "APP.2", "APP.3", "APP.4"]);
+  });
+
+  it("applies filter combinations, computes facets on filtered results, and enforces offset/limit bounds", async () => {
+    const app1 = createDoc("APP.1", {
+      facets: {
+        topGroupId: "APP",
+        groupId: "APP.1",
+        secLevel: "hoch",
+        effortLevel: "1",
+        class: null,
+        tags: ["netzwerk"],
+        modalverbs: ["SOLL"],
+        targetObjects: ["SYS.1"],
+        relationTypes: ["required"],
+        hasRelations: true
+      }
+    });
+    const app2 = createDoc("APP.2", {
+      facets: {
+        topGroupId: "APP",
+        groupId: "APP.1",
+        secLevel: "hoch",
+        effortLevel: "2",
+        class: null,
+        tags: ["cloud"],
+        modalverbs: ["MUSS"],
+        targetObjects: ["SYS.2"],
+        relationTypes: ["related"],
+        hasRelations: true
+      }
+    });
+    const ops1 = createDoc("OPS.1", {
+      topGroupId: "OPS",
+      facets: {
+        topGroupId: "OPS",
+        groupId: "OPS.1",
+        secLevel: "normal",
+        effortLevel: "3",
+        class: null,
+        tags: ["netzwerk"],
+        modalverbs: ["SOLL"],
+        targetObjects: ["SYS.3"],
+        relationTypes: ["required"],
+        hasRelations: true
+      }
+    });
+
+    fetchJsonWithValidationMock.mockResolvedValue({
+      stats: {
+        topGroupCount: 2,
+        groupCount: 2,
+        controlCount: 3,
+        relationCount: 3,
+        controlsWithRelations: 3
+      },
+      facetOptions: {
+        topGroupId: ["APP", "OPS"],
+        secLevel: ["hoch", "normal"],
+        effortLevel: ["1", "2", "3"],
+        class: [],
+        modalverbs: ["MUSS", "SOLL"],
+        targetObjects: ["SYS.1", "SYS.2", "SYS.3"],
+        tags: ["cloud", "netzwerk"],
+        relationTypes: ["related", "required"]
+      },
+      docs: [app1, app2, ops1]
+    });
+
+    const scope = new MockWorkerScope();
+    await loadWorker(scope);
+
+    await scope.dispatch({
+      type: "init",
+      requestId: "init-filters",
+      payload: {
+        indexUrl: "/data/catalog-index.json",
+        detailBasePath: "/data/details"
+      }
+    });
+
+    const filtered = defaultFilters();
+    filtered.topGroupId = ["APP"];
+    await scope.dispatch({
+      type: "search",
+      requestId: "search-filters",
+      payload: {
+        text: "",
+        sort: "id-asc",
+        filters: filtered,
+        limit: 1,
+        offset: 1
+      }
+    });
+
+    const response = findResponse(scope, "search-filters");
+    expect(response.ok).toBe(true);
+    expect(response.data).toMatchObject({
+      total: 2
+    });
+
+    const payload = response.data as SearchResponse;
+    expect(payload.items.map((item) => item.id)).toEqual(["APP.2"]);
+    expect(payload.facets.topGroupId).toEqual([{ value: "APP", count: 2 }]);
+    expect(payload.facets.tags).toEqual([
+      { value: "cloud", count: 1 },
+      { value: "netzwerk", count: 1 }
+    ]);
+    expect(payload.facets.relationTypes).toEqual([
+      { value: "related", count: 1 },
+      { value: "required", count: 1 }
+    ]);
+  });
+
+  it("fails closed for missing required request payload fields", async () => {
+    fetchJsonWithValidationMock.mockResolvedValue({
+      stats: {
+        topGroupCount: 1,
+        groupCount: 1,
+        controlCount: 1,
+        relationCount: 0,
+        controlsWithRelations: 0
+      },
+      facetOptions: {
+        topGroupId: ["APP"],
+        secLevel: [],
+        effortLevel: [],
+        class: [],
+        modalverbs: [],
+        targetObjects: [],
+        tags: [],
+        relationTypes: []
+      },
+      docs: [createDoc("APP.1")]
+    });
+
+    const scope = new MockWorkerScope();
+    await loadWorker(scope);
+
+    await scope.dispatch({
+      type: "init",
+      requestId: "init-missing-index-url",
+      payload: {
+        indexUrl: " ",
+        detailBasePath: "/data/details"
+      }
+    });
+    await scope.dispatch({
+      type: "get-control",
+      requestId: "get-control-missing-id",
+      payload: {
+        id: " ",
+        topGroupId: "APP"
+      }
+    });
+    await scope.dispatch({
+      type: "get-neighborhood",
+      requestId: "get-neighborhood-missing-id",
+      payload: {
+        id: " ",
+        hops: 2
+      }
+    });
+
+    expect(findResponse(scope, "init-missing-index-url")).toMatchObject({
+      ok: false,
+      error: "Index-URL fehlt."
+    });
+    expect(findResponse(scope, "get-control-missing-id")).toMatchObject({
+      ok: false,
+      error: "Control-ID fehlt."
+    });
+    expect(findResponse(scope, "get-neighborhood-missing-id")).toMatchObject({
+      ok: false,
+      error: "Control-ID fehlt."
+    });
+  });
+
+  it("returns timeout errors when search exceeds security time budget", async () => {
+    const docs = Array.from({ length: SECURITY_BUDGETS.searchCheckpointInterval + 1 }, (_, index) =>
+      createDoc(`APP.${index + 1}`)
+    );
+
+    fetchJsonWithValidationMock.mockResolvedValue({
+      stats: {
+        topGroupCount: 1,
+        groupCount: 1,
+        controlCount: docs.length,
+        relationCount: 0,
+        controlsWithRelations: 0
+      },
+      facetOptions: {
+        topGroupId: ["APP"],
+        secLevel: [],
+        effortLevel: [],
+        class: [],
+        modalverbs: [],
+        targetObjects: [],
+        tags: [],
+        relationTypes: []
+      },
+      docs
+    });
+
+    let nowCallCount = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => {
+      nowCallCount += 1;
+      if (nowCallCount === 1) {
+        return 0;
+      }
+      return SECURITY_BUDGETS.searchTimeBudgetMs + 10;
+    });
+
+    const scope = new MockWorkerScope();
+    await loadWorker(scope);
+
+    await scope.dispatch({
+      type: "init",
+      requestId: "init-timeout-search",
+      payload: {
+        indexUrl: "/data/catalog-index.json",
+        detailBasePath: "/data/details"
+      }
+    });
+    await scope.dispatch({
+      type: "search",
+      requestId: "search-timeout",
+      payload: {
+        text: "",
+        sort: "relevance",
+        filters: defaultFilters(),
+        limit: 1200,
+        offset: 0
+      }
+    });
+
+    const response = findResponse(scope, "search-timeout");
+    expect(response.ok).toBe(false);
+    expect(response.error).toContain("Suche hat das Zeitbudget");
   });
 
   it("returns an error for unresolved control IDs", async () => {

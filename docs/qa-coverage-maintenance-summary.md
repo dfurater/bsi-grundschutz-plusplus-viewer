@@ -5,6 +5,7 @@
 - Unit-Coverage ist aktiv und als CI-Gate etabliert.
 - Schneller Pflicht-Gate (`quality / qa`) ist von schwerer Browser-QA getrennt.
 - Maßgebliche Endstandsreferenz: `docs/qa-coverage-finalization.md`.
+- Aktueller Messstand (`npm run test:unit:coverage`): Statements `64.14%`, Branches `53.16%`, Functions `60.00%`, Lines `64.58%`.
 
 ## 2. Welche Konfiguration ist maßgeblich?
 
@@ -35,7 +36,7 @@ Nachgelagerter schwerer QA-Gate (`browser-qa`):
 
 ## 5. Welche bekannten Restlücken sind akzeptiert?
 
-1. Begrenzte direkte Tests für `src/App.tsx` und `src/main.tsx`.
-2. Kein dedizierter Worker-Last-/Soak-Test.
-3. Kein automatisierter Produktiv-Header-Testpfad in der Repository-CI.
+1. Kein dedizierter Last-/Soak-Test für den Worker unter hoher Last.
+2. Kein automatisierter Produktiv-Header-Testpfad in der Repository-CI.
+3. Branch-Coverage in `src/components/RelationGraphLite.tsx` und Teilen von `src/components/ControlDetailPanel.tsx` bleibt ausbaufähig.
 4. TypeScript weiterhin `strict: false`.

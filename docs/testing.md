@@ -11,12 +11,12 @@ Diese Datei (`docs/testing.md`) beschreibt die laufende Teststrategie und verwei
 
 - Konfiguration: `vitest.config.ts`
 - Testquellen: `src/**/*.test.ts`, `src/**/*.test.tsx`
-- Environment: `node`
+- Standard-Environment: `node` (DOM-nahe Tests nutzen explizit `jsdom` pro Testdatei)
 - Schwerpunkt:
   - Sicherheits- und Validierungslogik (`csv`, `urlSafety`, `searchSafety`, `validation`, `fetchJsonSafe`, `dataSchemas`)
   - Routing- und Worker-Client-Vertragsgrenzen (`routing`, `searchClient`)
   - Worker-Contract-Grenzen (`searchWorker`)
-  - zentrale UI-Zustandspfade auf Komponentenebene (`ResultList`, `GroupPage`, weitere Kernkomponenten)
+  - zentrale UI-Zustandspfade auf Komponentenebene (`ResultList`, `GroupPage`, `App`, `main`, `useFocusTrap`, weitere Kernkomponenten)
 
 ### 2) Browser-E2E (Playwright)
 
@@ -94,7 +94,7 @@ Hinweis: `npm run test:unit` und `npm run test:unit:coverage` führen intern zue
 
 1. Kein dedizierter Last-/Soak-Test für Worker unter hoher Last.
 2. Kein automatisierter Produktiv-Header-Testpfad außerhalb der Repository-CI.
-3. `src/App.tsx` und `src/main.tsx` bleiben im Vergleich zu Kern-Libs unterdurchschnittlich fein granular getestet.
+3. `src/components/RelationGraphLite.tsx` und Teile von `src/components/ControlDetailPanel.tsx` bleiben branch-seitig unterdurchschnittlich getestet.
 
 ## Historische Dokumente
 

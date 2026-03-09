@@ -1,6 +1,7 @@
 # Coverage Phase A Implementation (2026-03-09)
 
-> Historisches Umsetzungsprotokoll. Maßgeblicher Endstand: `docs/qa-coverage-finalization.md`.
+> Historisches Umsetzungsprotokoll (Snapshot vor Phase-B/Phase-C-Erweiterungen).
+> Maßgeblicher Endstand: `docs/qa-coverage-finalization.md`.
 
 ## 1. Kurzueberblick der umgesetzten Phase-A-Massnahmen
 
@@ -82,6 +83,8 @@ Keine produktive Fachlogik wurde geaendert.
 
 ## 5. Welche Risiken bewusst noch offen bleiben
 
+Hinweis: Die folgenden Punkte beziehen sich auf den Stand direkt nach Phase A; mehrere davon wurden in späteren Phasen adressiert.
+
 - Worker-Protokoll und Suchkern in `src/workers/searchWorker.ts` bleiben weiterhin ohne dedizierte Unit-/Integrationstests.
 - `src/lib/searchClient.ts` Fehler-/Timeout-Lifecycle bleibt offen.
 - `src/App.tsx` Orchestrierungspfad (Hash/State/Flow) bleibt offen.
@@ -99,3 +102,10 @@ Keine produktive Fachlogik wurde geaendert.
 - Die Suite deckt jetzt mehrere fachlich kritische und deterministische Kernpfade ab, die zuvor nur indirekt oder gar nicht geprueft waren.
 - Besonders bei Input-Sanitizing, Validierung, Fehlersemantik und Katalognormalisierung wurden Branches mit realem Regressionsnutzen geschlossen.
 - Es wurden keine kosmetischen Render-Tests ergaenzt; der Zugewinn liegt in inhaltlicher Prueftiefe, nicht in oberflaechlicher Coverage-Erhoehung.
+
+## 8. Nachgelagerter Update-Hinweis
+
+Dieser Phase-A-Bericht ist ein früher Snapshot. Der aktuelle Endstand ist deutlich weiter und in folgenden Dokumenten beschrieben:
+
+- `docs/qa-coverage-finalization.md`
+- `docs/coverage-phase-b-implementation.md`
