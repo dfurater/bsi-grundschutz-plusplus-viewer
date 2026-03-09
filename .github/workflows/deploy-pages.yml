@@ -1,7 +1,9 @@
 name: deploy-pages
 
 on:
-  push:
+  workflow_run:
+    workflows: ["quality"]
+    types: [completed]
     branches: ["main"]
   workflow_dispatch:
 
@@ -16,11 +18,16 @@ concurrency:
 
 jobs:
   build:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v6
