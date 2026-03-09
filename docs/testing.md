@@ -10,7 +10,18 @@
   - URL-Sicherheit (`urlSafety`)
   - Routing-Härtung (`routing`)
   - Datenschema-Validierung inkl. Budgetgrenzen (`dataSchemas`)
+  - Worker-Vertragsgrenze (`searchWorker`, `searchClient`)
   - statisches Rendering zentraler UI-Komponenten
+
+### Coverage-Gates
+
+- Unit-Coverage wird über `vitest --coverage` (Provider `v8`) gemessen.
+- Berichte liegen unter `coverage/unit`.
+- Aktive Mindestschwellen:
+  - `lines: 30`
+  - `functions: 34`
+  - `branches: 24`
+  - `statements: 30`
 
 ### 2) End-to-End-Tests (Playwright)
 
@@ -39,6 +50,7 @@
 
 ```bash
 npm run test:unit
+npm run test:unit:coverage
 npm run qa
 ```
 
@@ -46,11 +58,9 @@ Hinweis: `public/data/**` und `public/sw.js` sind nicht versioniert und werden i
 
 ### CI
 
-Workflow `.github/workflows/quality.yml` führt aus:
-1. Install
-2. Playwright Browser Install
-3. Dependency-Audit
-4. `npm run qa`
+Workflow `.github/workflows/quality.yml` führt getrennte Gates aus:
+1. `qa` (schnell, PR-pflichtig): Audit, Unit-Coverage-Gate, Release-Hygiene
+2. `browser-qa` (schwerer): Build, Lighthouse, Playwright/Axe
 
 ## Nachgewiesene lokale Läufe (2026-03-06)
 
