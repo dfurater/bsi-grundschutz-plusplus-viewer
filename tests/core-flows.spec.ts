@@ -102,6 +102,8 @@ test.describe("Kernflows", () => {
     await expect(page).not.toHaveURL(/q=/);
     await expect(overlayDialog).toBeVisible();
     await expect(reopenedSearchInput).toHaveValue("");
+    await reopenedSearchInput.focus();
+    await expect(reopenedSearchInput).toBeFocused();
     await page.keyboard.type("x");
     await expect(reopenedSearchInput).toHaveValue("x");
     await page.keyboard.press("Backspace");
