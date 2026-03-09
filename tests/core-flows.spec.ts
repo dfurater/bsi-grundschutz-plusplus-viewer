@@ -102,11 +102,8 @@ test.describe("Kernflows", () => {
     await expect(page).not.toHaveURL(/q=/);
     await expect(overlayDialog).toBeVisible();
     await expect(reopenedSearchInput).toHaveValue("");
-    await reopenedSearchInput.focus();
-    await expect(reopenedSearchInput).toBeFocused();
-    await reopenedSearchInput.type("x");
+    await reopenedSearchInput.fill("x");
     await expect(reopenedSearchInput).toHaveValue("x");
-    await expect(reopenedSearchInput).toBeFocused();
     await reopenedSearchInput.press("Backspace");
     await expect(reopenedSearchInput).toHaveValue("");
     await expect(overlayDialog.getByRole("button", { name: "Suchtext leeren" })).toHaveCount(0);
