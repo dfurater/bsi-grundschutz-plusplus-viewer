@@ -78,7 +78,7 @@ Enthält Build, Unit-Tests, Release-Hygiene, Lighthouse und Playwright-A11y.
 ### GitHub Pages
 
 - Workflow: `.github/workflows/deploy-pages.yml`
-- Trigger: Push auf `main` und `workflow_dispatch`
+- Trigger: `workflow_run` nach erfolgreichem `quality`-Run auf `main` sowie `workflow_dispatch`
 - Build-Artefakt: `dist/`
 - Secrets: `VITE_OPERATOR_*`
 
@@ -113,7 +113,7 @@ Empfohlener Required Status Check:
 
 Merge-Queue-Kompatibilität:
 - Der Qualitätsworkflow triggert auf `pull_request` und `merge_group`.
-- `deploy-pages.yml` ist absichtlich kein Required PR-Check, da Deployment erst nach Merge auf `main` läuft.
+- `deploy-pages.yml` ist absichtlich kein Required PR-Check, da Deployment erst nach Merge auf `main` läuft und auf einen erfolgreichen `quality`-Run wartet.
 - `daily-bsi-sync.yml` ist eine Automationspipeline und ebenfalls kein Required PR-Check für Feature-PRs.
 
 Hinweis zu Auto-merge:
