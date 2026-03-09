@@ -94,14 +94,18 @@ test.describe("Kernflows", () => {
     await expect(page.locator('[data-search-results-focus="results"], [data-search-results-focus="status"]')).toBeFocused();
 
     await page.getByRole("button", { name: "Suche öffnen" }).click();
-    await expect(overlayDialog.getByRole("searchbox", { name: "Suche" })).toHaveValue("");
+    const reopenedSearchInput = overlayDialog.getByRole("searchbox", { name: "Suche" });
+    await expect(reopenedSearchInput).toHaveValue("");
     await expect(overlayDialog.getByRole("button", { name: "Suchtext leeren" })).toHaveCount(0);
-    await overlayDialog.getByRole("searchbox", { name: "Suche" }).fill("abc");
+    await reopenedSearchInput.fill("abc");
     await overlayDialog.getByRole("button", { name: "Suchtext leeren" }).click();
     await expect(page).not.toHaveURL(/q=/);
     await expect(overlayDialog).toBeVisible();
-    await expect(overlayDialog.getByRole("searchbox", { name: "Suche" })).toHaveValue("");
-    await expect(overlayDialog.getByRole("searchbox", { name: "Suche" })).toBeFocused();
+    await expect(reopenedSearchInput).toHaveValue("");
+    await page.keyboard.type("x");
+    await expect(reopenedSearchInput).toHaveValue("x");
+    await page.keyboard.press("Backspace");
+    await expect(reopenedSearchInput).toHaveValue("");
     await expect(overlayDialog.getByRole("button", { name: "Suchtext leeren" })).toHaveCount(0);
   });
 
