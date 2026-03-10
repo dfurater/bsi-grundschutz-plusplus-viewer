@@ -10,7 +10,8 @@ export interface CsvOptions {
 }
 
 const DANGEROUS_FORMULA_PREFIXES = new Set(["=", "+", "-", "@", "|"]);
-const LEADING_IGNORED_CHARACTERS = /^[\uFEFF\s\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]*/u;
+const LEADING_IGNORED_CHARACTERS =
+  /^[\u0000-\u001F\u007F\uFEFF\s\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]*/u;
 
 function normalizeCell(value: unknown): string {
   if (value == null) {
