@@ -15,6 +15,16 @@ Eigenschaften:
 - Build-Output, nicht als handgepflegte Quelle behandeln
 - wird bei `npm run build:data` / `npm run build` neu erzeugt
 - wird per `src/lib/dataSchemas.ts` (Zod) validiert
+- Single-Catalog-Vertrag: keine `datasetId`-/`datasetLabel`-Felder im BuildInfo-Schema
+- Legacy-Ausgaben (`public/data/datasets`, `catalog-registry.json`, `profile-links.json`) werden im Build entfernt
+
+`build-info.json` enthält:
+- `buildTimestamp`
+- `appVersion`
+- `indexVersion`
+- `catalogFileName`
+- `catalogFileSha256`
+- `catalogFileSizeBytes`
 
 ## 2) Worker-Protokoll (`SearchClient` <-> `searchWorker`)
 
@@ -34,6 +44,10 @@ Sicherheits-/Robustheitsaspekte:
 - Zeit-/Mengenbudgets im Worker
 - Validierung externer JSON-Payloads
 
+Nicht vorhanden (bewusst ausgeschlossen):
+- kein Upload-Request-Typ
+- kein Dataset-Registry-Handshake
+
 ## 3) Routing-Schnittstelle
 
 Routen:
@@ -50,6 +64,10 @@ Routen:
 - Text/Sort: `q`, `sort`
 - Facetten: `tg`, `gid`, `sec`, `eff`, `cls`, `mod`, `tgt`, `tag`, `rel`
 - Detailkontext: `control`, `top`
+
+Nicht vorhanden (bewusst ausgeschlossen):
+- keine Hash-Route für manuellen JSON-Upload
+- keine Route zur Datensatz-Auswahl
 
 ## 4) CSV-Export-Schnittstelle
 

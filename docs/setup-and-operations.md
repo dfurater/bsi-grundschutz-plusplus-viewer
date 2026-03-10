@@ -29,6 +29,10 @@ npm run dev
 
 `npm run dev` führt zuerst `npm run build:data` aus und startet dann Vite.
 
+Single-Catalog-Betriebsmodell:
+- Laufzeitdaten kommen ausschließlich aus den generierten Artefakten unter `public/data/**`.
+- Es gibt keine Runtime-Dataset-Auswahl und keinen manuellen JSON-Upload.
+
 ## 4) Build- und Release-Pipeline
 
 ```bash
@@ -48,6 +52,7 @@ Generierte Artefakte:
 - `dist/**`
 
 `public/data/**` und `public/sw.js` sind Build-Output und in `.gitignore` ausgenommen.
+`npm run build:data` entfernt zusätzlich Legacy-Ausgaben (`public/data/datasets`, `catalog-registry.json`, `profile-links.json`).
 
 ## 5) Tests und QA lokal
 
@@ -113,6 +118,9 @@ Erwartbar bei:
 - Änderungen an `Kataloge/Grundschutz++-catalog.json`
 - Änderungen an `src/lib/normalize-core.js`
 - Änderungen an `scripts/build-catalog.mjs` oder `scripts/sw.template.js`
+
+Wichtig:
+- Änderungen am Katalog erfolgen über `Kataloge/Grundschutz++-catalog.json` (z. B. via `npm run sync:bsi`), nicht über Upload-Mechanismen zur Laufzeit.
 
 ## 8) Betriebshinweise
 
