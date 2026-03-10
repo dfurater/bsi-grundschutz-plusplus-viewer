@@ -34,6 +34,7 @@ Es ist kein externes Penetrationstest-Zertifikat und kein Compliance-Nachweis.
 
 - Neutralisierung spreadsheet-gefährlicher Zellinhalte
 - Linkfilterung auf sichere URLs (`src/lib/csv.ts`, `src/lib/controlExport.ts`)
+- Regressions-Guardrails in `src/lib/csv.test.ts` und `src/lib/controlExport.test.ts` decken führende Whitespaces, Control-Chars, Unicode-Normalisierung, Formelpräfixe und Export-Linkfilter explizit ab (konsistent zum Doku-Sync aus EH-04/#48).
 
 ### Service-Worker-Betrieb
 

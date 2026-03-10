@@ -54,6 +54,29 @@ describe("toCsv", () => {
     expect(lines[4]).toBe("'=SAFE");
   });
 
+  it("neutralisiert gefaehrliche Praefixe nach fuehrenden Control-Chars und Unicode-Whitespace", () => {
+    const values = [
+      "\u0000=1+1",
+      "\u001B+1+1",
+      "\u001F-1+1",
+      "\u007F@sum(A1:A2)",
+      "\u2007=1+1",
+      "\u00A0|cmd"
+    ];
+
+    const csv = toCsv(
+      values.map((value) => ({ value })),
+      [{ key: "value", header: "value" }],
+      { withBom: false }
+    );
+
+    const lines = csv.split("\r\n").slice(1);
+    expect(lines).toHaveLength(values.length);
+    for (let index = 0; index < values.length; index += 1) {
+      expect(lines[index]).toBe(`'${values[index]}`);
+    }
+  });
+
   it("neutralisiert Tab- und Carriage-Return-Praefixe", () => {
     const csv = toCsv(
       [{ value: "\t=1+1" }, { value: "\r=1+1" }],
