@@ -476,6 +476,58 @@ describe("App orchestration", () => {
     expect(window.location.hash).toBe("#/group/");
   });
 
+  it("rendert Legal-Routen auch während laufendem Boot-Prozess", async () => {
+    const initDeferred = deferred<{ facetOptions: { effortLevel: string[] } }>();
+    const metaDeferred = deferred<CatalogMeta>();
+    mocks.searchClient.init.mockReturnValueOnce(initDeferred.promise);
+    mocks.fetchJsonWithValidation.mockReturnValueOnce(metaDeferred.promise);
+
+    setHash("#/about/license");
+    await mountApp();
+
+    await waitFor(() => Boolean(document.querySelector('[data-testid="source-page"]')));
+    expect(document.body.textContent?.includes("Index wird aufgebaut und geladen")).toBe(false);
+
+    await act(async () => {
+      initDeferred.resolve({ facetOptions: { effortLevel: ["1"] } });
+      metaDeferred.resolve(createMeta());
+      await Promise.resolve();
+    });
+  });
+
+  it("lädt Gruppen-Controls aus der Group-Route mit erwarteten Filtern", async () => {
+    const groupItems = [createSearchItem("APP.1"), createSearchItem("APP.2")];
+    mocks.searchClient.search.mockResolvedValueOnce(createSearchResponse(groupItems));
+
+    setHash("#/group/APP.1");
+    await mountApp();
+
+    await waitFor(() => mocks.searchClient.search.mock.calls.length > 0);
+    expect(textByTestId("group-page-loading")).toBe("false");
+    expect(mocks.searchClient.search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: "",
+        sort: "id-asc",
+        limit: 1200,
+        offset: 0,
+        filters: expect.objectContaining({
+          topGroupId: ["APP"],
+          groupId: ["APP.1"]
+        })
+      })
+    );
+  });
+
+  it("bleibt stabil bei fehlgeschlagener Gruppenladung", async () => {
+    mocks.searchClient.search.mockRejectedValueOnce(new Error("Gruppenladen fehlgeschlagen"));
+
+    setHash("#/group/APP.1");
+    await mountApp();
+
+    await waitFor(() => textByTestId("group-page-loading") === "false");
+    expect(textByTestId("group-page-controls")).toBe("0");
+  });
+
   it("lädt Suchroute mit Control-Detail und navigiert per Back-to-results ohne Control-Parameter", async () => {
     const searchItems = [createSearchItem("APP.1")];
     mocks.searchClient.search.mockResolvedValue(createSearchResponse(searchItems));
@@ -556,5 +608,27 @@ describe("App orchestration", () => {
     expect(document.body.textContent).toContain("Index konnte nicht geladen werden.");
     const details = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Fehlerdetails"]');
     expect(details?.value).toContain("Index konnte nicht geladen werden.");
+  });
+
+  it("kann nach einem Boot-Fehler per Neu-Mount wieder erfolgreich initialisieren", async () => {
+    mocks.searchClient.init.mockRejectedValueOnce(new Error("Index konnte nicht geladen werden."));
+
+    await mountApp();
+    await waitFor(() => document.body.textContent?.includes("Initialisierung fehlgeschlagen") ?? false);
+
+    await unmountApp();
+
+    mocks.searchClient.init.mockResolvedValueOnce({
+      facetOptions: {
+        effortLevel: ["1", "2"]
+      }
+    });
+    mocks.fetchJsonWithValidation.mockResolvedValueOnce(createMeta());
+
+    setHash("#/");
+    await mountApp();
+
+    await waitFor(() => Boolean(document.querySelector('[data-testid="group-overview"]')));
+    expect(document.querySelector('[data-testid="group-overview"]')).not.toBeNull();
   });
 });
