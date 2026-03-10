@@ -3,8 +3,6 @@ export const SECURITY_BUDGETS = {
   maxRemoteJsonBytes: {
     catalogIndex: 3 * 1024 * 1024,
     catalogMeta: 1 * 1024 * 1024,
-    profileLinks: 512 * 1024,
-    catalogRegistry: 256 * 1024,
     detailChunk: 2 * 1024 * 1024
   },
   maxQueryChars: 180,

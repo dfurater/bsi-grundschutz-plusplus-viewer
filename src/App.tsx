@@ -139,7 +139,7 @@ function getInitialTheme(): ThemeMode {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-function getDatasetPaths() {
+function getCatalogAssetPaths() {
   return {
     metaUrl: assetUrl("./data/catalog-meta.json"),
     indexUrl: assetUrl("./data/catalog-index.json"),
@@ -243,7 +243,7 @@ export default function App() {
   }
 
   async function initializeDataset() {
-    const paths = getDatasetPaths();
+    const paths = getCatalogAssetPaths();
 
     setBootState("loading");
     setBootError(null);

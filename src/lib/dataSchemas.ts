@@ -16,8 +16,6 @@ const BuildInfoSchema = z
     buildTimestamp: shortString,
     appVersion: shortString,
     indexVersion: shortString,
-    datasetId: shortString.optional(),
-    datasetLabel: mediumString.optional(),
     catalogFileName: shortString,
     catalogFileSha256: z.string().regex(/^[a-f0-9]{64}$/i),
     catalogFileSizeBytes: z.number().int().nonnegative().max(SECURITY_BUDGETS.maxCatalogFileSizeBytes)

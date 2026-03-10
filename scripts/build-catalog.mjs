@@ -18,7 +18,6 @@ const swTemplatePath = path.join(rootDir, "scripts", "sw.template.js");
 const swOutputPath = path.join(rootDir, "public", "sw.js");
 
 const catalogSource = {
-  id: "anwender",
   label: "Anwenderkatalog",
   sourcePath: path.join(rootDir, "Kataloge", "Grundschutz++-catalog.json")
 };
@@ -56,8 +55,6 @@ async function main() {
     buildTimestamp: new Date().toISOString(),
     appVersion: pkg.version,
     indexVersion: "2",
-    datasetId: catalogSource.id,
-    datasetLabel: catalogSource.label,
     catalogFileName: basename(catalogSource.sourcePath),
     catalogFileSha256: sourceHash,
     catalogFileSizeBytes: sourceSizeBytes
