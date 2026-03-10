@@ -260,6 +260,19 @@ function createMeta(controlCount = 1): CatalogMeta {
   };
 }
 
+function createMetaWithGroups(groups: CatalogMeta["groups"]): CatalogMeta {
+  const base = createMeta(groups.length);
+  return {
+    ...base,
+    stats: {
+      ...base.stats,
+      topGroupCount: new Set(groups.map((group) => group.topGroupId)).size,
+      groupCount: groups.length
+    },
+    groups
+  };
+}
+
 function createSearchItem(id: string, topGroupId = "APP"): SearchResultItem {
   return {
     id,
@@ -353,6 +366,14 @@ let container: HTMLDivElement | null = null;
 function setHash(hash: string) {
   const next = hash.startsWith("#") ? hash : `#${hash}`;
   window.location.hash = next;
+}
+
+async function navigateHash(hash: string) {
+  const next = hash.startsWith("#") ? hash : `#${hash}`;
+  await act(async () => {
+    history.replaceState(null, "", `${window.location.pathname}${window.location.search}${next}`);
+    window.dispatchEvent(new Event("hashchange"));
+  });
 }
 
 async function mountApp() {
@@ -526,6 +547,102 @@ describe("App orchestration", () => {
 
     await waitFor(() => textByTestId("group-page-loading") === "false");
     expect(textByTestId("group-page-controls")).toBe("0");
+  });
+
+  it("ignoriert veraltete Gruppenantworten bei schnellem Gruppenwechsel", async () => {
+    const additionalGroup: CatalogMeta["groups"][number] = {
+      id: "SYS.1",
+      title: "Systeme",
+      altIdentifier: null,
+      label: null,
+      parentGroupId: "SYS",
+      topGroupId: "SYS",
+      pathIds: ["SYS", "SYS.1"],
+      pathTitles: ["SYS", "SYS.1"],
+      depth: 2
+    };
+    mocks.fetchJsonWithValidation.mockResolvedValueOnce(
+      createMetaWithGroups([createMeta().groups[0], additionalGroup])
+    );
+
+    const firstGroupLoad = deferred<SearchResponse>();
+    const secondGroupLoad = deferred<SearchResponse>();
+    mocks.searchClient.search.mockReset();
+    mocks.searchClient.search.mockImplementation((query: { filters?: { groupId?: string[] } }) => {
+      const groupId = query.filters?.groupId?.[0];
+      if (groupId === "APP.1") {
+        return firstGroupLoad.promise;
+      }
+      if (groupId === "SYS.1") {
+        return secondGroupLoad.promise;
+      }
+      return Promise.resolve(createSearchResponse([]));
+    });
+
+    setHash("#/group/APP.1");
+    await mountApp();
+
+    await waitFor(() => mocks.searchClient.search.mock.calls.length >= 1);
+    expect(textByTestId("group-page-loading")).toBe("true");
+
+    await navigateHash("#/group/SYS.1");
+    await waitFor(() =>
+      mocks.searchClient.search.mock.calls.some(
+        (call: Array<{ filters?: { groupId?: string[] } }>) => call[0]?.filters?.groupId?.[0] === "SYS.1"
+      )
+    );
+
+    secondGroupLoad.resolve(createSearchResponse([createSearchItem("SYS.1", "SYS"), createSearchItem("SYS.2", "SYS")]));
+    await waitFor(() => textByTestId("group-page-controls") === "2");
+    expect(textByTestId("group-page-loading")).toBe("false");
+
+    firstGroupLoad.resolve(createSearchResponse([createSearchItem("APP.1", "APP")]));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(textByTestId("group-page-controls")).toBe("2");
+    expect(textByTestId("group-page-loading")).toBe("false");
+  });
+
+  it("invalidiert laufende Gruppenanfragen bei Routenwechsel", async () => {
+    const firstGroupLoad = deferred<SearchResponse>();
+    const secondGroupLoad = deferred<SearchResponse>();
+    let appGroupLoadCount = 0;
+    mocks.searchClient.search.mockReset();
+    mocks.searchClient.search.mockImplementation((query: { filters?: { groupId?: string[] } }) => {
+      const groupId = query.filters?.groupId?.[0];
+      if (groupId === "APP.1") {
+        appGroupLoadCount += 1;
+        return appGroupLoadCount === 1 ? firstGroupLoad.promise : secondGroupLoad.promise;
+      }
+      return Promise.resolve(createSearchResponse([]));
+    });
+
+    setHash("#/group/APP.1");
+    await mountApp();
+
+    await waitFor(() => mocks.searchClient.search.mock.calls.length >= 1);
+    expect(textByTestId("group-page-loading")).toBe("true");
+
+    await navigateHash("#/");
+    await waitFor(() => Boolean(document.querySelector('[data-testid="group-overview"]')));
+
+    await navigateHash("#/group/APP.1");
+    await waitFor(() => appGroupLoadCount >= 2);
+    expect(textByTestId("group-page-loading")).toBe("true");
+
+    firstGroupLoad.resolve(createSearchResponse([createSearchItem("APP.legacy", "APP")]));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(textByTestId("group-page-loading")).toBe("true");
+    expect(textByTestId("group-page-controls")).toBe("0");
+
+    secondGroupLoad.resolve(createSearchResponse([createSearchItem("APP.1", "APP"), createSearchItem("APP.2", "APP")]));
+    await waitFor(() => textByTestId("group-page-loading") === "false");
+    expect(textByTestId("group-page-controls")).toBe("2");
   });
 
   it("lädt Suchroute mit Control-Detail und navigiert per Back-to-results ohne Control-Parameter", async () => {

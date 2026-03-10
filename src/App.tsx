@@ -197,6 +197,7 @@ export default function App() {
   const debouncedSearchText = useDebouncedValue(searchText, 300);
   const requestCounter = useRef(0);
   const graphRequestCounter = useRef(0);
+  const groupRequestCounter = useRef(0);
   const lastSearchStateRef = useRef<{
     query: string;
     sort: SearchQuery["sort"];
@@ -593,16 +594,27 @@ export default function App() {
   }, [bootState, client, pendingSearchResultsFocusQuery, route, searchOverlayOpen]);
 
   useEffect(() => {
-    if (bootState !== "ready" || route.view !== "group" || !meta) {
+    if (bootState !== "ready") {
+      groupRequestCounter.current += 1;
+      setGroupLoading(false);
+      return;
+    }
+
+    if (route.view !== "group" || !meta) {
+      groupRequestCounter.current += 1;
+      setGroupLoading(false);
       return;
     }
 
     const group = meta.groups.find((item) => item.id === route.groupId);
     if (!group) {
+      groupRequestCounter.current += 1;
       setGroupControls([]);
+      setGroupLoading(false);
       return;
     }
 
+    const current = ++groupRequestCounter.current;
     const queryFilters = defaultFilters();
     queryFilters.topGroupId = [group.topGroupId];
     if (group.depth > 1) {
@@ -619,13 +631,21 @@ export default function App() {
         offset: 0
       })
       .then((response) => {
+        if (current !== groupRequestCounter.current) {
+          return;
+        }
         setGroupControls(response.items);
       })
       .catch(() => {
+        if (current !== groupRequestCounter.current) {
+          return;
+        }
         setGroupControls([]);
       })
       .finally(() => {
-        setGroupLoading(false);
+        if (current === groupRequestCounter.current) {
+          setGroupLoading(false);
+        }
       });
   }, [bootState, client, route, meta]);
 
