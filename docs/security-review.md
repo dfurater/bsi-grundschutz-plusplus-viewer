@@ -14,6 +14,12 @@ Es ist kein externes Penetrationstest-Zertifikat und kein Compliance-Nachweis.
 - Fail-closed bei Schema-/Budgetverstößen
 - Größen-/Zeit-/Mengenbudgets (`src/lib/securityBudgets.ts`)
 
+### Scope-bedingte Reduktion der Angriffsfläche
+
+- Single-Catalog-Modell mit festen Build-/Runtime-Pfaden statt freier Dataset-Auswahl.
+- Kein manueller JSON-Upload in der Runtime (kein Upload-UI, kein Upload-State, kein Upload-Worker-Protokoll).
+- Legacy-Mehrkatalog-Artefakte werden im Build aktiv bereinigt.
+
 ### Such- und Routing-Härtung
 
 - Suchtext- und Filter-Sanitizing (`src/lib/searchSafety.ts`)
@@ -50,6 +56,7 @@ Es ist kein externes Penetrationstest-Zertifikat und kein Compliance-Nachweis.
 - GitHub Pages erlaubt keine vollständige, repository-lokale Headersteuerung
 - keine dedizierte SAST-/Lint-Sicherheits-Pipeline in `package.json`
 - TypeScript läuft mit `strict: false`
+- bei künftiger Wiedereinführung von Upload-Funktionen entstünde zusätzlicher Validierungs- und Missbrauchsaufwand
 
 ## 4) Operative Empfehlungen
 

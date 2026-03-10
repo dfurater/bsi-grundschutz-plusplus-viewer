@@ -15,6 +15,7 @@ Die Qualitätssicherung deckt drei Ebenen ab:
   - Datenvalidierung und Sicherheitslogik (`dataSchemas`, `fetchJsonSafe`, `searchSafety`, `csv`, `urlSafety`)
   - Routing-/Worker-Grenzen (`routing`, `searchClient`, `searchWorker`)
   - zentrale UI-Zustandspfade (`App`, Kernkomponenten)
+  - Single-Catalog-Regressionen in Kernkomponenten (u. a. kein Datensatz-Auswahl-UI im Header)
 
 ### Coverage-Gate
 
@@ -30,6 +31,7 @@ Die Qualitätssicherung deckt drei Ebenen ab:
 - E2E-Kernflüsse: `tests/core-flows.spec.ts`
 - A11y-Smoketests: `tests/a11y.spec.ts` (Playwright + Axe)
 - Lighthouse-Konfiguration: `lighthouserc.json`
+- Die Breakpoint-Checks verifizieren explizit, dass kein Inline-Datensatzselector gerendert wird.
 
 ## 3) Release-Hygiene
 
@@ -70,3 +72,4 @@ npm run qa
 - kein dedizierter Last-/Soak-Test für Worker unter extremer Last
 - kein automatisierter Test realer Response-Header des Produktivhostings
 - TypeScript ist nicht in `strict`-Mode
+- kein separater Pattern-Scanner, der beliebige `upload`-Tokens im Quelltext blockiert

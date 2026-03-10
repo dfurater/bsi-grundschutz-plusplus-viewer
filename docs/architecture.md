@@ -9,6 +9,14 @@ Die Anwendung ist eine rein statische Client-Side-React-App (CSR) ohne eigenes B
 - Generierte Runtime-Artefakte: `public/data/**`, `public/sw.js`
 - Hostingziel: statische Hosts (primär GitHub Pages)
 
+## Verbindlicher Runtime-/Artefakt-Vertrag (EH-02/EH-03)
+
+- Single-Catalog: Build-Input ist ausschließlich `Kataloge/Grundschutz++-catalog.json`.
+- Feste Runtime-Pfade: `./data/catalog-meta.json`, `./data/catalog-index.json`, `./data/details`.
+- Kein Dataset-Switching in der UI.
+- Kein manueller JSON-Upload (kein Upload-UI, kein Upload-State, kein Upload-Worker-Protokoll).
+- Build bereinigt Legacy-Ausgaben (`public/data/datasets`, `catalog-registry.json`, `profile-links.json`).
+
 ## Informationsarchitektur und Routing
 
 Hash-Routing ist bewusst gewählt (kein History-Rewrite erforderlich):
@@ -26,6 +34,7 @@ Hash-Routing ist bewusst gewählt (kein History-Rewrite erforderlich):
 ### 1) UI-Orchestrierung (`src/App.tsx`)
 
 - bootstrapped Metadaten + Worker-Index
+- nutzt feste Asset-Pfade statt dynamischer Dataset-Registries
 - hält Routing-/UI-Zustand (Suche, Filter, Sortierung, Selektion)
 - steuert Detail-/Graph-Laden und CSV-Export-Flows
 
@@ -64,9 +73,9 @@ Hash-Routing ist bewusst gewählt (kein History-Rewrite erforderlich):
 
 ### Laufzeit
 
-1. UI lädt `./data/catalog-meta.json`.
+1. UI lädt den Katalog über feste Single-Catalog-Pfade (`./data/catalog-meta.json`).
 2. `SearchClient` initialisiert Worker mit `./data/catalog-index.json` und `./data/details`.
-3. Worker beantwortet `search`/`get-control`/`get-neighborhood`.
+3. Worker beantwortet `search`/`get-control`/`get-neighborhood` und unterstützt `cancel`.
 4. UI rendert Treffer, Detailinformationen, Relationsgraph und CSV-Export.
 
 ## Architekturgrenzen und Nicht-Ziele
@@ -83,3 +92,7 @@ Hash-Routing ist bewusst gewählt (kein History-Rewrite erforderlich):
 - Sicherheitsrelevante Logik (URL-Härtung, CSV-Neutralisierung, Routing-/Query-Sanitizing) in dedizierten Lib-Modulen
 - TypeScript `strict` ist derzeit `false`
 - keine dedizierte Lint-/Format-Pipeline in `package.json`
+
+Siehe auch:
+- `docs/api-and-interfaces.md` (konkrete Schnittstellenverträge)
+- `docs/security-review.md` (Sicherheitsannahmen und Restrisiken)

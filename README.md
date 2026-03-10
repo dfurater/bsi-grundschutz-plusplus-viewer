@@ -22,6 +22,13 @@ Die App macht den Katalog im Browser nutzbar, ohne eigenes Backend:
 - Keine Schreiboperationen gegen externe Systeme
 - Kein Compliance- oder Zertifizierungsversprechen durch die Anwendung selbst
 
+## Verbindlicher Scope (Single-Catalog)
+
+- Die Anwendung verarbeitet genau einen Katalog: `Kataloge/Grundschutz++-catalog.json`.
+- Zur Laufzeit gibt es keine Dataset-Auswahl in der UI.
+- Manueller JSON-Upload ist kein Produktumfang (kein Upload-UI, kein Upload-State, kein Upload-Worker-Protokoll).
+- Legacy-Pfade wie `public/data/datasets` bzw. Registry/Profile werden beim Build aktiv bereinigt.
+
 ## Routing (Hash-basiert)
 
 - `#/`
@@ -65,6 +72,7 @@ Wichtige Hinweise:
 - `npm run build` erzeugt Datenartefakte und den Service Worker neu.
 - `npm run test:unit` führt intern zuerst `npm run build` aus.
 - `public/data/**` und `public/sw.js` sind generierte Artefakte und in Git ignoriert.
+- `npm run build:data` schreibt den Single-Catalog-Vertrag und entfernt Legacy-Artefakte aus früheren Multi-Dataset-Ansätzen.
 
 ## Wichtige Skripte
 
