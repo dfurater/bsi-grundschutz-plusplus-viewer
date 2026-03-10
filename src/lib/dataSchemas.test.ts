@@ -18,12 +18,9 @@ function readJson(relativePath: string) {
 }
 
 function findSampleDetailChunkPath() {
-  const candidates = ["public/data/details", "public/data/datasets/anwender/details"];
-  for (const relativeDir of candidates) {
-    const fullDir = path.join(rootDir, relativeDir);
-    if (!existsSync(fullDir)) {
-      continue;
-    }
+  const relativeDir = "public/data/details";
+  const fullDir = path.join(rootDir, relativeDir);
+  if (existsSync(fullDir)) {
     const firstJson = readdirSync(fullDir).find((entry) => entry.endsWith(".json"));
     if (firstJson) {
       return path.join(relativeDir, firstJson);
