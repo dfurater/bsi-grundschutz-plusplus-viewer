@@ -1,129 +1,28 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AboutPage } from "./components/AboutPage";
+import { AppFooter } from "./components/AppFooter";
 import { AppHeader } from "./components/AppHeader";
 import { ControlDetailPanel } from "./components/ControlDetailPanel";
-import { FacetPanel, type ActiveFilters } from "./components/FacetPanel";
+import { DatenschutzPage } from "./components/DatenschutzPage";
+import { FacetPanel } from "./components/FacetPanel";
 import { FilterSheet } from "./components/FilterSheet";
 import { GroupOverview } from "./components/GroupOverview";
 import { GroupPage } from "./components/GroupPage";
+import { ImpressumPage } from "./components/ImpressumPage";
 import { ResultList } from "./components/ResultList";
 import { SearchOverlay } from "./components/SearchOverlay";
 import { SourcePanel } from "./components/SourcePanel";
 import { StatusToast } from "./components/StatusToast";
-import { AboutPage } from "./components/AboutPage";
-import { ImpressumPage } from "./components/ImpressumPage";
-import { DatenschutzPage } from "./components/DatenschutzPage";
-import { AppFooter } from "./components/AppFooter";
-import { useDebouncedValue } from "./hooks/useDebouncedValue";
+import { navigate } from "./hooks/appFlowUtils";
+import { useAppBoot } from "./hooks/useAppBoot";
+import { useControlDetail } from "./hooks/useControlDetail";
+import { useCsvExport } from "./hooks/useCsvExport";
+import { useGroupPage } from "./hooks/useGroupPage";
 import { useMediaQuery } from "./hooks/useMediaQuery";
-import { CONTROL_EXPORT_COLUMNS, extractControlExportRow } from "./lib/controlExport";
-import { downloadBlob, toCsv } from "./lib/csv";
-import { CatalogMetaSchema } from "./lib/dataSchemas";
-import { fetchJsonWithValidation } from "./lib/fetchJsonSafe";
+import { useRelationGraph } from "./hooks/useRelationGraph";
+import { useSearchFlow } from "./hooks/useSearchFlow";
+import { buildControlHash, buildGroupHash, buildSearchHash, parseHash, type AppRoute } from "./lib/routing";
 import { SearchClient } from "./lib/searchClient";
-import {
-  buildControlHash,
-  buildGroupHash,
-  buildSearchHash,
-  defaultFilters,
-  parseHash,
-  type AppRoute
-} from "./lib/routing";
-import { sanitizeSearchText } from "./lib/searchSafety";
-import { SECURITY_BUDGETS } from "./lib/securityBudgets";
-import type {
-  CatalogMeta,
-  ControlDetail,
-  RelationGraphPayload,
-  SearchQuery,
-  SearchResponse,
-  SearchResultItem
-} from "./types";
-
-const DEFAULT_SEARCH_RESPONSE: SearchResponse = {
-  total: 0,
-  items: [],
-  facets: {
-    topGroupId: [],
-    secLevel: [],
-    effortLevel: [],
-    class: [],
-    modalverbs: [],
-    targetObjects: [],
-    tags: [],
-    relationTypes: []
-  },
-  elapsedMs: 0
-};
-
-type SortBase = "relevance" | "id" | "title" | "effort";
-const BACK_TO_RESULTS_TTL_MS = 30 * 60 * 1000;
-
-function getSortBase(sort: SearchQuery["sort"]): SortBase {
-  if (sort.startsWith("id-")) {
-    return "id";
-  }
-  if (sort.startsWith("title-")) {
-    return "title";
-  }
-  if (sort.startsWith("effort-")) {
-    return "effort";
-  }
-  return "relevance";
-}
-
-function getSortDirection(sort: SearchQuery["sort"]): "asc" | "desc" {
-  return sort.endsWith("-desc") ? "desc" : "asc";
-}
-
-function toSortValue(base: SortBase, direction: "asc" | "desc"): SearchQuery["sort"] {
-  if (base === "id") {
-    return direction === "asc" ? "id-asc" : "id-desc";
-  }
-  if (base === "title") {
-    return direction === "asc" ? "title-asc" : "title-desc";
-  }
-  if (base === "effort") {
-    return direction === "asc" ? "effort-asc" : "effort-desc";
-  }
-  return "relevance";
-}
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message ? error.message : fallback;
-}
-
-function getErrorDetails(error: unknown): string {
-  if (error instanceof Error) {
-    return error.stack || error.message;
-  }
-  return String(error);
-}
-
-function mapRouteFilters(filters: ActiveFilters): SearchQuery["filters"] {
-  return {
-    topGroupId: [...filters.topGroupId],
-    groupId: [...filters.groupId],
-    secLevel: [...filters.secLevel],
-    effortLevel: [...filters.effortLevel],
-    class: [...filters.class],
-    modalverbs: [...filters.modalverbs],
-    targetObjects: [...filters.targetObjects],
-    tags: [...filters.tags],
-    relationTypes: [...filters.relationTypes]
-  };
-}
-
-function navigate(hash: string) {
-  if (window.location.hash === hash.replace(/^#/, "#")) {
-    return;
-  }
-  window.location.hash = hash;
-}
-
-function assetUrl(relativePath: string) {
-  const hrefWithoutHash = window.location.href.split("#")[0];
-  return new URL(relativePath, hrefWithoutHash).toString();
-}
 
 type ThemeMode = "light" | "dark";
 
@@ -139,157 +38,77 @@ function getInitialTheme(): ThemeMode {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-function getCatalogAssetPaths() {
-  return {
-    metaUrl: assetUrl("./data/catalog-meta.json"),
-    indexUrl: assetUrl("./data/catalog-index.json"),
-    detailsUrl: assetUrl("./data/details")
-  };
-}
-
 export default function App() {
   const client = useMemo(() => new SearchClient(), []);
   const isTabletUp = useMediaQuery("(min-width: 768px)");
   const isWideDesktop = useMediaQuery("(min-width: 1280px)");
   const [route, setRoute] = useState<AppRoute>(() => parseHash(window.location.hash));
-  const [meta, setMeta] = useState<CatalogMeta | null>(null);
-  const [bootState, setBootState] = useState<"loading" | "ready" | "error">("loading");
-  const [bootError, setBootError] = useState<string | null>(null);
-  const [bootErrorDetails, setBootErrorDetails] = useState<string | null>(null);
-  const [bootProgress, setBootProgress] = useState(0);
-  const [bootStatusText, setBootStatusText] = useState("Index wird aufgebaut und geladen…");
-
-  const [searchText, setSearchText] = useState("");
-  const [searchOverlayText, setSearchOverlayText] = useState("");
-  const [searchInputDirty, setSearchInputDirty] = useState(false);
-  const [sort, setSort] = useState<SearchQuery["sort"]>("relevance");
-  const [effortSortEnabled, setEffortSortEnabled] = useState(true);
-  const [filters, setFilters] = useState<ActiveFilters>(defaultFilters());
-
-  const [searchResponse, setSearchResponse] = useState<SearchResponse>(DEFAULT_SEARCH_RESPONSE);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-
-  const [detail, setDetail] = useState<ControlDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState<string | null>(null);
-  const [graphData, setGraphData] = useState<RelationGraphPayload | null>(null);
-  const [graphLoading, setGraphLoading] = useState(false);
-  const [graphError, setGraphError] = useState<string | null>(null);
-  const [graphHops, setGraphHops] = useState<1 | 2>(1);
-  const [graphFilter, setGraphFilter] = useState<"all" | "required" | "related">("all");
-
-  const [groupControls, setGroupControls] = useState<SearchResultItem[]>([]);
-  const [groupLoading, setGroupLoading] = useState(false);
-  const [selectedControlTopGroups, setSelectedControlTopGroups] = useState<Record<string, string>>({});
-  const [exportCsvMessage, setExportCsvMessage] = useState<string | null>(null);
-  const [exportCsvRunning, setExportCsvRunning] = useState(false);
-  const [selectAllRunningScope, setSelectAllRunningScope] = useState<"home" | "group" | "search" | null>(null);
 
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
   const [headerShrunk, setHeaderShrunk] = useState(false);
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
-  const [pendingSearchResultsFocusQuery, setPendingSearchResultsFocusQuery] = useState<string | null>(null);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [toastTone, setToastTone] = useState<"info" | "success" | "error">("info");
 
-  const debouncedSearchText = useDebouncedValue(searchText, 300);
-  const requestCounter = useRef(0);
-  const graphRequestCounter = useRef(0);
-  const groupRequestCounter = useRef(0);
-  const lastSearchStateRef = useRef<{
-    query: string;
-    sort: SearchQuery["sort"];
-    filters: ActiveFilters;
-    timestamp: number;
-  } | null>(null);
-
-  function replaceHash(hash: string) {
+  const replaceHash = useCallback((hash: string) => {
     const normalized = hash.replace(/^#/, "#");
     if (window.location.hash === normalized) {
       return;
     }
     history.replaceState(null, "", `${window.location.pathname}${window.location.search}${normalized}`);
     setRoute(parseHash(window.location.hash));
-  }
+  }, []);
 
-  function focusSearchResultsArea() {
-    const focusTarget = document.querySelector<HTMLElement>(
-      '[data-search-results-focus="results"], [data-search-results-focus="status"]'
-    );
-    focusTarget?.focus();
-  }
+  const { meta, bootState, bootError, bootErrorDetails, bootProgress, bootStatusText, effortSortEnabled } = useAppBoot(client);
 
-  function scheduleSearchResultsFocus() {
-    let attempt = 0;
+  const controlDetail = useControlDetail({
+    client,
+    bootState,
+    route
+  });
 
-    function run() {
-      focusSearchResultsArea();
-      if (attempt >= 8) {
-        setPendingSearchResultsFocusQuery(null);
-        return;
-      }
-      attempt += 1;
-      window.setTimeout(run, 40);
+  const relationGraph = useRelationGraph({
+    client,
+    detailId: controlDetail.detail?.id ?? null
+  });
+
+  const clearDetailAndGraph = useCallback(() => {
+    controlDetail.clearDetail();
+    relationGraph.clearGraph();
+  }, [controlDetail.clearDetail, relationGraph.clearGraph]);
+
+  const searchFlow = useSearchFlow({
+    client,
+    bootState,
+    route,
+    effortSortEnabled,
+    searchOverlayOpen,
+    navigate,
+    replaceHash,
+    onLoadControl: controlDetail.loadControl,
+    onClearDetailAndGraph: clearDetailAndGraph
+  });
+
+  const groupPage = useGroupPage({
+    client,
+    bootState,
+    route,
+    meta
+  });
+
+  const csvExport = useCsvExport({
+    client,
+    meta,
+    bootState,
+    route,
+    resolveTopGroupId: controlDetail.resolveTopGroupId
+  });
+
+  useEffect(() => {
+    if (route.view === "search" || route.view === "control") {
+      return;
     }
-
-    run();
-  }
-
-  function clearPendingSearchResultsFocus() {
-    if (pendingSearchResultsFocusQuery !== null) {
-      setPendingSearchResultsFocusQuery(null);
-    }
-  }
-
-  async function initializeDataset() {
-    const paths = getCatalogAssetPaths();
-
-    setBootState("loading");
-    setBootError(null);
-    setBootErrorDetails(null);
-    setBootProgress(8);
-    setBootStatusText("Katalog wird vorbereitet…");
-
-    const initPromise = client.init(paths.indexUrl, paths.detailsUrl);
-    setBootProgress(24);
-    setBootStatusText("Suchindex wird geladen…");
-
-    const metaPromise = fetchJsonWithValidation({
-      url: paths.metaUrl,
-      label: "Datensatz-Metadaten",
-      schema: CatalogMetaSchema,
-      maxBytes: SECURITY_BUDGETS.maxRemoteJsonBytes.catalogMeta
-    });
-
-    setBootProgress(52);
-    setBootStatusText("Metadaten werden gelesen…");
-
-    const [initPayload, metaPayload] = (await Promise.all([initPromise, metaPromise])) as [
-      { facetOptions: { effortLevel?: unknown[] } },
-      CatalogMeta
-    ];
-    setBootProgress(76);
-    setBootStatusText("Suche wird initialisiert…");
-    setBootProgress(92);
-    setBootStatusText("Oberfläche wird aufgebaut…");
-    setMeta(metaPayload);
-    setEffortSortEnabled(Array.isArray(initPayload?.facetOptions?.effortLevel) && initPayload.facetOptions.effortLevel.length > 0);
-    setSearchResponse(DEFAULT_SEARCH_RESPONSE);
-    setSearchError(null);
-    setDetail(null);
-    setDetailError(null);
-    setGraphData(null);
-    setGraphError(null);
-    setGroupControls([]);
-    setSelectedControlTopGroups({});
-    setExportCsvMessage(null);
-    setSelectAllRunningScope(null);
-    setBootProgress(100);
-    setBootStatusText("Fertig");
-    setBootState("ready");
-  }
+    clearDetailAndGraph();
+  }, [route.view, clearDetailAndGraph]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -322,18 +141,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!toastMessage) {
-      return;
-    }
-    const timeout = window.setTimeout(() => {
-      setToastMessage(null);
-    }, 3200);
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [toastMessage]);
-
-  useEffect(() => {
     const onHash = () => {
       setRoute(parseHash(window.location.hash));
       setFilterSheetOpen(false);
@@ -362,723 +169,62 @@ export default function App() {
     };
   }, [filterSheetOpen, isWideDesktop, route.view, route.view === "search" ? route.controlId : null, searchOverlayOpen]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function boot() {
-      try {
-        setBootState("loading");
-        setBootError(null);
-        setBootErrorDetails(null);
-        setBootProgress(4);
-        setBootStatusText("Katalogdaten werden geladen…");
-
-        if (cancelled) {
-          return;
-        }
-
-        await initializeDataset();
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-        setBootState("error");
-        setBootError(getErrorMessage(error, "Initialisierung fehlgeschlagen."));
-        setBootErrorDetails(getErrorDetails(error));
-      }
-    }
-
-    boot();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [client]);
-
-  useEffect(() => {
-    if (route.view !== "search") {
-      return;
-    }
-
-    lastSearchStateRef.current = {
-      query: route.query,
-      sort: route.sort,
-      filters: mapRouteFilters(route.filters),
-      timestamp: Date.now()
-    };
-    setSearchText(route.query);
-    setSearchInputDirty(false);
-    setSort(route.sort);
-    setFilters(route.filters);
-  }, [route]);
-
-  useEffect(() => {
-    if (bootState !== "ready") {
-      return;
-    }
-    if (!searchInputDirty) {
-      return;
-    }
-
-    /* REQ: Clarification Pack §5 (Debounce immer aktiv, Enter bypass) */
-    const safeQuery = sanitizeSearchText(debouncedSearchText);
-
-    if (route.view === "search") {
-      if (route.query === safeQuery && !route.controlId) {
+  const handleRelationClick = useCallback(
+    async (controlId: string) => {
+      const topGroupId = await controlDetail.resolveTopGroupId(controlId);
+      if (route.view === "search") {
+        navigate(buildSearchHash(searchFlow.searchText, searchFlow.sort, searchFlow.filters, controlId, topGroupId));
         return;
       }
-      replaceHash(buildSearchHash(safeQuery, sort, filters, null, null));
-      return;
-    }
-
-    if (!safeQuery) {
-      return;
-    }
-
-    navigate(buildSearchHash(safeQuery, sort, filters, null, null));
-  }, [
-    bootState,
-    debouncedSearchText,
-    filters,
-    route.view,
-    searchInputDirty,
-    sort,
-    route.view === "search" ? route.query : "",
-    route.view === "search" ? route.controlId : null
-  ]);
-
-  useEffect(() => {
-    if (effortSortEnabled) {
-      return;
-    }
-    if (getSortBase(sort) !== "effort") {
-      return;
-    }
-
-    const fallbackSort: SearchQuery["sort"] = "relevance";
-    setSort(fallbackSort);
-
-    if (route.view === "search") {
-      navigate(buildSearchHash(searchText, fallbackSort, filters, route.controlId, route.controlTopGroupId));
-    } else {
-      navigate(buildSearchHash(searchText, fallbackSort, filters, null, null));
-    }
-  }, [
-    effortSortEnabled,
-    filters,
-    route.view,
-    searchText,
-    sort,
-    route.view === "search" ? route.controlId : null,
-    route.view === "search" ? route.controlTopGroupId : null
-  ]);
-
-  async function resolveTopGroupId(controlId: string): Promise<string | null> {
-    const response = await client.search({
-      text: controlId,
-      sort: "relevance",
-      filters: defaultFilters(),
-      limit: 8,
-      offset: 0
-    });
-
-    const exact = response.items.find((item) => item.id.toLowerCase() === controlId.toLowerCase());
-    return exact?.topGroupId ?? response.items[0]?.topGroupId ?? null;
-  }
-
-  async function loadControl(controlId: string, topGroupId: string | null) {
-    setDetailLoading(true);
-    setDetailError(null);
-
-    try {
-      const resolvedTopGroupId = topGroupId ?? (await resolveTopGroupId(controlId));
-      if (!resolvedTopGroupId) {
-        throw new Error(`Top-Gruppe für ${controlId} konnte nicht bestimmt werden.`);
-      }
-
-      const payload = await client.getControl(controlId, resolvedTopGroupId);
-      setDetail(payload);
-      setGraphError(null);
-    } catch (error) {
-      setDetail(null);
-      setDetailError(error instanceof Error ? error.message : "Control konnte nicht geladen werden.");
-      setGraphData(null);
-    } finally {
-      setDetailLoading(false);
-    }
-  }
-
-  async function loadGraph(controlId: string, hops: 1 | 2) {
-    const current = ++graphRequestCounter.current;
-    setGraphLoading(true);
-    setGraphError(null);
-
-    try {
-      const payload = await client.getNeighborhood(controlId, hops);
-      if (current !== graphRequestCounter.current) {
-        return;
-      }
-      setGraphData(payload);
-    } catch (error) {
-      if (current !== graphRequestCounter.current) {
-        return;
-      }
-      setGraphData(null);
-      setGraphError(error instanceof Error ? error.message : "Graph konnte nicht geladen werden.");
-    } finally {
-      if (current === graphRequestCounter.current) {
-        setGraphLoading(false);
-      }
-    }
-  }
-
-  useEffect(() => {
-    if (bootState !== "ready") {
-      return;
-    }
-
-    if (route.view !== "search") {
-      if (route.view !== "control") {
-        setDetail(null);
-        setGraphData(null);
-      }
-      setPendingSearchResultsFocusQuery(null);
-      return;
-    }
-
-    const current = ++requestCounter.current;
-    const shouldFocusAfterSearch =
-      pendingSearchResultsFocusQuery !== null && pendingSearchResultsFocusQuery === route.query && !searchOverlayOpen;
-    setSearchLoading(true);
-    setSearchError(null);
-
-    client
-      .search({
-        text: sanitizeSearchText(route.query),
-        sort: route.sort,
-        filters: mapRouteFilters(route.filters),
-        limit: 400,
-        offset: 0
-      })
-      .then((response) => {
-        if (current !== requestCounter.current) {
-          return;
-        }
-
-        setSearchResponse(response);
-
-        if (route.controlId) {
-          return loadControl(route.controlId, route.controlTopGroupId);
-        }
-
-        setDetail(null);
-        setGraphData(null);
-      })
-      .catch((error) => {
-        if (current !== requestCounter.current) {
-          return;
-        }
-        setSearchResponse(DEFAULT_SEARCH_RESPONSE);
-        setSearchError(error instanceof Error ? error.message : "Suche fehlgeschlagen.");
-      })
-      .finally(() => {
-        if (current === requestCounter.current) {
-          setSearchLoading(false);
-          if (shouldFocusAfterSearch) {
-            window.requestAnimationFrame(() => {
-              scheduleSearchResultsFocus();
-            });
-          }
-        }
-      });
-  }, [bootState, client, pendingSearchResultsFocusQuery, route, searchOverlayOpen]);
-
-  useEffect(() => {
-    if (bootState !== "ready") {
-      groupRequestCounter.current += 1;
-      setGroupLoading(false);
-      return;
-    }
-
-    if (route.view !== "group" || !meta) {
-      groupRequestCounter.current += 1;
-      setGroupLoading(false);
-      return;
-    }
-
-    const group = meta.groups.find((item) => item.id === route.groupId);
-    if (!group) {
-      groupRequestCounter.current += 1;
-      setGroupControls([]);
-      setGroupLoading(false);
-      return;
-    }
-
-    const current = ++groupRequestCounter.current;
-    const queryFilters = defaultFilters();
-    queryFilters.topGroupId = [group.topGroupId];
-    if (group.depth > 1) {
-      queryFilters.groupId = [group.id];
-    }
-
-    setGroupLoading(true);
-    client
-      .search({
-        text: "",
-        sort: "id-asc",
-        filters: queryFilters,
-        limit: 1200,
-        offset: 0
-      })
-      .then((response) => {
-        if (current !== groupRequestCounter.current) {
-          return;
-        }
-        setGroupControls(response.items);
-      })
-      .catch(() => {
-        if (current !== groupRequestCounter.current) {
-          return;
-        }
-        setGroupControls([]);
-      })
-      .finally(() => {
-        if (current === groupRequestCounter.current) {
-          setGroupLoading(false);
-        }
-      });
-  }, [bootState, client, route, meta]);
-
-  useEffect(() => {
-    if (bootState !== "ready" || route.view !== "control") {
-      return;
-    }
-    loadControl(route.controlId, route.topGroupId);
-  }, [bootState, route]);
-
-  useEffect(() => {
-    if (!detail) {
-      setGraphData(null);
-      return;
-    }
-    loadGraph(detail.id, graphHops);
-  }, [detail?.id, graphHops]);
-
-  function handleToggleControlSelection(item: SearchResultItem, selected: boolean) {
-    setSelectedControlTopGroups((prev) => {
-      if (selected) {
-        if (prev[item.id] === item.topGroupId) {
-          return prev;
-        }
-        return {
-          ...prev,
-          [item.id]: item.topGroupId
-        };
-      }
-
-      if (!prev[item.id]) {
-        return prev;
-      }
-      const next = { ...prev };
-      delete next[item.id];
-      return next;
-    });
-  }
-
-  async function fetchAllMatchingControls(baseQuery: Omit<SearchQuery, "limit" | "offset">): Promise<SearchResultItem[]> {
-    const limit = 1200;
-    let offset = 0;
-    let total = Number.POSITIVE_INFINITY;
-    const byId = new Map<string, SearchResultItem>();
-
-    while (offset < total && offset < SECURITY_BUDGETS.maxControlCount) {
-      const response = await client.search({
-        ...baseQuery,
-        limit,
-        offset
-      });
-
-      total = response.total;
-      for (const item of response.items) {
-        byId.set(item.id, item);
-      }
-
-      if (!response.items.length) {
-        break;
-      }
-      offset += response.items.length;
-    }
-
-    return Array.from(byId.values());
-  }
-
-  function toggleSelectionForItems(items: SearchResultItem[]): "selected" | "deselected" | "none" {
-    if (!items.length) {
-      return "none";
-    }
-
-    const allAlreadySelected = items.every((item) => selectedControlIds.has(item.id));
-    setSelectedControlTopGroups((prev) => {
-      const next = { ...prev };
-      if (allAlreadySelected) {
-        for (const item of items) {
-          delete next[item.id];
-        }
-        return next;
-      }
-
-      for (const item of items) {
-        next[item.id] = item.topGroupId;
-      }
-      return next;
-    });
-
-    return allAlreadySelected ? "deselected" : "selected";
-  }
-
-  async function handleSelectAllHomeControls() {
-    if (selectAllRunningScope || bootState !== "ready") {
-      return;
-    }
-    setSelectAllRunningScope("home");
-    try {
-      const items = await fetchAllMatchingControls({
-        text: "",
-        sort: "id-asc",
-        filters: defaultFilters()
-      });
-      const action = toggleSelectionForItems(items);
-      if (action === "none") {
-        setExportCsvMessage("Keine Controls gefunden.");
-      } else if (action === "selected") {
-        setExportCsvMessage(`${items.length} Controls zur CSV-Auswahl hinzugefuegt.`);
-      } else {
-        setExportCsvMessage(`${items.length} Controls aus der CSV-Auswahl entfernt.`);
-      }
-    } catch (error) {
-      setExportCsvMessage(getErrorMessage(error, "Alles auswählen fehlgeschlagen."));
-    } finally {
-      setSelectAllRunningScope(null);
-    }
-  }
-
-  async function handleSelectAllGroupControls() {
-    if (selectAllRunningScope || route.view !== "group" || !meta) {
-      return;
-    }
-
-    const group = meta.groups.find((item) => item.id === route.groupId);
-    if (!group) {
-      return;
-    }
-
-    const queryFilters = defaultFilters();
-    queryFilters.topGroupId = [group.topGroupId];
-    if (group.depth > 1) {
-      queryFilters.groupId = [group.id];
-    }
-
-    setSelectAllRunningScope("group");
-    try {
-      const items = await fetchAllMatchingControls({
-        text: "",
-        sort: "id-asc",
-        filters: queryFilters
-      });
-      const action = toggleSelectionForItems(items);
-      if (action === "none") {
-        setExportCsvMessage("Keine Gruppen-Controls gefunden.");
-      } else if (action === "selected") {
-        setExportCsvMessage(`${items.length} Gruppen-Controls zur CSV-Auswahl hinzugefuegt.`);
-      } else {
-        setExportCsvMessage(`${items.length} Gruppen-Controls aus der CSV-Auswahl entfernt.`);
-      }
-    } catch (error) {
-      setExportCsvMessage(getErrorMessage(error, "Alles auswählen in Gruppe fehlgeschlagen."));
-    } finally {
-      setSelectAllRunningScope(null);
-    }
-  }
-
-  async function handleSelectAllSearchControls() {
-    if (selectAllRunningScope || route.view !== "search") {
-      return;
-    }
-
-    setSelectAllRunningScope("search");
-    try {
-      const items = await fetchAllMatchingControls({
-        text: sanitizeSearchText(route.query),
-        sort: route.sort,
-        filters: mapRouteFilters(route.filters)
-      });
-      const action = toggleSelectionForItems(items);
-      if (action === "none") {
-        setExportCsvMessage("Keine Suchtreffer gefunden.");
-      } else if (action === "selected") {
-        setExportCsvMessage(`${items.length} Suchtreffer zur CSV-Auswahl hinzugefuegt.`);
-      } else {
-        setExportCsvMessage(`${items.length} Suchtreffer aus der CSV-Auswahl entfernt.`);
-      }
-    } catch (error) {
-      setExportCsvMessage(getErrorMessage(error, "Alles auswählen in Suche fehlgeschlagen."));
-    } finally {
-      setSelectAllRunningScope(null);
-    }
-  }
-
-  async function handleExportCsv() {
-    if (!meta || exportCsvRunning) {
-      return;
-    }
-    const selectedEntries = Object.entries(selectedControlTopGroups);
-    if (selectedEntries.length === 0) {
-      return;
-    }
-
-    setExportCsvRunning(true);
-    setExportCsvMessage(null);
-    try {
-      const rows = [];
-      for (let index = 0; index < selectedEntries.length; index += 1) {
-        const [controlId, knownTopGroupId] = selectedEntries[index];
-        const resolvedTopGroupId = knownTopGroupId || (await resolveTopGroupId(controlId));
-        if (!resolvedTopGroupId) {
-          throw new Error(`Top-Gruppe für ${controlId} konnte nicht aufgelöst werden.`);
-        }
-
-        const detailPayload = await client.getControl(controlId, resolvedTopGroupId);
-        rows.push(
-          extractControlExportRow(detailPayload, {
-            sourceVersion: meta.version,
-            sourceLastModified: meta.lastModified
-          })
-        );
-
-        if (index > 0 && index % 25 === 0) {
-          await new Promise<void>((resolve) => {
-            setTimeout(resolve, 0);
-          });
-        }
-      }
-
-      const csvText = toCsv(rows, CONTROL_EXPORT_COLUMNS, {
-        delimiter: ";",
-        lineEnding: "\r\n",
-        withBom: true
-      });
-      const now = new Date().toISOString().slice(0, 10);
-      const filename = `grundschutz-controls_${now}_${rows.length}.csv`;
-      const csvBlob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
-      downloadBlob(filename, csvBlob);
-      setSelectedControlTopGroups({});
-      setExportCsvMessage(`CSV erfolgreich exportiert (${rows.length} Controls).`);
-      setToastTone("success");
-      setToastMessage(`CSV erfolgreich exportiert (${rows.length}).`);
-    } catch (error) {
-      setExportCsvMessage(getErrorMessage(error, "CSV-Export fehlgeschlagen."));
-      setToastTone("error");
-      setToastMessage("CSV-Export fehlgeschlagen.");
-    } finally {
-      setExportCsvRunning(false);
-    }
-  }
-
-  useEffect(() => {
-    if (!exportCsvMessage) {
-      return;
-    }
-    const timeout = window.setTimeout(() => {
-      setExportCsvMessage(null);
-    }, 4800);
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [exportCsvMessage]);
-
-  function handleSubmitSearch(valueOverride?: string) {
-    /* REQ: US-02, PD-04 */
-    const nextSearch = sanitizeSearchText(
-      typeof valueOverride === "string" ? valueOverride : searchOverlayText || searchText
-    );
-    const nextHash = buildSearchHash(nextSearch, sort, filters, null, null);
-    const hashWillChange = window.location.hash !== nextHash.replace(/^#/, "#");
-
-    setSearchText(nextSearch);
-    setSearchOverlayText("");
-    setSearchInputDirty(false);
-    setPendingSearchResultsFocusQuery(hashWillChange ? nextSearch : null);
-    navigate(nextHash);
-    setSearchOverlayOpen(false);
-
-    if (!hashWillChange) {
-      window.requestAnimationFrame(() => {
-        scheduleSearchResultsFocus();
-      });
-    }
-  }
-
-  function handleClearSearch() {
-    setSearchText("");
-    setSearchOverlayText("");
-    setSearchInputDirty(false);
-    clearPendingSearchResultsFocus();
-    const nextFilters = route.view === "search" ? filters : defaultFilters();
-    replaceHash(buildSearchHash("", sort, nextFilters, null, null));
-  }
-
-  function handleSearchTextChange(nextValue: string) {
-    setSearchInputDirty(true);
-    setSearchOverlayText(nextValue);
-    setSearchText(nextValue);
-  }
-
-  function toggleFilter(key: keyof ActiveFilters, value: string) {
-    const nextFilters: ActiveFilters = {
-      ...filters,
-      [key]: filters[key].includes(value) ? filters[key].filter((item) => item !== value) : [...filters[key], value]
-    };
-    setFilters(nextFilters);
-    navigate(buildSearchHash(searchText, sort, nextFilters, null, null));
-  }
-
-  function handleSortBaseChange(base: SortBase) {
-    if (base === "effort" && !effortSortEnabled) {
-      return;
-    }
-    const nextSort = base === "relevance" ? "relevance" : toSortValue(base, "asc");
-    handleSortChange(nextSort);
-  }
-
-  function handleSortDirectionToggle() {
-    const base = getSortBase(sort);
-    if (base === "relevance") {
-      return;
-    }
-    const currentDirection = getSortDirection(sort);
-    const nextSort = toSortValue(base, currentDirection === "asc" ? "desc" : "asc");
-    handleSortChange(nextSort);
-  }
-
-  function handleSortChange(nextSort: SearchQuery["sort"]) {
-    setSort(nextSort);
-    navigate(buildSearchHash(searchText, nextSort, filters, null, null));
-  }
-
-  function handlePropertyFilterClick(facet: "secLevel" | "effortLevel" | "tags", value: string) {
-    const normalizedValue = value.trim();
-    if (!normalizedValue) {
-      return;
-    }
-
-    const baseFilters = route.view === "search" ? filters : defaultFilters();
-    const baseSort = route.view === "search" ? sort : "relevance";
-    const baseText = route.view === "search" ? searchText : "";
-
-    const alreadyPresent = baseFilters[facet].some(
-      (entry) => entry.toLocaleLowerCase("de-DE") === normalizedValue.toLocaleLowerCase("de-DE")
-    );
-
-    const nextFilters: ActiveFilters = {
-      ...baseFilters,
-      [facet]: alreadyPresent ? [...baseFilters[facet]] : [...baseFilters[facet], normalizedValue]
-    };
-
-    setFilters(nextFilters);
-    setSort(baseSort);
-    setSearchText(baseText);
-    setSearchInputDirty(false);
-    navigate(buildSearchHash(baseText, baseSort, nextFilters, null, null));
-  }
-
-  function handleSelectResult(item: SearchResultItem) {
-    if (route.view === "search") {
-      navigate(buildSearchHash(searchText, sort, filters, item.id, item.topGroupId));
-      return;
-    }
-    navigate(buildControlHash(item.id, item.topGroupId));
-  }
-
-  async function handleRelationClick(controlId: string) {
-    const topGroupId = await resolveTopGroupId(controlId);
-    if (route.view === "search") {
-      navigate(buildSearchHash(searchText, sort, filters, controlId, topGroupId));
-      return;
-    }
-    navigate(buildControlHash(controlId, topGroupId));
-  }
-
-  function handleBreadcrumbGroupClick(groupId: string) {
+      navigate(buildControlHash(controlId, topGroupId));
+    },
+    [controlDetail.resolveTopGroupId, route.view, searchFlow.searchText, searchFlow.sort, searchFlow.filters]
+  );
+
+  const handleBreadcrumbGroupClick = useCallback((groupId: string) => {
     navigate(buildGroupHash(groupId));
-  }
+  }, []);
 
-  function handleBreadcrumbControlClick(controlId: string) {
-    handleRelationClick(controlId);
-  }
-
-  function getRecentSearchState() {
-    const last = lastSearchStateRef.current;
-    if (!last) {
-      return null;
-    }
-    if (Date.now() - last.timestamp > BACK_TO_RESULTS_TTL_MS) {
-      return null;
-    }
-    return last;
-  }
-
-  function handleBackToResults() {
-    if (route.view === "search") {
-      navigate(buildSearchHash(searchText, sort, filters, null, null));
-      return;
-    }
-
-    const fallbackState = getRecentSearchState();
-    if (fallbackState) {
-      setSearchText(fallbackState.query);
-      setSort(fallbackState.sort);
-      setFilters(fallbackState.filters);
-      setSearchInputDirty(false);
-      navigate(buildSearchHash(fallbackState.query, fallbackState.sort, fallbackState.filters, null, null));
-      return;
-    }
-
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      navigate("#/");
-    }
-  }
+  const handleBreadcrumbControlClick = useCallback(
+    (controlId: string) => {
+      void handleRelationClick(controlId);
+    },
+    [handleRelationClick]
+  );
 
   const selectedControlId =
-    route.view === "search" ? route.controlId : route.view === "control" ? route.controlId : detail?.id ?? null;
-  const selectedControlIds = useMemo(() => new Set(Object.keys(selectedControlTopGroups)), [selectedControlTopGroups]);
-  const selectedControlCount = selectedControlIds.size;
-
-  const currentGroup =
-    route.view === "group" && meta ? meta.groups.find((group) => group.id === route.groupId) ?? null : null;
-  const currentSubgroups =
-    route.view === "group" && meta && currentGroup
-      ? meta.groups.filter((group) => group.parentGroupId === currentGroup.id)
-      : [];
+    route.view === "search" ? route.controlId : route.view === "control" ? route.controlId : controlDetail.detail?.id ?? null;
 
   const isLegalRoute = route.view === "impressum" || route.view === "datenschutz" || route.view === "source";
-  const homeAllControlsSelected = Boolean(
-    meta && meta.stats.controlCount > 0 && selectedControlCount === meta.stats.controlCount
-  );
-  const groupAllControlsSelected = Boolean(
-    currentGroup && groupControls.length > 0 && groupControls.every((item) => selectedControlIds.has(item.id))
-  );
-  const searchAllControlsSelected = Boolean(
+  const homeAllControlsSelected =
+    Boolean(meta && meta.stats.controlCount > 0) && csvExport.selectedControlCount === (meta?.stats.controlCount ?? 0);
+  const groupAllControlsSelected =
+    Boolean(groupPage.currentGroup) &&
+    groupPage.groupControls.length > 0 &&
+    groupPage.groupControls.every((item) => csvExport.selectedControlIds.has(item.id));
+  const searchAllControlsSelected =
     route.view === "search" &&
-      searchResponse.items.length > 0 &&
-      searchResponse.items.every((item) => selectedControlIds.has(item.id))
-  );
-  const hasActiveFilters = Object.values(filters).some((entries) => entries.length > 0);
-  const sortBase = getSortBase(sort);
-  const sortDirection = getSortDirection(sort);
-  const hasRecentSearchState = Boolean(getRecentSearchState());
-  const showBackToResults = route.view === "search" ? Boolean(route.controlId) : route.view === "control" && hasRecentSearchState;
+    searchFlow.searchResponse.items.length > 0 &&
+    searchFlow.searchResponse.items.every((item) => csvExport.selectedControlIds.has(item.id));
+
+  const detailPanelProps = {
+    detail: controlDetail.detail,
+    loading: controlDetail.detailLoading,
+    error: controlDetail.detailError,
+    graphData: relationGraph.graphData,
+    graphLoading: relationGraph.graphLoading,
+    graphError: relationGraph.graphError,
+    graphHops: relationGraph.graphHops,
+    graphFilter: relationGraph.graphFilter,
+    onGraphHopsChange: relationGraph.setGraphHops,
+    onGraphFilterChange: relationGraph.setGraphFilter,
+    onRelationClick: handleRelationClick,
+    onPropertyFilterClick: searchFlow.handlePropertyFilterClick,
+    onBreadcrumbGroupClick: handleBreadcrumbGroupClick,
+    onBreadcrumbControlClick: handleBreadcrumbControlClick,
+    onBackToResults: searchFlow.showBackToResults ? searchFlow.handleBackToResults : null,
+    expandAllByDefault: true
+  };
 
   if (bootState === "loading" && !meta && !isLegalRoute) {
     const progress = Math.min(100, Math.max(4, Math.round(bootProgress)));
@@ -1141,10 +287,10 @@ export default function App() {
         isShrunk={headerShrunk}
         searchOverlayOpen={searchOverlayOpen}
         theme={theme}
-        selectedControlCount={selectedControlCount}
-        exportingCsv={exportCsvRunning}
+        selectedControlCount={csvExport.selectedControlCount}
+        exportingCsv={csvExport.exportCsvRunning}
         onOpenSearchOverlay={() => setSearchOverlayOpen(true)}
-        onExportCsv={handleExportCsv}
+        onExportCsv={csvExport.handleExportCsv}
         onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         onGoHome={() => navigate("#/")}
         onGoBack={() => {
@@ -1159,23 +305,29 @@ export default function App() {
 
       <SearchOverlay
         open={searchOverlayOpen}
-        value={searchOverlayText}
-        onChange={handleSearchTextChange}
-        onClear={handleClearSearch}
-        onSubmit={handleSubmitSearch}
+        value={searchFlow.searchOverlayText}
+        onChange={searchFlow.handleSearchTextChange}
+        onClear={searchFlow.handleClearSearch}
+        onSubmit={(value) => {
+          searchFlow.handleSubmitSearch(value);
+          setSearchOverlayOpen(false);
+        }}
         onClose={() => setSearchOverlayOpen(false)}
       />
 
-      <StatusToast message={toastMessage ?? exportCsvMessage} tone={toastMessage ? toastTone : "info"} />
+      <StatusToast
+        message={csvExport.toastMessage ?? csvExport.exportCsvMessage}
+        tone={csvExport.toastMessage ? csvExport.toastTone : "info"}
+      />
 
       <div id="main-content" className="app-main-content">
         {route.view === "home" ? (
           <GroupOverview
             meta={meta}
             onOpenGroup={(groupId) => navigate(buildGroupHash(groupId))}
-            onStartSearch={() => navigate(buildSearchHash(searchText, sort, filters))}
-            onSelectAllControls={handleSelectAllHomeControls}
-            selectingAllControls={selectAllRunningScope === "home"}
+            onStartSearch={searchFlow.handleStartSearch}
+            onSelectAllControls={csvExport.handleSelectAllHomeControls}
+            selectingAllControls={csvExport.selectAllRunningScope === "home"}
             allControlsSelected={homeAllControlsSelected}
           />
         ) : null}
@@ -1186,17 +338,17 @@ export default function App() {
 
         {route.view === "group" ? (
           <GroupPage
-            group={currentGroup}
-            subgroups={currentSubgroups}
-            controls={groupControls}
-            selectedControlIds={selectedControlIds}
-            loading={groupLoading}
-            selectingAllControls={selectAllRunningScope === "group"}
+            group={groupPage.currentGroup}
+            subgroups={groupPage.currentSubgroups}
+            controls={groupPage.groupControls}
+            selectedControlIds={csvExport.selectedControlIds}
+            loading={groupPage.groupLoading}
+            selectingAllControls={csvExport.selectAllRunningScope === "group"}
             allControlsSelected={groupAllControlsSelected}
             onOpenSubgroup={(groupId) => navigate(buildGroupHash(groupId))}
             onOpenControl={(item) => navigate(buildControlHash(item.id, item.topGroupId))}
-            onToggleControlSelection={handleToggleControlSelection}
-            onSelectAllControls={handleSelectAllGroupControls}
+            onToggleControlSelection={csvExport.handleToggleControlSelection}
+            onSelectAllControls={csvExport.handleSelectAllGroupControls}
           />
         ) : null}
 
@@ -1212,86 +364,42 @@ export default function App() {
 
             {isWideDesktop ? (
               <FacetPanel
-                facets={searchResponse.facets}
-                filters={filters}
-                sortBase={sortBase}
-                sortDirection={sortDirection}
+                facets={searchFlow.searchResponse.facets}
+                filters={searchFlow.filters}
+                sortBase={searchFlow.sortBase}
+                sortDirection={searchFlow.sortDirection}
                 effortSortEnabled={effortSortEnabled}
-                onToggle={toggleFilter}
-                onSortBaseChange={handleSortBaseChange}
-                onSortDirectionToggle={handleSortDirectionToggle}
-                onReset={() => {
-                  const next = defaultFilters();
-                  setFilters(next);
-                  navigate(buildSearchHash(searchText, sort, next, null, null));
-                }}
+                onToggle={searchFlow.toggleFilter}
+                onSortBaseChange={searchFlow.handleSortBaseChange}
+                onSortDirectionToggle={searchFlow.handleSortDirectionToggle}
+                onReset={searchFlow.handleResetFilters}
               />
             ) : null}
 
             <ResultList
-              items={searchResponse.items}
-              total={searchResponse.total}
-              query={searchText}
+              items={searchFlow.searchResponse.items}
+              total={searchFlow.searchResponse.total}
+              query={searchFlow.searchText}
               selectedId={selectedControlId}
-              selectedControlIds={selectedControlIds}
-              loading={searchLoading}
-              error={searchError}
-              hasActiveFilters={hasActiveFilters}
-              onResetFilters={() => {
-                const next = defaultFilters();
-                setFilters(next);
-                navigate(buildSearchHash(searchText, sort, next, null, null));
-              }}
-              onSelect={handleSelectResult}
-              onToggleSelection={handleToggleControlSelection}
-              onSelectAllControls={handleSelectAllSearchControls}
-              selectingAllControls={selectAllRunningScope === "search"}
+              selectedControlIds={csvExport.selectedControlIds}
+              loading={searchFlow.searchLoading}
+              error={searchFlow.searchError}
+              hasActiveFilters={searchFlow.hasActiveFilters}
+              onResetFilters={searchFlow.handleResetFilters}
+              onSelect={searchFlow.handleSelectResult}
+              onToggleSelection={csvExport.handleToggleControlSelection}
+              onSelectAllControls={csvExport.handleSelectAllSearchControls}
+              selectingAllControls={csvExport.selectAllRunningScope === "search"}
               allControlsSelected={searchAllControlsSelected}
             />
 
-            {isWideDesktop ? (
-              <ControlDetailPanel
-                detail={detail}
-                loading={detailLoading}
-                error={detailError}
-                graphData={graphData}
-                graphLoading={graphLoading}
-                graphError={graphError}
-                graphHops={graphHops}
-                graphFilter={graphFilter}
-                onGraphHopsChange={setGraphHops}
-                onGraphFilterChange={setGraphFilter}
-                onRelationClick={handleRelationClick}
-                onPropertyFilterClick={handlePropertyFilterClick}
-                onBreadcrumbGroupClick={handleBreadcrumbGroupClick}
-                onBreadcrumbControlClick={handleBreadcrumbControlClick}
-                onBackToResults={showBackToResults ? handleBackToResults : null}
-                expandAllByDefault
-              />
-            ) : null}
+            {isWideDesktop ? <ControlDetailPanel {...detailPanelProps} /> : null}
           </section>
         ) : null}
 
         {route.view === "control" ? (
           <section className="single-control-layout">
-            <ControlDetailPanel
-              detail={detail}
-              loading={detailLoading}
-              error={detailError}
-              graphData={graphData}
-              graphLoading={graphLoading}
-              graphError={graphError}
-              graphHops={graphHops}
-              graphFilter={graphFilter}
-              onGraphHopsChange={setGraphHops}
-              onGraphFilterChange={setGraphFilter}
-              onRelationClick={handleRelationClick}
-              onPropertyFilterClick={handlePropertyFilterClick}
-              onBreadcrumbGroupClick={handleBreadcrumbGroupClick}
-              onBreadcrumbControlClick={handleBreadcrumbControlClick}
-              onBackToResults={showBackToResults ? handleBackToResults : null}
-              expandAllByDefault
-            />
+            <ControlDetailPanel {...detailPanelProps} />
           </section>
         ) : null}
 
@@ -1307,19 +415,15 @@ export default function App() {
           onClose={() => setFilterSheetOpen(false)}
         >
           <FacetPanel
-            facets={searchResponse.facets}
-            filters={filters}
-            sortBase={sortBase}
-            sortDirection={sortDirection}
+            facets={searchFlow.searchResponse.facets}
+            filters={searchFlow.filters}
+            sortBase={searchFlow.sortBase}
+            sortDirection={searchFlow.sortDirection}
             effortSortEnabled={effortSortEnabled}
-            onToggle={toggleFilter}
-            onSortBaseChange={handleSortBaseChange}
-            onSortDirectionToggle={handleSortDirectionToggle}
-            onReset={() => {
-              const next = defaultFilters();
-              setFilters(next);
-              navigate(buildSearchHash(searchText, sort, next, null, null));
-            }}
+            onToggle={searchFlow.toggleFilter}
+            onSortBaseChange={searchFlow.handleSortBaseChange}
+            onSortDirectionToggle={searchFlow.handleSortDirectionToggle}
+            onReset={searchFlow.handleResetFilters}
           />
         </FilterSheet>
       ) : null}
@@ -1329,27 +433,10 @@ export default function App() {
           open={Boolean(route.controlId)}
           title="Control-Detail"
           variant="detail"
-          onClose={() => navigate(buildSearchHash(searchText, sort, filters, null, null))}
+          onClose={() => navigate(buildSearchHash(searchFlow.searchText, searchFlow.sort, searchFlow.filters, null, null))}
         >
           {/* REQ: PD-06, Clarification Pack §8 */}
-          <ControlDetailPanel
-            detail={detail}
-            loading={detailLoading}
-            error={detailError}
-            graphData={graphData}
-            graphLoading={graphLoading}
-            graphError={graphError}
-            graphHops={graphHops}
-            graphFilter={graphFilter}
-            onGraphHopsChange={setGraphHops}
-            onGraphFilterChange={setGraphFilter}
-            onRelationClick={handleRelationClick}
-            onPropertyFilterClick={handlePropertyFilterClick}
-            onBreadcrumbGroupClick={handleBreadcrumbGroupClick}
-            onBreadcrumbControlClick={handleBreadcrumbControlClick}
-            onBackToResults={showBackToResults ? handleBackToResults : null}
-            expandAllByDefault
-          />
+          <ControlDetailPanel {...detailPanelProps} />
         </FilterSheet>
       ) : null}
 
