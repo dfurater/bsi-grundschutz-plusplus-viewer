@@ -172,6 +172,11 @@ This repository already has:
 - a GitHub Pages deploy workflow
 - a daily BSI sync workflow that may create PRs when catalog files change
 
+## PR merge policy
+- Do not use automatic PR merges via workflow, bot, or GitHub auto-merge.
+- Always wait for QA checks to complete, then review QA results manually.
+- Merge PRs only as a manual maintainer action after QA review is approved.
+
 Do not break these workflows casually.
 If you touch workflow files:
 - explain why
