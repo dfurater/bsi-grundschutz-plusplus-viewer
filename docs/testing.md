@@ -15,15 +15,16 @@ Die Qualitätssicherung deckt drei Ebenen ab:
   - Datenvalidierung und Sicherheitslogik (`dataSchemas`, `fetchJsonSafe`, `searchSafety`, `csv`, `urlSafety`)
   - Routing-/Worker-Grenzen (`routing`, `searchClient`, `searchWorker`)
   - zentrale UI-Zustandspfade (`App`, Kernkomponenten)
+  - A11y- und Interaktions-Hooks/-Komponenten (`useFocusTrap`, `SearchOverlay`, `FilterSheet`)
   - Single-Catalog-Regressionen in Kernkomponenten (u. a. kein Datensatz-Auswahl-UI im Header)
 
 ### Coverage-Gate
 
 `npm run test:unit:coverage` nutzt `v8`-Coverage mit globalen Mindestschwellen:
-- `lines: 30`
-- `functions: 34`
-- `branches: 24`
-- `statements: 30`
+- `lines: 35`
+- `functions: 39`
+- `branches: 29`
+- `statements: 35`
 
 ## 2) Browser-QA
 
@@ -32,6 +33,7 @@ Die Qualitätssicherung deckt drei Ebenen ab:
 - A11y-Smoketests: `tests/a11y.spec.ts` (Playwright + Axe)
 - Lighthouse-Konfiguration: `lighthouserc.json`
 - Die Breakpoint-Checks verifizieren explizit, dass kein Inline-Datensatzselector gerendert wird.
+- Weitere Kernflüsse prüfen u. a. Search-Overlay (Enter/Clear/Escape), Fokus-Restore und Theme-Toggle.
 
 ## 3) Release-Hygiene
 

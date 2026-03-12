@@ -11,8 +11,16 @@ Maßgebliche Quellenreferenz in der App:
 
 ## 2) Primärquelle der Katalogdaten
 
-Runtime-Primärquelle im Projekt:
+Build-Zeit-Primärquelle im Projekt:
 - `Kataloge/Grundschutz++-catalog.json`
+
+Runtime-Artefakte im Projekt:
+- `public/data/catalog-meta.json`
+- `public/data/catalog-index.json`
+- `public/data/details/*.json`
+- `public/data/build-info.json`
+
+Die Runtime-Artefakte werden bei `npm run build:data` bzw. `npm run build` aus der Build-Quelle neu erzeugt.
 
 Upstream-Bezug:
 - `BSI-Bund/Stand-der-Technik-Bibliothek`

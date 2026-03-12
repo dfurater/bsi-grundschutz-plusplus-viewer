@@ -35,7 +35,8 @@ Hash-Routing ist bewusst gewählt (kein History-Rewrite erforderlich):
 
 - bootstrapped Metadaten + Worker-Index
 - nutzt feste Asset-Pfade statt dynamischer Dataset-Registries
-- hält Routing-/UI-Zustand (Suche, Filter, Sortierung, Selektion)
+- hält Routing-/UI-Zustand (Suche, Filter, Sortierung, Selektion, Theme)
+- steuert responsive Overlay-/Sheet-Container (Suche/Filter/Detail) inkl. Scroll-Lock
 - steuert Detail-/Graph-Laden und CSV-Export-Flows
 
 ### 2) Search Worker (`src/workers/searchWorker.ts`)
@@ -77,6 +78,7 @@ Hash-Routing ist bewusst gewählt (kein History-Rewrite erforderlich):
 2. `SearchClient` initialisiert Worker mit `./data/catalog-index.json` und `./data/details`.
 3. Worker beantwortet `search`/`get-control`/`get-neighborhood` und unterstützt `cancel`.
 4. UI rendert Treffer, Detailinformationen, Relationsgraph und CSV-Export.
+5. Overlay-/Sheet-Dialoge kapseln Interaktionen responsiv und halten den Fokus per `useFocusTrap` im aktiven Container.
 
 ## Architekturgrenzen und Nicht-Ziele
 
@@ -90,6 +92,7 @@ Hash-Routing ist bewusst gewählt (kein History-Rewrite erforderlich):
 - Hash-Routing statt History-Routing
 - Fail-closed-Validierung mit Zod + Budgets auf kritischen Datenpfaden
 - Sicherheitsrelevante Logik (URL-Härtung, CSV-Neutralisierung, Routing-/Query-Sanitizing) in dedizierten Lib-Modulen
+- A11y-relevante Overlay-Navigation mit Focus-Trap + Escape/Restore-Fokus-Mechanik
 - TypeScript `strict` ist derzeit `false`
 - keine dedizierte Lint-/Format-Pipeline in `package.json`
 
