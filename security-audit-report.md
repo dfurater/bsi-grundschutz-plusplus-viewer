@@ -95,16 +95,20 @@ Falls ein Build-/Testschritt oder eine Dependency kompromittiert wird, erhöht e
 | Kategorie | Supply Chain |
 | Betroffene Datei(en) | `package-lock.json`, `package.json` |
 | Zeile(n) | package-lock.json L930–L949, L3291–L3299, L6042–L6050; package.json L27–L38 |
-| CVE (falls zutreffend) | GHSA-52f5-9888-hmc6 (kein CVE zugeordnet) |
+| CVE (falls zutreffend) | GHSA-52f5-9888-hmc6 / CVE-2025-54798 |
+| Status | Risk accepted (Dev-only), Stand: 12.03.2026 |
 
 **Beschreibung:**
-`npm audit --json` meldet eine Low-Severity-Schwachstelle in `tmp` (`<=0.2.3`), transitiv über `@lhci/cli`/`inquirer`/`external-editor`. Produktionsabhängigkeiten (`npm audit --omit=dev`) sind ohne Befund.
+`npm audit --json` meldet eine Low-Severity-Schwachstelle in `tmp` (`<=0.2.3`), transitiv über `@lhci/cli`/`inquirer`/`external-editor` im QA-Tooling. Produktionsabhängigkeiten (`npm audit --omit=dev`) sind ohne Befund.
 
 **Angriffsszenario:**
-Der Pfad betrifft primär Dev-/CI-Kontext. Auf gemeinsam genutzten Runnern kann ein lokaler Symlink-Angriff auf temporäre Dateien theoretisch möglich sein, in isolierten CI-Umgebungen ist das Risiko begrenzt.
+Der Pfad betrifft primär Dev-/CI-Kontext. Auf gemeinsam genutzten Runnern kann ein lokaler Symlink-Angriff auf temporäre Dateien theoretisch möglich sein; auf isolierten GitHub-Hosted Runnern ist die praktische Ausnutzbarkeit deutlich reduziert.
 
 **Empfehlung:**
-Upstream-Updates von `@lhci/cli` beobachten bzw. Alternative für Lighthouse-Ausführung prüfen; Risiko bis dahin als Dev-Only akzeptieren und dokumentieren.
+Kurzfristig Risiko als Dev-only akzeptieren und dokumentiert beobachten. Re-Evaluation spaetestens bis 30.06.2026 oder frueher bei einem der folgenden Trigger:
+- `@lhci/cli` veroeffentlicht eine Version mit `tmp >= 0.2.4`.
+- QA-Tooling wird auf persistenten/self-hosted Runnern ausgefuehrt.
+- die betroffene Dependency-Kette wird in produktionsrelevante Pfade verschoben.
 
 ---
 
