@@ -13,7 +13,9 @@ Die größten Schwächen liegen weniger im „harten“ CSS-Overflow, sondern in
 - Footer-Navigation auf kleinen Screens mit horizontal scrollender Linkzeile,
 - potenziell hohe visuelle Dichte im Search-Flow auf kleinen Höhen (z. B. 375x667).
 
-**Kurzfazit:** technisch stabil responsiv, aber mit spürbaren UX-Reibungen auf Mobile (v. a. Interaktion + Informationshierarchie).
+Die zuvor offene Lighthouse-Messlücke wurde inzwischen nachgeholt (Desktop + Mobile). Die Produktwerte sind gut; als verbleibende Prozesslücke bleibt, dass Mobile-Lighthouse aktuell noch kein fester QA-Gate ist.
+
+**Kurzfazit:** technisch stabil responsiv, mit spürbaren UX-Reibungen auf Mobile (v. a. Interaktion + Informationshierarchie) und einem verbleibenden QA-Prozess-Thema bei Mobile-Performance-Gates.
 
 ---
 
@@ -23,7 +25,7 @@ Die größten Schwächen liegen weniger im „harten“ CSS-Overflow, sondern in
 2. **Footer-Linkzeile auf Mobile mit horizontalem Scrolling / abgeschnittener Wahrnehmung**.  
 3. **Hohe UI-Dichte im Search-Kontext auf kleinen Höhen** → reduzierte Ergebnis- und CTA-Sichtbarkeit.  
 4. **Icon-only/kompakte Actions auf Mobile reduzieren Erkennbarkeit** (insb. ohne explizite Textlabels).  
-5. **Performance-UX formal nicht vollständig verifiziert** (Lighthouse nicht lauffähig im Environment wegen fehlender Chrome-Installation).
+5. **Lighthouse-Qualitätssicherung deckt standardmäßig nur Desktop ab** (Mobile-Messung noch kein verbindlicher QA-Gate).
 
 ---
 
@@ -79,16 +81,21 @@ Die größten Schwächen liegen weniger im „harten“ CSS-Overflow, sondern in
   - kritische Aktionen mit ergänzendem Label/Tooltip oder Onboarding-Hinweis,
   - testen, ob ein minimaler Text-Label-Mode auf Mobile die Erfolgsrate verbessert.
 
-### Finding E — Performance UX Messlücke (LCP/CLS)
+### Finding E — Performance UX QA-Lücke (Mobile-Gating)
 - **Seite:** gesamtes Produkt
-- **Bildschirmgröße:** alle
-- **Problem:** LCP/CLS konnten im lokalen Audit nicht formal per Lighthouse ausgewertet werden.
-- **Ursache:** `npm run qa:lighthouse` scheitert lokal mit „Chrome installation not found“.
-- **UX Impact:** Es bleibt Unsicherheit in quantitativen Performance-KPIs.
-- **Severity:** **Medium**
+- **Bildschirmgröße:** alle (insb. Mobile-Relevanz)
+- **Problem:** Die Lighthouse-Prozedur wurde nachgeholt und zeigt gute Werte; Mobile-Lighthouse ist jedoch noch nicht als verbindlicher Standard-Gate hinterlegt.
+- **Screenshot/Beleg:** 
+  - `npm run qa:browser` (2026-03-13) erfolgreich inkl. `qa:lighthouse`.
+  - Ad-hoc Mobile-Lighthouse (2026-03-13) erfolgreich für `#/`, `#/search?q=KONF.12.4`, `#/about/source`.
+  - Desktop: Performance **100**, Accessibility **95-100**, Best Practices **96**, LCP **~404-407ms**, CLS **0-0.008**.
+  - Mobile: Performance **99**, Accessibility **95-100**, Best Practices **96**, LCP **~1653-1660ms**, CLS **~0**.
+- **Ursache:** `lighthouserc.json` nutzt aktuell `preset: desktop`; Mobile-Runs passieren derzeit nur manuell/ad-hoc.
+- **UX Impact:** Kurzfristig geringe Produkt-Performance-Risiken, aber mittelfristig Risiko unentdeckter mobiler Regressions ohne festen Gate.
+- **Severity:** **Low-Medium**
 - **Empfehlung:**
-  - Lighthouse im CI (mit gesicherter Browser Runtime) als verbindliche Responsiveness/Performance-Referenz,
-  - zusätzlich Mobile-Preset laufen lassen (derzeit Desktop-Preset).
+  - Mobile-Lighthouse als zweiten verbindlichen CI-Lauf ergänzen (eigene Config oder separater Job),
+  - mobile KPI-Schwellen für LCP/CLS explizit definieren und versionieren.
 
 ---
 
@@ -100,9 +107,9 @@ Die größten Schwächen liegen weniger im „harten“ CSS-Overflow, sondern in
 | Mobile UX | **69** | Touch-Targets + Dichte/Scannability auf kleinen Höhen verbesserungsbedürftig. |
 | Navigation | **74** | Grundsätzlich klar, aber mobile Action-Auffindbarkeit und Footer-Navigation ausbaufähig. |
 | Accessibility (responsive-relevant) | **72** | Fokus auf Touch-Ziele/Lesbarkeit/Interaktionsflächen nötig. |
-| Performance UX | **70** | Subjektiv solide, aber ohne vollständige LCP/CLS-Messung im Audit-Environment. |
+| Performance UX | **84** | Desktop- und Mobile-Lighthouse-Werte sind gut; verbleibend ist primär das fehlende Mobile-CI-Gating. |
 
-**Gesamtscore: 74 / 100**
+**Gesamtscore: 77 / 100**
 
 ---
 
@@ -135,6 +142,9 @@ Methodik:
 - Visuelle Prüfung via Playwright-Screenshots auf Home/Search/About (stichprobenartig).
 - DOM-Checks auf Horizontal-Overflow und kleine Touch-Targets.
 - Code-Review der Breakpoints/Responsiveness-Logik in `src/styles.css`, `src/App.tsx`, Header/Footer-Komponenten.
+- Nachgeholte Lighthouse-Auswertung am 2026-03-13:
+  - Desktop (`npm run qa:browser`): Performance 100, Accessibility 95-100, Best Practices 96, LCP ~404-407ms, CLS 0-0.008.
+  - Mobile (ad-hoc Lighthouse): Performance 99, Accessibility 95-100, Best Practices 96, LCP ~1653-1660ms, CLS ~0.
 
 Hinweis zu Artefakten:
 - `public/data/**` wurde nicht geändert (nur während Build neu generiert, nicht versioniert).
