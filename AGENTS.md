@@ -1,208 +1,168 @@
 # AGENTS.md — bsi-grundschutz-plusplus-viewer
 
-## Project context
-This repository is a static client-side React/Vite application for searching, navigating, and locally evaluating BSI Grundschutz++ OSCAL catalogs.
+## Repo purpose and operating model
+- Static client-side React/Vite app for browsing and evaluating the BSI Grundschutz++ Anwenderkatalog (OSCAL JSON).
+- Runtime is browser-only CSR. No backend, no server sessions, no database.
+- Single-catalog contract:
+  - Source input: `Kataloge/Grundschutz++-catalog.json`
+  - Runtime artifacts: `public/data/**`
+  - Generated service worker: `public/sw.js`
+- No runtime dataset selector and no runtime JSON upload flow.
 
-Key architecture facts:
-- Frontend: React 19 + TypeScript + Vite
-- App type: static CSR, no backend
-- Routing: hash-based routing
-- Search/index logic: Web Worker
-- Source inputs: `Kataloge/*.json`
-- Generated artifacts: `public/data/**` and `public/sw.js`
-- Hosting targets: GitHub Pages and other static hosts
-- CI/CD and automation exist in `.github/workflows/*`
-
-## Environment and toolchain
-- Required Node.js: `20.19.0` or newer
-- Required npm: `10` or newer
-- `.nvmrc` is authoritative for local Node version
-- Use npm, not pnpm/yarn/bun
-
-## Required workflow for any code change
-1. Read the relevant docs first:
-   - `README.md`
-   - `docs/architecture.md`
-   - `docs/setup-and-operations.md`
-   - `docs/testing.md`
-   - `docs/security-review.md`
-2. Identify whether the change affects:
-   - UI / routing
-   - worker protocol
-   - catalog normalization / build pipeline
-   - generated data artifacts
-   - legal pages / operator metadata
-   - hosting / CI / deployment
-3. State clearly whether `public/data/**` changes are expected.
-4. Keep the change narrowly scoped.
-
-## Git and branch policy
-- Never commit directly to `main`.
-- Use short-lived branches only.
-- Branch naming:
-  - `feat/<topic>`
-  - `fix/<topic>`
-  - `docs/<topic>`
-  - `refactor/<topic>`
-  - `chore/<topic>`
-  - `test/<topic>`
-- For catalog-sync-only changes, prefer:
-  - `chore/catalog-sync-<topic>`
-- For UI-only changes, prefer:
-  - `fix/ui-<topic>` or `feat/ui-<topic>`
-
-## Repository-specific implementation rules
-
-### 1) Respect the static architecture
-- Do not introduce a backend, server runtime, or server-only assumptions.
-- Do not replace hash routing with history routing unless explicitly requested.
-- Do not introduce features that require server-side sessions, authentication, or databases.
-- Keep the app statically deployable.
-
-### 2) Respect the data pipeline
-- `Kataloge/*.json` are source inputs.
-- `public/data/**` are generated artifacts, not hand-authored primary sources.
-- If source schema or normalization logic changes, regenerate artifacts with:
-  - `npm run build:data`
-- Do not manually edit generated files unless the task explicitly requires a one-off repair and the reason is documented.
-- Treat `scripts/build-catalog.mjs` and normalization logic as critical infrastructure.
-
-### 3) Respect the worker boundary
-- Search, filtering, chunk loading, graph computation, and upload ingestion are worker-sensitive areas.
-- Be conservative when changing worker message contracts or data schemas.
-- If worker-facing data shapes change, check for ripple effects in:
-  - `src/workers/**`
-  - `src/lib/dataSchemas*`
-  - `src/types*`
-  - UI components consuming worker responses
-- Avoid casual protocol drift. Tiny mismatch, giant gremlin.
-
-### 4) Respect security posture
-- Preserve fail-closed validation behavior.
-- Do not weaken schema validation, budgets, URL restrictions, CSV neutralization, or upload safeguards without explicit reason.
-- Do not introduce unsafe external link handling.
-- Do not bypass legal placeholder checks in production build flow.
-- Treat service worker changes as security- and caching-sensitive.
-- Treat `netlify.toml`, `public/_headers`, security scripts, and legal pages as controlled surfaces.
-
-### 5) Respect legal/operator configuration
-- Production builds depend on:
+## Toolchain and local setup
+- Node.js `>=20.19.0` (`.nvmrc` is authoritative).
+- npm `>=10`; use npm (not pnpm/yarn/bun).
+- Required build-time legal env vars:
   - `VITE_OPERATOR_NAME`
   - `VITE_OPERATOR_ADDRESS_LINE1`
   - `VITE_OPERATOR_ADDRESS_LINE2`
   - `VITE_OPERATOR_EMAIL`
-- Never hardcode real personal data into the repository unless explicitly instructed and appropriate.
-- Preserve the build-time legal placeholder validation.
-- If a task affects Impressum or Datenschutz, update both code and docs.
 
-### 6) Respect hosting constraints
-- GitHub Pages uses `VITE_BASE_PATH=/${repository-name}/`
-- Do not break relative asset loading or base path handling.
-- Remember that GitHub Pages does not enforce custom security headers like Netlify does.
-- If hosting behavior changes, update:
-  - workflow files
-  - README deployment notes
-  - relevant docs in `docs/`
+## Codebase map and boundaries
+- `src/components/**`: UI components and legal/content pages.
+- `src/hooks/**`: App flow orchestration and state transitions.
+- `src/lib/**`: shared domain/security logic (routing, validation, schema, export, safety helpers).
+- `src/workers/searchWorker.ts`: worker-side search/filter/detail/graph runtime.
+- `scripts/**`: build/data/security/release scripts.
+- `Kataloge/**`: source catalog input.
+- `public/data/**`, `public/sw.js`: generated artifacts (do not treat as hand-authored source).
 
-### 7) Respect current repository limits
-- TypeScript `strict` is currently `false`.
-- There is no dedicated lint/format pipeline in `package.json`.
-- Coverage thresholds are not configured.
-- Do not pretend these are solved.
-- If you improve them, do so explicitly, incrementally, and with documentation.
+## Hard architecture contracts
+### Routing contract (hash-based)
+- Keep hash routing. Do not switch to history routing.
+- Supported routes:
+  - `#/`
+  - `#/search`
+  - `#/group/:id`
+  - `#/control/:id`
+  - `#/about`
+  - `#/about/license` (alias `#/about/source`)
+  - `#/impressum`
+  - `#/datenschutz`
 
-## Validation rules
+### Worker protocol contract
+- `SearchClient` and `searchWorker` must stay in sync for message types:
+  - `init`
+  - `search`
+  - `get-control`
+  - `get-neighborhood`
+  - `cancel`
+- If worker payloads or response shapes change, update and verify together:
+  - `src/workers/searchWorker.ts`
+  - `src/lib/searchClient.ts`
+  - `src/lib/dataSchemas.ts`
+  - `src/types.ts`
+  - affected UI/hook consumers
 
-### Minimum validation by change type
-- UI / component / routing change:
+### Data pipeline contract
+- `scripts/build-catalog.mjs` + `src/lib/normalize-core.js` define canonical normalization behavior.
+- `npm run build:data` regenerates:
+  - `public/data/catalog-meta.json`
+  - `public/data/catalog-index.json`
+  - `public/data/details/*.json`
+  - `public/data/build-info.json`
+  - `public/sw.js` (from `scripts/sw.template.js`)
+- Legacy outputs are intentionally removed during build (`public/data/datasets`, `catalog-registry.json`, `profile-links.json`).
+
+## Where to implement changes
+- UI layout/interaction/routing rendering: `src/components/**`, `src/App.tsx`, related hooks.
+- Search behavior/filtering/ranking/detail chunk loading/graph logic: `src/workers/searchWorker.ts` and worker-facing schemas/types.
+- Catalog transformation and artifact generation: `src/lib/normalize-core.js`, `scripts/build-catalog.mjs`.
+- Legal/operator output and placeholder behavior: `src/legal/placeholders.ts`, `src/components/ImpressumPage.tsx`, `src/components/DatenschutzPage.tsx`, `scripts/check-legal-placeholders.mjs`.
+- CI/deploy behavior: `.github/workflows/quality.yml`, `deploy-pages.yml`, `daily-bsi-sync.yml`.
+
+## Generated artifacts policy
+- Do not hand-edit generated files in `public/data/**` or `public/sw.js`.
+- Regenerate via `npm run build:data` (or `npm run build`) when source data/normalization/service-worker template changes.
+- `public/data/**` and `public/sw.js` are gitignored build outputs; avoid treating them as reviewable source-of-truth diffs.
+
+## Commands in this repo
+- Setup:
+  - `npm install`
+  - `cp .env.example .env.local`
+- Development:
+  - `npm run dev`
+- Data and builds:
+  - `npm run sync:bsi`
+  - `npm run build:data`
+  - `npm run build`
+  - `npm run preview`
+- Tests and QA:
+  - `npm run test:unit`
+  - `npm run test:unit:raw`
+  - `npm run test:unit:coverage`
+  - `npm run check:release-hygiene`
+  - `npm run qa:lighthouse`
+  - `npm run qa:a11y`
+  - `npm run qa:browser`
+  - `npm run qa`
+- Dependency audit:
+  - `npm run audit:prod`
+  - `npm run audit:dev`
+
+## Validation matrix
+- UI/component/routing change:
   - `npm run test:unit`
   - `npm run build`
-- Data pipeline / schema / worker change:
+- Worker/schema/data-contract change:
   - `npm run build:data`
   - `npm run test:unit`
   - `npm run build`
   - `npm run check:release-hygiene`
-- CI / deploy / security change:
+- CI/deploy/security-script change:
   - `npm run build`
   - `npm run test:unit`
   - `npm run check:release-hygiene`
-  - run the specific related check if applicable
-- Release-quality or merge-ready change:
+  - plus the targeted check (`audit:*`, `qa:*`, or workflow-specific path checks) as relevant
+- Merge-ready/release-quality validation:
   - `npm run qa`
 
-### Available commands
-- `npm run dev`
-- `npm run sync:bsi`
-- `npm run build:data`
-- `npm run build`
-- `npm run preview`
-- `npm run test:unit`
-- `npm run check:release-hygiene`
-- `npm run audit:prod`
-- `npm run audit:dev`
-- `npm run qa:lighthouse`
-- `npm run qa:a11y`
-- `npm run qa`
+## Sensitive surfaces (extra caution)
+- Data generation and normalization:
+  - `scripts/build-catalog.mjs`
+  - `src/lib/normalize-core.js`
+- Worker boundary and schemas:
+  - `src/workers/searchWorker.ts`
+  - `src/lib/searchClient.ts`
+  - `src/lib/dataSchemas.ts`
+  - `src/types.ts`
+- Security-critical logic:
+  - `src/lib/csv.ts`
+  - `src/lib/controlExport.ts`
+  - `src/lib/urlSafety.ts`
+  - `src/lib/routing.ts`
+  - `src/lib/searchSafety.ts`
+  - `src/lib/securityBudgets.ts`
+  - `src/lib/validation.ts`
+- Legal/operator surfaces:
+  - `src/legal/placeholders.ts`
+  - `src/components/ImpressumPage.tsx`
+  - `src/components/DatenschutzPage.tsx`
+  - `scripts/check-legal-placeholders.mjs`
+- Deployment/automation:
+  - `.github/workflows/quality.yml`
+  - `.github/workflows/deploy-pages.yml`
+  - `.github/workflows/daily-bsi-sync.yml`
 
-### Validation reporting
-For every task, report:
-- which commands were run
-- whether `public/data/**` changed
-- whether the change affects GitHub Pages behavior
-- whether any tests/checks were skipped
-- residual risk
+## CI and hosting constraints
+- `quality.yml` is the primary QA gate (audit, coverage/unit tests, release hygiene, browser QA split by jobs).
+- `deploy-pages.yml` deploys only after successful `quality` on `main` (`workflow_run`) or manual dispatch.
+- GitHub Pages build uses `VITE_BASE_PATH=/${repository-name}/`; keep asset/base-path handling compatible.
+- GitHub Pages cannot enforce all security headers repo-locally; avoid assuming host header controls exist by default.
 
-## Documentation update rules
-Update documentation whenever you change:
-- setup or required env vars
-- build or data generation flow
-- deployment behavior
-- security assumptions
-- worker/data contracts
-- legal pages
-- test strategy or QA expectations
+## Current repository limits (do not overclaim)
+- TypeScript `strict` is `false`.
+- No dedicated lint/format script pipeline in `package.json`.
+- No Docker/devcontainer setup in this repo.
+- No `CONTRIBUTING.md` or root `SECURITY.md` currently present.
 
-Minimum doc targets to consider:
-- `README.md`
-- relevant file(s) in `docs/*`
-
-## CI/CD awareness
-This repository already has:
-- a quality workflow for QA on push/PR/merge_group (Merge Queue kompatibel)
-- a GitHub Pages deploy workflow
-- a daily BSI sync workflow that may create PRs when catalog files change
-
-## PR merge policy
-- Do not use automatic PR merges via workflow, bot, or GitHub auto-merge.
-- Always wait for QA checks to complete, then review QA results manually.
-- Merge PRs only as a manual maintainer action after QA review is approved.
-
-Do not break these workflows casually.
-If you touch workflow files:
-- explain why
-- explain the impact on PR validation and deployment
-- keep permissions minimal
-
-## PR scope guidance
-Prefer separate PRs for:
-- UI/UX changes
-- worker/data model changes
-- CI/CD changes
-- security hardening
-- legal/content changes
-- upstream catalog sync
-
-Do not combine catalog-sync noise with unrelated code changes.
-
-## Required output format for this repository
-Always return:
-1. Plan
-2. Affected areas
-3. Files changed
-4. Whether generated artifacts changed
-5. Commands run
-6. Result
-7. Risks / follow-ups
-8. Suggested commit message
-9. Suggested PR title
-10. Suggested PR description
+## Definition of done for agent changes
+- Requested behavior is implemented without violating static/single-catalog/worker contracts.
+- Relevant validations were run (or explicitly skipped with reason).
+- Report explicitly:
+  - commands run
+  - whether generated artifacts changed (especially `public/data/**` / `public/sw.js`)
+  - whether GitHub Pages behavior is affected
+  - skipped checks
+  - residual risk
+- Update docs when behavior/contracts/setup/validation expectations change (`README.md`, `AGENTS.md`and relevant `docs/*`).
