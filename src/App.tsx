@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { AboutPage } from "./components/AboutPage";
 import { AppFooter } from "./components/AppFooter";
 import { AppHeader } from "./components/AppHeader";
@@ -78,6 +78,17 @@ export default function App() {
     }
     history.replaceState(null, "", `${window.location.pathname}${window.location.search}${normalized}`);
     setRoute(parseHash(window.location.hash));
+  }, []);
+
+  const handleSkipLinkClick = useCallback((event: MouseEvent<HTMLAnchorElement>, targetId: string) => {
+    event.preventDefault();
+    const target = document.getElementById(targetId);
+    if (!target) {
+      return;
+    }
+
+    target.focus();
+    target.scrollIntoView?.({ block: "start" });
   }, []);
 
   const { meta, bootState, bootError, bootErrorDetails, bootProgress, bootStatusText, effortSortEnabled } = useAppBoot(client);
@@ -224,7 +235,7 @@ export default function App() {
           : controlDetail.detail?.topGroupId ?? null;
   const searchOverlayValue = searchFlow.searchOverlayText || searchFlow.searchText;
   const searchCountLabel = searchFlow.searchLoading ? "Suche läuft…" : `${searchFlow.searchResponse.total} Treffer`;
-  const canOpenSearch = route.view !== "search" || !isWideDesktop;
+  const canOpenSearch = route.view !== "search";
 
   const detailPanelProps = {
     detail: controlDetail.detail,
@@ -329,9 +340,11 @@ export default function App() {
   function renderDesktopSearchHead() {
     return (
       <form
+        id="search-workspace"
         className="c-search-wrapper search-console-shell"
         role="search"
         aria-label="Katalog durchsuchen"
+        tabIndex={-1}
         onSubmit={(event) => {
           event.preventDefault();
           searchFlow.handleSubmitSearch(searchFlow.searchText);
@@ -361,7 +374,7 @@ export default function App() {
 
   function renderMobileSearchHead() {
     return (
-      <div className="search-mobile-shell">
+      <div id="search-workspace" className="search-mobile-shell" tabIndex={-1}>
         <div className="c-search-wrapper search-console-shell mobile">
           <div className="c-search-head">
             <svg className={`c-search-icon ${searchFlow.searchText.trim() ? "active" : ""}`} width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -436,9 +449,18 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <a className="skip-link" href="#main-content">
+      <a className="skip-link" href="#main-content" onClick={(event) => handleSkipLinkClick(event, "main-content")}>
         Zum Inhalt springen
       </a>
+      {route.view === "search" ? (
+        <a
+          className="skip-link skip-link-secondary"
+          href="#search-workspace"
+          onClick={(event) => handleSkipLinkClick(event, "search-workspace")}
+        >
+          Zum Sucharbeitsbereich springen
+        </a>
+      ) : null}
 
       <AppHeader
         currentLabel={currentLabel(route)}
@@ -478,7 +500,7 @@ export default function App() {
       <div className="app-shell-body">
         {renderSidebar()}
 
-        <div id="main-content" className="app-main-content">
+        <div id="main-content" className="app-main-content" tabIndex={-1}>
           {statusContent ? statusContent : null}
 
           {!statusContent && route.view === "home" ? (

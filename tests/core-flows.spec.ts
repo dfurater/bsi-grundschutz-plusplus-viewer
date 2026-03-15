@@ -76,13 +76,28 @@ test.describe("Kernflows", () => {
       await expect(page.locator(".search-layout.wide")).toHaveCount(entry.expectWide ? 1 : 0);
       await expect(page.getByRole("button", { name: "Filter" })).toHaveCount(entry.expectFilterButton ? 1 : 0);
       await expect(page.locator(".search-summary-trigger")).toHaveCount(entry.expectSummaryTrigger ? 1 : 0);
+      await expect(page.locator(".app-header-shell").getByRole("button", { name: "Suche öffnen" })).toHaveCount(0);
       await expect(page.getByLabel("Datensatz auswählen")).toHaveCount(0);
     }
   });
 
+  test("Skip-Link springt direkt in den Sucharbeitsbereich", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await gotoSearch(page);
+
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("link", { name: "Zum Inhalt springen" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("link", { name: "Zum Sucharbeitsbereich springen" })).toBeFocused();
+
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#search-workspace")).toBeFocused();
+    await expect(page).toHaveURL(/#\/search/);
+  });
+
   test("Suche per Overlay Enter und Clear", async ({ page }) => {
     await page.setViewportSize({ width: 900, height: 900 });
-    await page.goto("/#/search");
+    await page.goto("/#/about");
 
     const headerSearchTrigger = page.locator(".app-header-shell").getByRole("button", { name: "Suche öffnen" });
     await headerSearchTrigger.click();
@@ -96,7 +111,7 @@ test.describe("Kernflows", () => {
     await expect(overlayDialog).toBeHidden();
     await expect(page.locator('[data-search-results-focus="results"], [data-search-results-focus="status"]')).toBeFocused();
 
-    await headerSearchTrigger.click();
+    await page.locator(".search-summary-trigger").click();
     const reopenedSearchInput = overlayDialog.getByRole("searchbox", { name: "Suche" });
     await expect(reopenedSearchInput).toHaveValue("KONF.12.4");
     await overlayDialog.getByRole("button", { name: "Suchtext leeren" }).click();
@@ -127,7 +142,7 @@ test.describe("Kernflows", () => {
 
   test("Search Overlay schließt per ESC und gibt Fokus zurück", async ({ page }) => {
     await page.setViewportSize({ width: 900, height: 900 });
-    await page.goto("/#/search");
+    await page.goto("/#/about");
     const trigger = page.locator(".app-header-shell").getByRole("button", { name: "Suche öffnen" });
     await trigger.click();
     await expect(page.getByRole("dialog", { name: "Katalog durchsuchen" })).toBeVisible();

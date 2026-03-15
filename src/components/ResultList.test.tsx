@@ -235,27 +235,33 @@ describe("ResultList interactions", () => {
     expect(resetButton).toBeUndefined();
   });
 
-  it("rendert Selektionszustände und optionale Chip-Branches in Ergebnis-Karten", async () => {
-    const item: SearchResultItem = {
+  it("rendert Selected- und Export-Zustaende getrennt und priorisiert Selected", async () => {
+    const selectedItem: SearchResultItem = {
       ...createItem("APP.1", ""),
       secLevel: null,
       effortLevel: null,
       modalverbs: []
     };
+    const exportOnlyItem = createItem("APP.2", "");
 
     await renderResultList(
       buildProps({
-        items: [item],
-        total: 1,
+        items: [selectedItem, exportOnlyItem],
+        total: 2,
         selectedId: "APP.1",
-        selectedControlIds: new Set<string>(["APP.1"])
+        selectedControlIds: new Set<string>(["APP.1", "APP.2"])
       })
     );
 
     const selectedCard = document.querySelector<HTMLElement>('article.result-card.state-selected[data-state="state-selected"]');
+    const exportCard = document.querySelector<HTMLElement>('article.result-card.state-export[data-state="state-export"]');
+
     expect(selectedCard).not.toBeNull();
-    expect(document.querySelector(".chip-amber")).not.toBeNull();
-    expect(document.querySelectorAll(".chip").length).toBe(1);
+    expect(exportCard).not.toBeNull();
+    expect(selectedCard?.textContent).toContain("Titel APP.1");
+    expect(exportCard?.textContent).toContain("Titel APP.2");
+    expect(document.querySelectorAll(".chip-amber")).toHaveLength(2);
+    expect(document.querySelectorAll('article.result-card.state-export[data-state="state-export"]')).toHaveLength(1);
   });
 
   it("steuert Select-all-Zustände und ruft den Callback aus", async () => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { SearchResponse } from "../types";
 
 type SortBase = "relevance" | "id" | "title" | "effort";
@@ -50,6 +50,28 @@ export const FACET_ORDER: Array<keyof ActiveFilters> = [
   "tags",
   "relationTypes"
 ];
+
+const DEFAULT_OPEN_FACETS = new Set<keyof ActiveFilters>(["topGroupId", "secLevel", "effortLevel"]);
+
+function buildCollapsedState(
+  facets: SearchResponse["facets"],
+  filters: ActiveFilters
+): Record<keyof ActiveFilters, boolean> {
+  return FACET_ORDER.reduce(
+    (state, facetKey) => {
+      const options = facets?.[facetKey] ?? [];
+      if (!options.length) {
+        state[facetKey] = true;
+        return state;
+      }
+
+      const hasActiveFilters = filters[facetKey].length > 0;
+      state[facetKey] = !(hasActiveFilters || DEFAULT_OPEN_FACETS.has(facetKey));
+      return state;
+    },
+    {} as Record<keyof ActiveFilters, boolean>
+  );
+}
 
 function sortFacetOptions(
   facetKey: keyof ActiveFilters,
@@ -104,8 +126,39 @@ export function FacetPanel({
   onSortDirectionToggle,
   onReset
 }: FacetPanelProps) {
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [collapsed, setCollapsed] = useState<Record<keyof ActiveFilters, boolean>>(() => buildCollapsedState(facets, filters));
   const activeFilterCount = Object.values(filters).reduce((sum, entries) => sum + entries.length, 0);
+
+  useEffect(() => {
+    setCollapsed((previous) => {
+      let changed = false;
+      const nextState = { ...previous };
+
+      for (const facetKey of FACET_ORDER) {
+        const options = facets?.[facetKey] ?? [];
+        if (!options.length) {
+          if (nextState[facetKey] !== true) {
+            nextState[facetKey] = true;
+            changed = true;
+          }
+          continue;
+        }
+
+        if (!(facetKey in nextState)) {
+          nextState[facetKey] = buildCollapsedState(facets, filters)[facetKey];
+          changed = true;
+          continue;
+        }
+
+        if (filters[facetKey].length > 0 && nextState[facetKey]) {
+          nextState[facetKey] = false;
+          changed = true;
+        }
+      }
+
+      return changed ? nextState : previous;
+    });
+  }, [facets, filters]);
 
   return (
     <aside className="facet-panel c-filter-panel" aria-label="Filter">
@@ -164,7 +217,7 @@ export function FacetPanel({
           return null;
         }
 
-        const isCollapsed = collapsed[facetKey] ?? false;
+        const isCollapsed = collapsed[facetKey] ?? true;
         const activeCount = filters[facetKey].length;
         const sortedOptions = sortFacetOptions(facetKey, options);
 

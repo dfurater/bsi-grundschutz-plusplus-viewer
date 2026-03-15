@@ -170,9 +170,18 @@ svg {
   transition: top var(--dur-fast) var(--ease-out);
 }
 
+.skip-link-secondary {
+  top: -96px;
+}
+
 .skip-link:focus,
 .skip-link:focus-visible {
   top: var(--sp-4);
+}
+
+.skip-link-secondary:focus,
+.skip-link-secondary:focus-visible {
+  top: calc(var(--sp-4) + 44px);
 }
 
 .app-shell {
@@ -674,6 +683,12 @@ svg {
   gap: var(--sp-3);
 }
 
+.search-console-shell:focus,
+.search-mobile-shell:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
 .search-summary-trigger {
   flex: 1;
   min-width: 0;
@@ -919,7 +934,7 @@ svg {
 .badge-success {
   background: var(--success-subtle);
   color: var(--success);
-  border: 1px solid #1A4230;
+  border: 1px solid var(--success);
 }
 
 .badge-error {
@@ -943,7 +958,10 @@ svg {
 }
 
 .facet-panel {
-  overflow: hidden;
+  position: sticky;
+  top: calc(56px + var(--sp-4));
+  max-height: calc(100vh - 56px - var(--sp-8));
+  overflow: auto;
 }
 
 .c-filter-panel {
@@ -1208,10 +1226,8 @@ svg {
   border-radius: var(--r-lg);
   padding: var(--sp-4) var(--sp-5);
   transition:
-    background var(--dur-fast) var(--ease-out),
-    border-color var(--dur-fast) var(--ease-out),
-    box-shadow var(--dur-fast) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out);
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
   position: relative;
 }
 
@@ -1229,7 +1245,7 @@ svg {
 
 .c-result-card:hover {
   background: var(--surface-2);
-  border-color: var(--border);
+  border-color: var(--border-strong);
   box-shadow: var(--shadow-1);
 }
 
@@ -1301,6 +1317,7 @@ svg {
 
 .state-selected .c-result-card-title {
   color: var(--accent-light);
+  font-weight: var(--fw-bold);
 }
 
 .state-export .c-result-card-title {
@@ -1447,7 +1464,7 @@ svg {
 
 .empty-state-error .c-empty-icon {
   color: var(--error);
-  border-color: #4A1A1A;
+  border-color: var(--error);
 }
 
 .c-empty-title {
@@ -1467,7 +1484,7 @@ svg {
 }
 
 .empty-state-error .c-empty-desc {
-  color: #D79B9B;
+  color: var(--text-primary);
 }
 
 .c-empty-action {
@@ -1930,7 +1947,7 @@ svg {
 }
 
 .status-toast-error {
-  border-color: #4A1A1A;
+  border-color: var(--error);
 }
 
 .status-toast-dot {
@@ -1956,7 +1973,7 @@ svg {
   position: fixed;
   inset: 0;
   z-index: 180;
-  background: rgba(6, 7, 11, 0.72);
+  background: color-mix(in srgb, var(--bg-recessed) 72%, transparent);
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -2072,6 +2089,9 @@ svg {
 }
 
 .sheet-content .facet-panel {
+  position: static;
+  top: auto;
+  max-height: none;
   border: 0;
   box-shadow: none;
 }
@@ -2210,6 +2230,12 @@ svg {
   .detail-panel,
   .facet-panel {
     max-width: 100%;
+  }
+
+  .facet-panel {
+    position: static;
+    top: auto;
+    max-height: none;
   }
 
   .relation-columns {
