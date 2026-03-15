@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
 import type { SearchResultItem } from "../types";
 
 interface ResultListProps {
   items: SearchResultItem[];
   total: number;
   query: string;
+  page: number;
+  pageSize: number;
   selectedId: string | null;
   selectedControlIds: Set<string>;
   loading: boolean;
   error: string | null;
   onSelect: (item: SearchResultItem) => void;
+  onPageChange: (page: number) => void;
   onToggleSelection: (item: SearchResultItem, selected: boolean) => void;
   onSelectAllControls: () => void;
   selectingAllControls: boolean;
@@ -34,11 +36,14 @@ export function ResultList({
   items,
   total,
   query,
+  page,
+  pageSize,
   selectedId,
   selectedControlIds,
   loading,
   error,
   onSelect,
+  onPageChange,
   onToggleSelection,
   onSelectAllControls,
   selectingAllControls,
@@ -46,15 +51,14 @@ export function ResultList({
   hasActiveFilters,
   onResetFilters
 }: ResultListProps) {
-  /* REQ: EC-03, UI 5.2 Group/Search Pagination */
-  const [visibleCount, setVisibleCount] = useState(25);
   const normalizedQuery = query.trim();
-
-  useEffect(() => {
-    setVisibleCount(25);
-  }, [items, query]);
-
-  const visibleItems = useMemo(() => items.slice(0, visibleCount), [items, visibleCount]);
+  const safePageSize = Number.isFinite(pageSize) && pageSize > 0 ? Math.floor(pageSize) : 50;
+  const totalPages = Math.max(1, Math.ceil(items.length / safePageSize));
+  const currentPage = Math.max(1, Math.min(totalPages, Math.floor(page)));
+  const sliceStart = (currentPage - 1) * safePageSize;
+  const visibleItems = items.slice(sliceStart, sliceStart + safePageSize);
+  const visibleStart = sliceStart + 1;
+  const visibleEnd = sliceStart + visibleItems.length;
 
   if (loading) {
     return (
@@ -150,12 +154,23 @@ export function ResultList({
         })}
       </ul>
 
-      {visibleCount < items.length ? (
-        <div className="list-pagination">
-          <button type="button" className="secondary" onClick={() => setVisibleCount((prev) => prev + 25)}>
-            Mehr laden
+      {totalPages > 1 ? (
+        <nav className="list-pagination" aria-label="Seitennavigation Suchergebnisse">
+          <button type="button" className="secondary" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage <= 1}>
+            Vorherige Seite
           </button>
-        </div>
+          <p className="list-pagination-status" aria-live="polite">
+            Seite {currentPage} von {totalPages} ({visibleStart}-{visibleEnd})
+          </p>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+          >
+            Nächste Seite
+          </button>
+        </nav>
       ) : null}
     </section>
   );

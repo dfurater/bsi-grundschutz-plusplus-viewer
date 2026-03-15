@@ -1,16 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
 import type { GroupNode, SearchResultItem } from "../types";
 
 interface GroupPageProps {
   group: GroupNode | null;
   subgroups: GroupNode[];
   controls: SearchResultItem[];
+  page: number;
+  pageSize: number;
   selectedControlIds: Set<string>;
   loading: boolean;
   selectingAllControls: boolean;
   allControlsSelected: boolean;
   onOpenSubgroup: (id: string) => void;
   onOpenControl: (control: SearchResultItem) => void;
+  onPageChange: (page: number) => void;
   onToggleControlSelection: (control: SearchResultItem, selected: boolean) => void;
   onSelectAllControls: () => void;
 }
@@ -19,23 +21,25 @@ export function GroupPage({
   group,
   subgroups,
   controls,
+  page,
+  pageSize,
   selectedControlIds,
   loading,
   selectingAllControls,
   allControlsSelected,
   onOpenSubgroup,
   onOpenControl,
+  onPageChange,
   onToggleControlSelection,
   onSelectAllControls
 }: GroupPageProps) {
-  /* REQ: EC-03, UI 5.2 Group/Search Pagination */
-  const [visibleCount, setVisibleCount] = useState(25);
-
-  useEffect(() => {
-    setVisibleCount(25);
-  }, [group?.id, controls]);
-
-  const visibleControls = useMemo(() => controls.slice(0, visibleCount), [controls, visibleCount]);
+  const safePageSize = Number.isFinite(pageSize) && pageSize > 0 ? Math.floor(pageSize) : 50;
+  const totalPages = Math.max(1, Math.ceil(controls.length / safePageSize));
+  const currentPage = Math.max(1, Math.min(totalPages, Math.floor(page)));
+  const sliceStart = (currentPage - 1) * safePageSize;
+  const visibleControls = controls.slice(sliceStart, sliceStart + safePageSize);
+  const visibleStart = sliceStart + 1;
+  const visibleEnd = sliceStart + visibleControls.length;
 
   if (!group) {
     return <section className="status-box error">Gruppe nicht gefunden.</section>;
@@ -126,12 +130,28 @@ export function GroupPage({
             );
           })}
         </ul>
-        {visibleCount < controls.length ? (
-          <div className="list-pagination">
-            <button type="button" className="secondary" onClick={() => setVisibleCount((prev) => prev + 25)}>
-              Mehr laden
+        {totalPages > 1 ? (
+          <nav className="list-pagination" aria-label="Seitennavigation Gruppen-Controls">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage <= 1}
+            >
+              Vorherige Seite
             </button>
-          </div>
+            <p className="list-pagination-status" aria-live="polite">
+              Seite {currentPage} von {totalPages} ({visibleStart}-{visibleEnd})
+            </p>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+            >
+              Nächste Seite
+            </button>
+          </nav>
         ) : null}
       </section>
     </section>

@@ -16,6 +16,7 @@ export function useGroupPage({ client, bootState, route, meta }: UseGroupPageArg
   const [groupLoading, setGroupLoading] = useState(false);
 
   const groupRequestCounter = useRef(0);
+  const routeGroupId = route.view === "group" ? route.groupId : null;
 
   useEffect(() => {
     if (bootState !== "ready") {
@@ -24,13 +25,13 @@ export function useGroupPage({ client, bootState, route, meta }: UseGroupPageArg
       return;
     }
 
-    if (route.view !== "group" || !meta) {
+    if (!routeGroupId || !meta) {
       groupRequestCounter.current += 1;
       setGroupLoading(false);
       return;
     }
 
-    const group = meta.groups.find((item) => item.id === route.groupId);
+    const group = meta.groups.find((item) => item.id === routeGroupId);
     if (!group) {
       groupRequestCounter.current += 1;
       setGroupControls([]);
@@ -71,10 +72,10 @@ export function useGroupPage({ client, bootState, route, meta }: UseGroupPageArg
           setGroupLoading(false);
         }
       });
-  }, [bootState, client, route, meta]);
+  }, [bootState, client, routeGroupId, meta]);
 
   const currentGroup =
-    route.view === "group" && meta ? meta.groups.find((group) => group.id === route.groupId) ?? null : null;
+    routeGroupId && meta ? meta.groups.find((group) => group.id === routeGroupId) ?? null : null;
 
   const currentSubgroups = useMemo(() => {
     if (route.view !== "group" || !meta || !currentGroup) {

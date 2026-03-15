@@ -162,6 +162,29 @@ test.describe("Kernflows", () => {
     await expect(page).not.toHaveURL(/control=/);
   });
 
+  test("Pagination bleibt über Deep-Link und Back-to-results stabil, inklusive Tastaturbedienung", async ({ page }) => {
+    await page.goto("/#/search?q=KONF&page=2&pageSize=25");
+
+    await expect(page.getByText(/^Seite 2 von \d+/)).toBeVisible({ timeout: 15000 });
+
+    const nextPageButton = page.getByRole("button", { name: "Nächste Seite" });
+    await nextPageButton.focus();
+    await expect(nextPageButton).toBeFocused();
+    await page.keyboard.press("Enter");
+
+    await expect(page).toHaveURL(/page=3/);
+    await expect(page.getByText(/^Seite 3 von \d+/)).toBeVisible({ timeout: 15000 });
+
+    await page.locator(".result-card").first().click();
+    await expect(page).toHaveURL(/control=/);
+
+    await page.getByRole("button", { name: "Zur Ergebnisliste" }).click();
+    await expect(page).toHaveURL(/page=3/);
+    await expect(page).toHaveURL(/pageSize=25/);
+    await expect(page).not.toHaveURL(/control=/);
+    await expect(page.getByText(/^Seite 3 von \d+/)).toBeVisible({ timeout: 15000 });
+  });
+
   test("Direkter Control-Deep-Link oeffnet die Detailansicht stabil", async ({ page }) => {
     await page.goto("/#/search?q=KONF");
     await page.locator(".result-card").first().click();

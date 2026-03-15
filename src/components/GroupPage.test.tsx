@@ -48,12 +48,15 @@ function buildProps(overrides: Partial<ComponentProps<typeof GroupPage>> = {}): 
     group: createGroup(),
     subgroups: [],
     controls: [],
+    page: 1,
+    pageSize: 50,
     selectedControlIds: new Set<string>(),
     loading: false,
     selectingAllControls: false,
     allControlsSelected: false,
     onOpenSubgroup: vi.fn(),
     onOpenControl: vi.fn(),
+    onPageChange: vi.fn(),
     onToggleControlSelection: vi.fn(),
     onSelectAllControls: vi.fn(),
     ...overrides
@@ -172,23 +175,43 @@ describe("GroupPage interactions", () => {
     expect(onOpenControl).toHaveBeenCalledWith(controls[0]);
   });
 
-  it("paginiert Controls und setzt Pagination beim Gruppenwechsel zurück", async () => {
+  it("meldet Seitenwechsel und rendert den aktiven Gruppen-Seitenausschnitt", async () => {
     const controls = createControls(30);
+    const onPageChange = vi.fn();
 
-    await renderGroupPage(buildProps({ controls }));
+    await renderGroupPage(
+      buildProps({
+        controls,
+        page: 1,
+        pageSize: 25,
+        onPageChange
+      })
+    );
 
     expect(document.body.textContent).toContain("APP.25");
     expect(document.body.textContent).not.toContain("APP.26");
 
-    const loadMore = findButtonByExactText("Mehr laden");
-    await clickElement(loadMore);
+    const nextPageButton = findButtonByExactText("Nächste Seite");
+    await clickElement(nextPageButton);
+    expect(onPageChange).toHaveBeenCalledWith(2);
+
+    await renderGroupPage(
+      buildProps({
+        controls,
+        page: 2,
+        pageSize: 25
+      })
+    );
 
     expect(document.body.textContent).toContain("APP.26");
+    expect(document.body.textContent).not.toContain("APP.25");
 
     await renderGroupPage(
       buildProps({
         group: createGroup({ id: "APP.2", title: "Neue Gruppe", pathIds: ["APP", "APP.2"], pathTitles: ["Root", "Neue Gruppe"] }),
-        controls
+        controls,
+        page: 1,
+        pageSize: 25
       })
     );
 
