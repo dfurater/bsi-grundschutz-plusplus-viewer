@@ -10,4 +10,3 @@ public/data/
 public/sw.js
 .env*
 !.env.example
-AGENTS.md
