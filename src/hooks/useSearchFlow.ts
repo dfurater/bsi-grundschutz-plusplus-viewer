@@ -61,11 +61,14 @@ export function useSearchFlow({
   const [pendingSearchResultsFocusQuery, setPendingSearchResultsFocusQuery] = useState<string | null>(null);
 
   const debouncedSearchText = useDebouncedValue(searchText, 300);
+  const routeFiltersKey = route.view === "search" ? JSON.stringify(route.filters) : "";
   const requestCounter = useRef(0);
   const lastSearchStateRef = useRef<{
     query: string;
     sort: SearchQuery["sort"];
     filters: ActiveFilters;
+    page: number;
+    pageSize: number;
     timestamp: number;
   } | null>(null);
 
@@ -107,6 +110,8 @@ export function useSearchFlow({
       query: route.query,
       sort: route.sort,
       filters: mapRouteFilters(route.filters),
+      page: route.page,
+      pageSize: route.pageSize,
       timestamp: Date.now()
     };
     setSearchText(route.query);
@@ -163,7 +168,12 @@ export function useSearchFlow({
     setSort(fallbackSort);
 
     if (route.view === "search") {
-      navigate(buildSearchHash(searchText, fallbackSort, filters, route.controlId, route.controlTopGroupId));
+      navigate(
+        buildSearchHash(searchText, fallbackSort, filters, route.controlId, route.controlTopGroupId, {
+          page: route.page,
+          pageSize: route.pageSize
+        })
+      );
     } else {
       navigate(buildSearchHash(searchText, fallbackSort, filters, null, null));
     }
@@ -175,6 +185,8 @@ export function useSearchFlow({
     sort,
     route.view === "search" ? route.controlId : null,
     route.view === "search" ? route.controlTopGroupId : null,
+    route.view === "search" ? route.page : null,
+    route.view === "search" ? route.pageSize : null,
     navigate
   ]);
 
@@ -237,7 +249,12 @@ export function useSearchFlow({
     bootState,
     client,
     pendingSearchResultsFocusQuery,
-    route,
+    route.view,
+    route.view === "search" ? route.query : "",
+    route.view === "search" ? route.sort : "relevance",
+    routeFiltersKey,
+    route.view === "search" ? route.controlId : null,
+    route.view === "search" ? route.controlTopGroupId : null,
     searchOverlayOpen,
     onLoadControl,
     onClearDetailAndGraph
@@ -338,7 +355,12 @@ export function useSearchFlow({
 
   function handleSelectResult(item: SearchResultItem) {
     if (route.view === "search") {
-      navigate(buildSearchHash(searchText, sort, filters, item.id, item.topGroupId));
+      navigate(
+        buildSearchHash(searchText, sort, filters, item.id, item.topGroupId, {
+          page: route.page,
+          pageSize: route.pageSize
+        })
+      );
       return;
     }
     navigate(buildControlHash(item.id, item.topGroupId));
@@ -367,7 +389,12 @@ export function useSearchFlow({
 
   function handleBackToResults() {
     if (route.view === "search") {
-      navigate(buildSearchHash(searchText, sort, filters, null, null));
+      navigate(
+        buildSearchHash(searchText, sort, filters, null, null, {
+          page: route.page,
+          pageSize: route.pageSize
+        })
+      );
       return;
     }
 
@@ -377,7 +404,12 @@ export function useSearchFlow({
       setSort(fallbackState.sort);
       setFilters(fallbackState.filters);
       setSearchInputDirty(false);
-      navigate(buildSearchHash(fallbackState.query, fallbackState.sort, fallbackState.filters, null, null));
+      navigate(
+        buildSearchHash(fallbackState.query, fallbackState.sort, fallbackState.filters, null, null, {
+          page: fallbackState.page,
+          pageSize: fallbackState.pageSize
+        })
+      );
       return;
     }
 

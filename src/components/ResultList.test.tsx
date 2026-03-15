@@ -34,11 +34,14 @@ function buildProps(overrides: Partial<ComponentProps<typeof ResultList>> = {}):
     items: [],
     total: 0,
     query: "",
+    page: 1,
+    pageSize: 50,
     selectedId: null,
     selectedControlIds: new Set<string>(),
     loading: false,
     error: null,
     onSelect: vi.fn(),
+    onPageChange: vi.fn(),
     onToggleSelection: vi.fn(),
     onSelectAllControls: vi.fn(),
     selectingAllControls: false,
@@ -145,30 +148,48 @@ describe("ResultList interactions", () => {
     expect(onSelect).toHaveBeenCalledWith(item);
   });
 
-  it("paginiert über Mehr laden und setzt Pagination bei Query-/Item-Wechsel zurück", async () => {
+  it("navigiert über Seitenwechsel und rendert den jeweils aktiven Ausschnitt", async () => {
     const items = createItems(30);
+    const onPageChange = vi.fn();
 
     await renderResultList(
       buildProps({
         items,
         total: 30,
-        query: "firewall"
+        query: "firewall",
+        page: 1,
+        pageSize: 25,
+        onPageChange
       })
     );
 
     expect(document.body.textContent).toContain("APP.25");
     expect(document.body.textContent).not.toContain("APP.26");
 
-    const loadMore = findButtonByExactText("Mehr laden");
-    await clickElement(loadMore);
-
-    expect(document.body.textContent).toContain("APP.26");
+    const nextPageButton = findButtonByExactText("Nächste Seite");
+    await clickElement(nextPageButton);
+    expect(onPageChange).toHaveBeenCalledWith(2);
 
     await renderResultList(
       buildProps({
         items,
         total: 30,
-        query: "netz"
+        query: "firewall",
+        page: 2,
+        pageSize: 25
+      })
+    );
+
+    expect(document.body.textContent).toContain("APP.26");
+    expect(document.body.textContent).not.toContain("APP.25");
+
+    await renderResultList(
+      buildProps({
+        items,
+        total: 30,
+        query: "netz",
+        page: 1,
+        pageSize: 25
       })
     );
 

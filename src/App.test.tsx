@@ -664,6 +664,23 @@ describe("App orchestration", () => {
     expect(window.location.hash.includes("top=")).toBe(false);
   });
 
+  it("erhaelt page/pageSize beim Back-to-results aus dem Such-Detailkontext", async () => {
+    const searchItems = [createSearchItem("APP.1")];
+    mocks.searchClient.search.mockResolvedValue(createSearchResponse(searchItems));
+    mocks.searchClient.getControl.mockResolvedValue(createControlDetail("APP.1", "APP"));
+
+    setHash("#/search?q=alpha&page=3&pageSize=25&control=APP.1&top=APP");
+    await mountApp();
+
+    await waitFor(() => textByTestId("detail-id") === "APP.1");
+
+    await clickByTestId("back-to-results");
+
+    await waitFor(() => !window.location.hash.includes("control="));
+    expect(window.location.hash).toContain("page=3");
+    expect(window.location.hash).toContain("pageSize=25");
+  });
+
   it("exportiert CSV erfolgreich aus ausgewählten Controls", async () => {
     const searchItems = [createSearchItem("APP.1")];
     mocks.searchClient.search.mockResolvedValue(createSearchResponse(searchItems));

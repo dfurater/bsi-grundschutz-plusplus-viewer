@@ -5,6 +5,11 @@ import { SECURITY_BUDGETS } from "./securityBudgets";
 
 export type ActiveFilters = SearchQuery["filters"];
 
+export const DEFAULT_ROUTE_PAGE = 1;
+export const DEFAULT_ROUTE_PAGE_SIZE = 50;
+const MAX_ROUTE_PAGE = 10000;
+const MAX_ROUTE_PAGE_SIZE = 200;
+
 export const defaultFilters = (): ActiveFilters => ({
   topGroupId: [],
   groupId: [],
@@ -17,6 +22,11 @@ export const defaultFilters = (): ActiveFilters => ({
   relationTypes: []
 });
 
+interface RoutePaginationState {
+  page: number;
+  pageSize: number;
+}
+
 export interface SearchRouteState {
   view: "search";
   query: string;
@@ -24,12 +34,19 @@ export interface SearchRouteState {
   filters: ActiveFilters;
   controlId: string | null;
   controlTopGroupId: string | null;
+  page: number;
+  pageSize: number;
+}
+
+export interface RoutePaginationOptions {
+  page?: number | null;
+  pageSize?: number | null;
 }
 
 export type AppRoute =
   | { view: "home" }
   | SearchRouteState
-  | { view: "group"; groupId: string }
+  | ({ view: "group"; groupId: string } & RoutePaginationState)
   | { view: "control"; controlId: string; topGroupId: string | null }
   | { view: "about" }
   | { view: "source" }
@@ -53,6 +70,8 @@ export function parseHash(hash: string): AppRoute {
   const [pathPart, queryPart = ""] = raw.split("?");
   const path = pathPart.startsWith("/") ? pathPart : `/${pathPart}`;
   const params = new URLSearchParams(queryPart);
+  const page = parseRoutePage(params.get("page"));
+  const pageSize = parseRoutePageSize(params.get("pageSize"));
 
   if (path === "/" || path === "") {
     return { view: "home" };
@@ -73,7 +92,9 @@ export function parseHash(hash: string): AppRoute {
         : "relevance",
       filters,
       controlId: sanitizeRouteToken(params.get("control")),
-      controlTopGroupId: sanitizeRouteToken(params.get("top"))
+      controlTopGroupId: sanitizeRouteToken(params.get("top")),
+      page,
+      pageSize
     };
   }
 
@@ -82,7 +103,7 @@ export function parseHash(hash: string): AppRoute {
     if (!groupId) {
       return { view: "home" };
     }
-    return { view: "group", groupId };
+    return { view: "group", groupId, page, pageSize };
   }
 
   if (path.startsWith("/control/")) {
@@ -121,10 +142,13 @@ export function buildSearchHash(
   sort: SearchQuery["sort"],
   filters: ActiveFilters,
   controlId?: string | null,
-  controlTopGroupId?: string | null
+  controlTopGroupId?: string | null,
+  pagination: RoutePaginationOptions = {}
 ) {
   const params = new URLSearchParams();
   const safeQuery = sanitizeSearchText(query);
+  const page = sanitizeRoutePageNumber(pagination.page);
+  const pageSize = sanitizeRoutePageSizeNumber(pagination.pageSize);
   if (safeQuery) {
     params.set("q", safeQuery);
   }
@@ -146,6 +170,12 @@ export function buildSearchHash(
   if (controlTopGroupId) {
     params.set("top", controlTopGroupId);
   }
+  if (page > DEFAULT_ROUTE_PAGE) {
+    params.set("page", String(page));
+  }
+  if (pageSize !== DEFAULT_ROUTE_PAGE_SIZE) {
+    params.set("pageSize", String(pageSize));
+  }
 
   return `#/search${params.toString() ? `?${params.toString()}` : ""}`;
 }
@@ -162,8 +192,17 @@ function sanitizeRouteToken(value: string | null): string | null {
   return safe || null;
 }
 
-export function buildGroupHash(groupId: string) {
-  return `#/group/${encodeURIComponent(groupId)}`;
+export function buildGroupHash(groupId: string, pagination: RoutePaginationOptions = {}) {
+  const params = new URLSearchParams();
+  const page = sanitizeRoutePageNumber(pagination.page);
+  const pageSize = sanitizeRoutePageSizeNumber(pagination.pageSize);
+  if (page > DEFAULT_ROUTE_PAGE) {
+    params.set("page", String(page));
+  }
+  if (pageSize !== DEFAULT_ROUTE_PAGE_SIZE) {
+    params.set("pageSize", String(pageSize));
+  }
+  return `#/group/${encodeURIComponent(groupId)}${params.toString() ? `?${params.toString()}` : ""}`;
 }
 
 export function buildControlHash(controlId: string, topGroupId?: string | null) {
@@ -172,4 +211,41 @@ export function buildControlHash(controlId: string, topGroupId?: string | null) 
     params.set("top", topGroupId);
   }
   return `#/control/${encodeURIComponent(controlId)}${params.toString() ? `?${params.toString()}` : ""}`;
+}
+
+function parseRoutePage(value: string | null): number {
+  return parseRouteNumber(value, DEFAULT_ROUTE_PAGE, MAX_ROUTE_PAGE);
+}
+
+function parseRoutePageSize(value: string | null): number {
+  return parseRouteNumber(value, DEFAULT_ROUTE_PAGE_SIZE, MAX_ROUTE_PAGE_SIZE);
+}
+
+function parseRouteNumber(value: string | null, fallback: number, max: number): number {
+  if (!value) {
+    return fallback;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  if (parsed < 1) {
+    return fallback;
+  }
+  return Math.min(max, parsed);
+}
+
+function sanitizeRoutePageNumber(value: number | null | undefined): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return DEFAULT_ROUTE_PAGE;
+  }
+  return Math.max(DEFAULT_ROUTE_PAGE, Math.min(MAX_ROUTE_PAGE, Math.floor(value)));
+}
+
+function sanitizeRoutePageSizeNumber(value: number | null | undefined): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return DEFAULT_ROUTE_PAGE_SIZE;
+  }
+  return Math.max(DEFAULT_ROUTE_PAGE, Math.min(MAX_ROUTE_PAGE_SIZE, Math.floor(value)));
 }

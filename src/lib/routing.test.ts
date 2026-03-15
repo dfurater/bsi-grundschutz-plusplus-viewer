@@ -72,13 +72,35 @@ describe("parseHash hardening", () => {
     if (route.view === "search") {
       expect(route.controlId).toBe("CTRL-1");
       expect(route.controlTopGroupId).toBeNull();
+      expect(route.page).toBe(1);
+      expect(route.pageSize).toBe(50);
     }
+  });
+
+  it("parst und begrenzt page/pageSize in Search- und Group-Routen", () => {
+    const searchRoute = parseHash("#/search?q=test&page=3&pageSize=75");
+    expect(searchRoute.view).toBe("search");
+    if (searchRoute.view === "search") {
+      expect(searchRoute.page).toBe(3);
+      expect(searchRoute.pageSize).toBe(75);
+    }
+
+    const constrainedSearchRoute = parseHash("#/search?q=test&page=-2&pageSize=9999");
+    expect(constrainedSearchRoute.view).toBe("search");
+    if (constrainedSearchRoute.view === "search") {
+      expect(constrainedSearchRoute.page).toBe(1);
+      expect(constrainedSearchRoute.pageSize).toBe(200);
+    }
+
+    const groupRoute = parseHash("#/group/APP.1?page=2&pageSize=25");
+    expect(groupRoute).toEqual({ view: "group", groupId: "APP.1", page: 2, pageSize: 25 });
   });
 });
 
 describe("build hash helpers", () => {
   it("kodiert Group- und Control-IDs fuer Hash-Routen", () => {
     expect(buildGroupHash("OPS 1")).toBe("#/group/OPS%201");
+    expect(buildGroupHash("OPS 1", { page: 2, pageSize: 75 })).toBe("#/group/OPS%201?page=2&pageSize=75");
     expect(buildControlHash("APP-1.2", "APP ROOT")).toBe("#/control/APP-1.2?top=APP+ROOT");
   });
 
@@ -86,7 +108,7 @@ describe("build hash helpers", () => {
     const filters = defaultFilters();
     filters.topGroupId = ["APP"];
     filters.tags = ["netzwerk", "haertung"];
-    const hash = buildSearchHash("  Härtung  ", "title-desc", filters, "APP.1", "APP");
+    const hash = buildSearchHash("  Härtung  ", "title-desc", filters, "APP.1", "APP", { page: 2, pageSize: 75 });
 
     expect(hash).toContain("#/search?");
     expect(hash).toContain("q=H%C3%A4rtung");
@@ -96,6 +118,8 @@ describe("build hash helpers", () => {
     expect(hash).toContain("tag=haertung");
     expect(hash).toContain("control=APP.1");
     expect(hash).toContain("top=APP");
+    expect(hash).toContain("page=2");
+    expect(hash).toContain("pageSize=75");
   });
 
   it("laesst leere Querys und Default-Sortierung weg", () => {
@@ -108,7 +132,7 @@ describe("build hash helpers", () => {
     filters.groupId = ["OPS.1"];
     filters.secLevel = ["hoch"];
     filters.relationTypes = ["required"];
-    const hash = buildSearchHash("Kontrolle", "id-asc", filters, "OPS.1.2", "OPS");
+    const hash = buildSearchHash("Kontrolle", "id-asc", filters, "OPS.1.2", "OPS", { page: 4, pageSize: 25 });
 
     const route = parseHash(hash);
     expect(route.view).toBe("search");
@@ -120,6 +144,8 @@ describe("build hash helpers", () => {
       expect(route.filters.relationTypes).toEqual(["required"]);
       expect(route.controlId).toBe("OPS.1.2");
       expect(route.controlTopGroupId).toBe("OPS");
+      expect(route.page).toBe(4);
+      expect(route.pageSize).toBe(25);
     }
   });
 });

@@ -173,12 +173,25 @@ export default function App() {
     async (controlId: string) => {
       const topGroupId = await controlDetail.resolveTopGroupId(controlId);
       if (route.view === "search") {
-        navigate(buildSearchHash(searchFlow.searchText, searchFlow.sort, searchFlow.filters, controlId, topGroupId));
+        navigate(
+          buildSearchHash(searchFlow.searchText, searchFlow.sort, searchFlow.filters, controlId, topGroupId, {
+            page: route.page,
+            pageSize: route.pageSize
+          })
+        );
         return;
       }
       navigate(buildControlHash(controlId, topGroupId));
     },
-    [controlDetail.resolveTopGroupId, route.view, searchFlow.searchText, searchFlow.sort, searchFlow.filters]
+    [
+      controlDetail.resolveTopGroupId,
+      route.view,
+      route.view === "search" ? route.page : null,
+      route.view === "search" ? route.pageSize : null,
+      searchFlow.searchText,
+      searchFlow.sort,
+      searchFlow.filters
+    ]
   );
 
   const handleBreadcrumbGroupClick = useCallback((groupId: string) => {
@@ -341,12 +354,15 @@ export default function App() {
             group={groupPage.currentGroup}
             subgroups={groupPage.currentSubgroups}
             controls={groupPage.groupControls}
+            page={route.page}
+            pageSize={route.pageSize}
             selectedControlIds={csvExport.selectedControlIds}
             loading={groupPage.groupLoading}
             selectingAllControls={csvExport.selectAllRunningScope === "group"}
             allControlsSelected={groupAllControlsSelected}
             onOpenSubgroup={(groupId) => navigate(buildGroupHash(groupId))}
             onOpenControl={(item) => navigate(buildControlHash(item.id, item.topGroupId))}
+            onPageChange={(nextPage) => navigate(buildGroupHash(route.groupId, { page: nextPage, pageSize: route.pageSize }))}
             onToggleControlSelection={csvExport.handleToggleControlSelection}
             onSelectAllControls={csvExport.handleSelectAllGroupControls}
           />
@@ -385,8 +401,18 @@ export default function App() {
               loading={searchFlow.searchLoading}
               error={searchFlow.searchError}
               hasActiveFilters={searchFlow.hasActiveFilters}
+              page={route.page}
+              pageSize={route.pageSize}
               onResetFilters={searchFlow.handleResetFilters}
               onSelect={searchFlow.handleSelectResult}
+              onPageChange={(nextPage) =>
+                navigate(
+                  buildSearchHash(searchFlow.searchText, searchFlow.sort, searchFlow.filters, route.controlId, route.controlTopGroupId, {
+                    page: nextPage,
+                    pageSize: route.pageSize
+                  })
+                )
+              }
               onToggleSelection={csvExport.handleToggleControlSelection}
               onSelectAllControls={csvExport.handleSelectAllSearchControls}
               selectingAllControls={csvExport.selectAllRunningScope === "search"}
@@ -433,7 +459,14 @@ export default function App() {
           open={Boolean(route.controlId)}
           title="Control-Detail"
           variant="detail"
-          onClose={() => navigate(buildSearchHash(searchFlow.searchText, searchFlow.sort, searchFlow.filters, null, null))}
+          onClose={() =>
+            navigate(
+              buildSearchHash(searchFlow.searchText, searchFlow.sort, searchFlow.filters, null, null, {
+                page: route.page,
+                pageSize: route.pageSize
+              })
+            )
+          }
         >
           {/* REQ: PD-06, Clarification Pack §8 */}
           <ControlDetailPanel {...detailPanelProps} />
