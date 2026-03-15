@@ -569,6 +569,8 @@ svg {
   text-align: left;
   color: var(--text-primary);
   cursor: pointer;
+  min-width: 0;
+  overflow: hidden;
   transition:
     background var(--dur-fast) var(--ease-out),
     border-color var(--dur-fast) var(--ease-out),
@@ -594,6 +596,10 @@ svg {
   font-weight: var(--fw-semibold);
   line-height: 1.45;
   letter-spacing: -0.02em;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  hyphens: auto;
 }
 
 .home-group-card-meta {

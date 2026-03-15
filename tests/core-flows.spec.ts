@@ -81,6 +81,25 @@ test.describe("Kernflows", () => {
     }
   });
 
+  test("Startseite: lange Katalogtitel bleiben innerhalb ihrer Kacheln", async ({ page }) => {
+    const widths = [375, 768, 1024, 1280, 1600];
+
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/#/");
+
+      const targetTitle = page.locator(".home-group-card-title").filter({ hasText: /Sicherheitsvorfalls?behandlung/ });
+      await expect(targetTitle).toBeVisible({ timeout: 15000 });
+
+      const hasOverflow = await targetTitle.evaluate((element) => {
+        const node = element as HTMLElement;
+        return node.scrollWidth > node.clientWidth || node.scrollHeight === 0;
+      });
+
+      expect(hasOverflow).toBe(false);
+    }
+  });
+
   test("Skip-Link springt direkt in den Sucharbeitsbereich", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await gotoSearch(page);
