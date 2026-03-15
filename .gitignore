@@ -11,3 +11,4 @@ public/sw.js
 .env*
 !.env.example
 AGENTS.md
+.claude
