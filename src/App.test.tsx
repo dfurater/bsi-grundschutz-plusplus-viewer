@@ -98,7 +98,7 @@ vi.mock("./components/GroupOverview", () => ({
       <button type="button" data-testid="home-select-all" onClick={props.onSelectAllControls}>
         home-select-all
       </button>
-      <button type="button" data-testid="home-search" onClick={props.onStartSearch}>
+      <button type="button" data-testid="home-search" onClick={props.onSubmitSearch}>
         home-search
       </button>
     </section>
@@ -179,6 +179,17 @@ vi.mock("./components/SearchOverlay", () => ({
 }));
 
 vi.mock("./components/FacetPanel", () => ({
+  FACET_LABELS: {
+    topGroupId: "Top-Gruppen",
+    groupId: "Gruppen",
+    secLevel: "Schutzniveau",
+    effortLevel: "Aufwand",
+    class: "Klasse",
+    modalverbs: "Modalverben",
+    targetObjects: "Zielobjekte",
+    tags: "Tags",
+    relationTypes: "Relationen"
+  },
   FacetPanel: (_props: any) => null
 }));
 
@@ -726,6 +737,7 @@ describe("App orchestration", () => {
 
     await waitFor(() => textByTestId("result-list-count") === "1");
     await clickByTestId("result-toggle-first");
+    await waitFor(() => textByTestId("header-selected-count") === "1");
     await clickByTestId("header-export");
 
     await waitFor(() => textByTestId("status-toast").includes("CSV-Export fehlgeschlagen"));

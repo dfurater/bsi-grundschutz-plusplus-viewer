@@ -11,8 +11,7 @@ interface FilterSheetProps {
 }
 
 /**
- * Responsive filter container: off-canvas drawer on tablet, bottom sheet on mobile.
- * REQ: PD-06, US-08, RESP-01
+ * Mobile and tablet overlay container for filters and detail panels.
  */
 export function FilterSheet({ open, title, variant, onClose, children }: FilterSheetProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -34,7 +33,6 @@ export function FilterSheet({ open, title, variant, onClose, children }: FilterS
 
   return (
     <div className="sheet-backdrop" onMouseDown={onClose}>
-      {/* REQ: US-08, A11y-03 */}
       <section
         ref={containerRef}
         role="dialog"
@@ -45,9 +43,14 @@ export function FilterSheet({ open, title, variant, onClose, children }: FilterS
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="sheet-header">
-          <h2>{title}</h2>
-          <button type="button" className="icon-button" aria-label={`${title} schließen`} onClick={onClose}>
-            ✕
+          <div>
+            <div className="ds-section-tag">{variant === "filter" ? "Filter" : "Detail"}</div>
+            <h2>{title}</h2>
+          </div>
+          <button type="button" className="icon-btn" aria-label={`${title} schließen`} onClick={onClose}>
+            <svg viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M2 2l8 8M10 2L2 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
           </button>
         </div>
         <div className="sheet-content">{children}</div>

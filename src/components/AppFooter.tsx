@@ -4,10 +4,12 @@ const CC_BY_SA_4_URL = "https://creativecommons.org/licenses/by-sa/4.0/";
 export function AppFooter() {
   return (
     <footer className="app-footer" aria-labelledby="footer-attribution">
-      <p id="footer-attribution" className="app-footer-attribution">
-        Enthält Inhalte aus der Stand-der-Technik-Bibliothek des BSI. Lizenz: CC BY-SA 4.0. Für diesen Viewer
-        technisch aufbereitet.
-      </p>
+      <div className="app-footer-meta">
+        <div className="ds-section-tag">Attribution</div>
+        <p id="footer-attribution" className="app-footer-attribution">
+          Enthält Inhalte aus der Stand-der-Technik-Bibliothek des BSI. Lizenz: CC BY-SA 4.0. Für diesen Viewer technisch aufbereitet.
+        </p>
+      </div>
 
       <nav className="app-footer-links" aria-label="Attribution, Lizenz und Footer-Navigation">
         <a href={BSI_REPOSITORY_URL} target="_blank" rel="noopener noreferrer">

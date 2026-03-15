@@ -92,20 +92,8 @@ export function DatenschutzPage() {
       <h3>5.1 Cookies</h3>
       <p>Diese Website verwendet nach aktuellem Stand keine Cookies.</p>
 
-      <h3>5.2 localStorage (Theme-Präferenz)</h3>
-      <p>
-        Die Website speichert im Browser den Schlüssel <code>gspp-theme</code>, um die gewählte
-        Darstellungs-Präferenz (Hell/Dunkel) zu speichern.
-      </p>
-      <p>
-        <strong>Zweck:</strong> nutzerfreundliche Darstellung und Wiederherstellung der gewählten UI-Einstellung.
-        <br />
-        <strong>Rechtsgrundlage (DSGVO):</strong> Art. 6 Abs. 1 lit. f DSGVO.
-        <br />
-        <strong>Endgerätezugriff (Paragraf 25 TDDDG/TTDSG):</strong> Soweit die Speicherung oder das Auslesen von
-        Informationen auf dem Endgerät betroffen ist, erfolgt dies nur, soweit dies für die Bereitstellung der vom
-        Nutzer gewünschten Funktion erforderlich ist.
-      </p>
+      <h3>5.2 localStorage</h3>
+      <p>Nach aktuellem Stand verwendet diese Website kein localStorage für nutzerbezogene Einstellungen oder Inhaltsdaten.</p>
 
       <h3>5.3 Service Worker / Cache Storage</h3>
       <p>
@@ -151,8 +139,8 @@ export function DatenschutzPage() {
       <h2>8. Speicherdauer</h2>
       <ul>
         <li>
-          <strong>Lokale Browserdaten</strong> (Theme-Präferenz, Cache) bleiben gespeichert, bis sie durch den Nutzer
-          gelöscht oder technisch invalidiert werden.
+          <strong>Lokale Browserdaten</strong> (insbesondere Cache-Inhalte des Service Workers) bleiben gespeichert, bis
+          sie durch den Nutzer gelöscht oder technisch invalidiert werden.
         </li>
         <li>
           <strong>Server-Logs</strong> richten sich nach den Vorgaben des Hosting-Anbieters.

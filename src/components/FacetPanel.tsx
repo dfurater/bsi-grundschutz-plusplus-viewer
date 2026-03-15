@@ -27,19 +27,19 @@ interface FacetPanelProps {
   onReset: () => void;
 }
 
-const FACET_LABELS: Record<keyof ActiveFilters, string> = {
-  topGroupId: "Top-Gruppe",
-  groupId: "Gruppe",
-  secLevel: "Sicherheitsniveau",
+export const FACET_LABELS: Record<keyof ActiveFilters, string> = {
+  topGroupId: "Top-Gruppen",
+  groupId: "Gruppen",
+  secLevel: "Schutzniveau",
   effortLevel: "Aufwand",
   class: "Klasse",
-  modalverbs: "Modalverb",
+  modalverbs: "Modalverben",
   targetObjects: "Zielobjekte",
   tags: "Tags",
   relationTypes: "Relationen"
 };
 
-const FACET_ORDER: Array<keyof ActiveFilters> = [
+export const FACET_ORDER: Array<keyof ActiveFilters> = [
   "topGroupId",
   "groupId",
   "secLevel",
@@ -78,6 +78,21 @@ function sortFacetOptions(
   });
 }
 
+function sortLabel(sortBase: SortBase, sortDirection: "asc" | "desc") {
+  if (sortBase === "relevance") {
+    return "Relevanz";
+  }
+
+  const directionLabel = sortDirection === "asc" ? "aufsteigend" : "absteigend";
+  if (sortBase === "id") {
+    return `ID ${directionLabel}`;
+  }
+  if (sortBase === "title") {
+    return `Titel ${directionLabel}`;
+  }
+  return `Aufwand ${directionLabel}`;
+}
+
 export function FacetPanel({
   facets,
   filters,
@@ -90,21 +105,30 @@ export function FacetPanel({
   onReset
 }: FacetPanelProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const activeFilterCount = Object.values(filters).reduce((sum, entries) => sum + entries.length, 0);
 
   return (
-    /* REQ: US-08, A11y-02 */
-    <aside className="facet-panel" aria-label="Filter">
-      {/* REQ: User Request Sort-Umzug Sidebar */}
-      <div className="facet-sort-block">
+    <aside className="facet-panel c-filter-panel" aria-label="Filter">
+      <div className="c-filter-header">
+        <div className="facet-panel-heading">
+          <span className="c-filter-title">Filter</span>
+          <span className="facet-sort-summary">{sortLabel(sortBase, sortDirection)}</span>
+        </div>
+        <button type="button" className={`c-filter-reset ${activeFilterCount > 0 ? "visible" : ""}`} onClick={onReset}>
+          Zurücksetzen
+        </button>
+      </div>
+
+      <div className="facet-sort-tools">
         <label htmlFor="facet-sort-select" className="facet-sort-label">
-          Relevanz
+          Sortierung
         </label>
-        <div className="sort-controls">
+        <div className="facet-sort-controls">
           <select
             id="facet-sort-select"
             value={sortBase}
             onChange={(event) => onSortBaseChange(event.target.value as SortBase)}
-            aria-label="Relevanz"
+            aria-label="Sortierung"
           >
             <option value="relevance">Relevanz</option>
             <option value="id">ID</option>
@@ -116,21 +140,22 @@ export function FacetPanel({
           {sortBase !== "relevance" ? (
             <button
               type="button"
-              className="icon-button"
+              className="icon-btn"
               aria-label={sortDirection === "asc" ? "Sortierung absteigend" : "Sortierung aufsteigend"}
               onClick={onSortDirectionToggle}
             >
-              {sortDirection === "asc" ? "↑" : "↓"}
+              <svg viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <path
+                  d={sortDirection === "asc" ? "M6 2v8M3.5 4.5L6 2l2.5 2.5" : "M6 10V2M3.5 7.5L6 10l2.5-2.5"}
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </button>
           ) : null}
         </div>
-      </div>
-
-      <div className="facet-panel-header">
-        <h2>Filter</h2>
-        <button type="button" className="link-button" onClick={onReset}>
-          Zurücksetzen
-        </button>
       </div>
 
       {FACET_ORDER.map((facetKey) => {
@@ -140,43 +165,69 @@ export function FacetPanel({
         }
 
         const isCollapsed = collapsed[facetKey] ?? false;
+        const activeCount = filters[facetKey].length;
         const sortedOptions = sortFacetOptions(facetKey, options);
 
         return (
-          <section key={facetKey} className={`facet-section ${isCollapsed ? "collapsed" : ""}`}>
+          <section key={facetKey} className="c-filter-group facet-group">
             <button
               type="button"
-              className="facet-toggle"
+              className="c-filter-group-head"
               aria-expanded={!isCollapsed}
               aria-label={`${FACET_LABELS[facetKey]} ein- oder ausklappen`}
               onClick={() => setCollapsed((prev) => ({ ...prev, [facetKey]: !isCollapsed }))}
             >
-              <span>{FACET_LABELS[facetKey]}</span>
-              <span className="accordion-indicator" aria-hidden="true">
-                ▾
+              <span className="c-filter-group-name">
+                {FACET_LABELS[facetKey]}
+                <span className={`c-filter-group-count ${activeCount > 0 ? "has-active" : ""}`}>{activeCount}</span>
+              </span>
+              <span className="facet-group-icon" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path
+                    d={isCollapsed ? "M3 4l2 2 2-2" : "M7 4l-2 2-2-2"}
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                  />
+                </svg>
               </span>
             </button>
 
             {!isCollapsed ? (
-              <ul>
+              <div className="c-filter-items">
                 {sortedOptions.slice(0, facetKey === "tags" ? 40 : 20).map((option) => {
                   const selected = filters[facetKey].includes(option.value);
+
                   return (
-                    <li key={`${facetKey}-${option.value}`}>
-                      <label>
+                    <label key={`${facetKey}-${option.value}`} className={`c-filter-item ${selected ? "checked" : ""}`}>
+                      <span className="c-filter-item-left">
                         <input
+                          className="sr-only"
                           type="checkbox"
                           checked={selected}
                           onChange={() => onToggle(facetKey, option.value)}
                           aria-label={`${FACET_LABELS[facetKey]} ${option.value}`}
                         />
-                        <span>{option.value}</span>
-                        <em>{option.count}</em>
-                      </label>
-                    </li>
+                        <span className={`c-checkbox ${selected ? "checked" : ""}`} aria-hidden="true">
+                          {selected ? (
+                            <svg viewBox="0 0 8 8" fill="none">
+                              <path
+                                d="M1 4l2 2 4-4"
+                                stroke="white"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          ) : null}
+                        </span>
+                        <span className="c-filter-item-label">{option.value}</span>
+                      </span>
+                      <span className="c-filter-item-num">{option.count}</span>
+                    </label>
                   );
                 })}
-              </ul>
+              </div>
             ) : null}
           </section>
         );

@@ -108,7 +108,7 @@ afterEach(async () => {
 describe("ResultList interactions", () => {
   it("zeigt Lade- und Fehlerzustand mit Fokusankern", async () => {
     await renderResultList(buildProps({ loading: true }));
-    expect(document.body.textContent).toContain("Index wird abgefragt…");
+    expect(document.body.textContent).toContain("Ergebnisse werden geladen");
     expect(document.querySelector('[data-search-results-focus="loading"]')).not.toBeNull();
 
     await renderResultList(buildProps({ loading: false, error: "Worker ist nicht erreichbar." }));
@@ -137,7 +137,7 @@ describe("ResultList interactions", () => {
 
     await clickElement(checkbox);
 
-    const cardButton = document.querySelector<HTMLButtonElement>("button.result-card");
+    const cardButton = document.querySelector<HTMLButtonElement>("button.result-card-button");
     if (!cardButton) {
       throw new Error("Result-Card fehlt");
     }
@@ -210,7 +210,7 @@ describe("ResultList interactions", () => {
     );
 
     expect(document.body.textContent).toContain("Keine Treffer");
-    expect(document.body.textContent).toContain("Keine Ergebnisse für „Firewall“.");
+    expect(document.body.textContent).toContain('Die Kombination aus Suchbegriff "Firewall" und aktiven Filtern liefert keine Ergebnisse.');
 
     const resetButton = findButtonByExactText("Filter zurücksetzen");
     await clickElement(resetButton);
@@ -228,7 +228,7 @@ describe("ResultList interactions", () => {
       })
     );
 
-    expect(document.body.textContent).toContain("Keine Ergebnisse. Passe Suche oder Filter an.");
+    expect(document.body.textContent).toContain("Der aktuelle Suchkontext liefert keine Ergebnisse.");
     const resetButton = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find((entry) =>
       entry.textContent?.includes("Filter zurücksetzen")
     );
@@ -252,10 +252,10 @@ describe("ResultList interactions", () => {
       })
     );
 
-    const selectedCard = document.querySelector<HTMLButtonElement>("button.result-card.selected");
+    const selectedCard = document.querySelector<HTMLElement>('article.result-card.state-selected[data-state="state-selected"]');
     expect(selectedCard).not.toBeNull();
-    expect(document.querySelector(".result-card-shell.export-selected")).not.toBeNull();
-    expect(document.querySelectorAll(".chip").length).toBe(0);
+    expect(document.querySelector(".chip-amber")).not.toBeNull();
+    expect(document.querySelectorAll(".chip").length).toBe(1);
   });
 
   it("steuert Select-all-Zustände und ruft den Callback aus", async () => {
@@ -272,7 +272,7 @@ describe("ResultList interactions", () => {
       })
     );
 
-    const selectAllButton = findButtonByExactText("Alles auswählen");
+    const selectAllButton = findButtonByExactText("Alle markieren");
     await clickElement(selectAllButton);
     expect(onSelectAllControls).toHaveBeenCalledTimes(1);
 
@@ -285,7 +285,7 @@ describe("ResultList interactions", () => {
         allControlsSelected: true
       })
     );
-    expect(document.body.textContent).toContain("Alles abwählen");
+    expect(document.body.textContent).toContain("Auswahl lösen");
 
     await renderResultList(
       buildProps({
@@ -297,7 +297,7 @@ describe("ResultList interactions", () => {
       })
     );
 
-    const busyButton = findButtonByExactText("Alles auswählen...");
+    const busyButton = findButtonByExactText("Auswahl läuft...");
     expect(busyButton.disabled).toBe(true);
   });
 });

@@ -3,83 +3,66 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { AppHeader } from "./AppHeader";
 
 describe("AppHeader", () => {
-  it("rendert einzeilige Primary-Actions mit Suche links und Theme-Button rechts", () => {
+  it("rendert Routen-Kontext, Home-Branding und Suchaktion", () => {
     const html = renderToStaticMarkup(
       <AppHeader
-        isTabletUp
-        isShrunk={false}
-        searchOverlayOpen={false}
-        theme="light"
+        currentLabel="Suche"
+        canOpenSearch
         selectedControlCount={0}
         exportingCsv={false}
         onOpenSearchOverlay={vi.fn()}
         onExportCsv={vi.fn()}
-        onToggleTheme={vi.fn()}
         onGoHome={vi.fn()}
         onGoBack={vi.fn()}
         showBack
       />
     );
 
-    expect(html).toContain("Suche öffnen");
-    expect(html).toContain("Katalog durchsuchen");
-    expect(html).not.toContain("Datensatz auswählen");
-    expect(html).not.toContain("Weitere Aktionen");
+    expect(html).toContain("Zurück");
     expect(html).toContain("Zur Startseite");
-    expect(html).not.toContain("Grundschutz++");
-    expect(html).not.toContain("<h1");
-    expect(html).toContain("Dunkelmodus");
-    expect(html).not.toContain("Export CSV");
-    expect(html).toContain("theme-toggle-button");
-    expect(html).toContain("app-bar-end");
+    expect(html).toContain("Regulatory Intelligence Console");
+    expect(html).toContain("Suche öffnen");
+    expect(html).toContain("Static Viewer - BSI Grundschutz++");
+    expect(html).not.toContain("theme-toggle-button");
+    expect(html).not.toContain("CSV Export");
   });
 
-  it("rendert unter 768px Suche als Icon und blendet den Aktionen-Button ohne Auswahl aus", () => {
+  it("blendet die Suchaktion aus, wenn kein Overlay geöffnet werden kann", () => {
     const html = renderToStaticMarkup(
       <AppHeader
-        isTabletUp={false}
-        isShrunk={false}
-        searchOverlayOpen={false}
-        theme="dark"
+        currentLabel="Control"
+        canOpenSearch={false}
         selectedControlCount={0}
         exportingCsv={false}
         onOpenSearchOverlay={vi.fn()}
         onExportCsv={vi.fn()}
-        onToggleTheme={vi.fn()}
         onGoHome={vi.fn()}
         onGoBack={vi.fn()}
         showBack={false}
       />
     );
 
-    expect(html).toContain("Suche öffnen");
-    expect(html).not.toContain("Katalog durchsuchen");
-    expect(html).not.toContain("Weitere Aktionen");
-    expect(html).not.toContain("Datensatz auswählen");
-    expect(html).toContain("Hellmodus");
+    expect(html).toContain("Control");
+    expect(html).not.toContain("Suche öffnen");
   });
 
-  it("zeigt Export CSV sobald Controls ausgewählt sind", () => {
+  it("zeigt Exportaktion und Zähler bei ausgewählten Controls", () => {
     const html = renderToStaticMarkup(
       <AppHeader
-        isTabletUp
-        isShrunk={false}
-        searchOverlayOpen={false}
-        theme="light"
+        currentLabel="Suche"
+        canOpenSearch
         selectedControlCount={3}
         exportingCsv={false}
         onOpenSearchOverlay={vi.fn()}
         onExportCsv={vi.fn()}
-        onToggleTheme={vi.fn()}
         onGoHome={vi.fn()}
         onGoBack={vi.fn()}
         showBack={false}
       />
     );
 
-    expect(html).toContain("Export CSV (3)");
-    expect(html).toContain("Exportierte Daten basieren auf Inhalten aus der Stand-der-Technik-Bibliothek des BSI");
-    expect(html).toContain("Quellen &amp; Lizenz");
-    expect(html).toContain('href="#/about/license"');
+    expect(html).toContain("3 im Export");
+    expect(html).toContain("CSV Export (3)");
+    expect(html).toContain("Ausgewählte Controls als CSV herunterladen");
   });
 });

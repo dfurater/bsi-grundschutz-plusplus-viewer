@@ -121,12 +121,12 @@ describe("GroupPage interactions", () => {
   it("zeigt Fehlerzustand wenn Gruppe fehlt", async () => {
     await renderGroupPage(buildProps({ group: null }));
 
-    expect(document.body.textContent).toContain("Gruppe nicht gefunden.");
+    expect(document.body.textContent).toContain("Gruppe nicht gefunden");
   });
 
   it("zeigt Ladehinweis während Gruppen-Controls nachgeladen werden", async () => {
     await renderGroupPage(buildProps({ loading: true }));
-    expect(document.body.textContent).toContain("Controls werden geladen…");
+    expect(document.querySelector('.result-list-loading[aria-busy="true"]')).not.toBeNull();
   });
 
   it("löst Callback-Flows für Breadcrumbs, Untergruppen, Controls und Checkboxen aus", async () => {
@@ -145,13 +145,13 @@ describe("GroupPage interactions", () => {
       })
     );
 
-    const breadcrumbButton = document.querySelector<HTMLButtonElement>(".breadcrumb-link");
+    const breadcrumbButton = document.querySelector<HTMLButtonElement>(".detail-breadcrumb-link:not(.current)");
     if (!breadcrumbButton) {
       throw new Error("Breadcrumb-Button fehlt");
     }
     await clickElement(breadcrumbButton);
 
-    const subgroupTile = document.querySelector<HTMLButtonElement>("button.group-tile");
+    const subgroupTile = document.querySelector<HTMLButtonElement>("button.home-group-card.compact");
     if (!subgroupTile) {
       throw new Error("Untergruppen-Button fehlt");
     }
@@ -163,7 +163,7 @@ describe("GroupPage interactions", () => {
     }
     await clickElement(checkbox);
 
-    const controlButton = document.querySelector<HTMLButtonElement>(".group-control-row button");
+    const controlButton = document.querySelector<HTMLButtonElement>("button.result-card-button");
     if (!controlButton) {
       throw new Error("Control-Button fehlt");
     }
@@ -230,7 +230,7 @@ describe("GroupPage interactions", () => {
       })
     );
 
-    const selectAll = findButtonByExactText("Alles auswählen");
+    const selectAll = findButtonByExactText("Alle markieren");
     await clickElement(selectAll);
     expect(onSelectAllControls).toHaveBeenCalledTimes(1);
 
@@ -242,7 +242,7 @@ describe("GroupPage interactions", () => {
         allControlsSelected: true
       })
     );
-    expect(document.body.textContent).toContain("Alles abwählen");
+    expect(document.body.textContent).toContain("Auswahl lösen");
 
     await renderGroupPage(
       buildProps({
@@ -253,7 +253,7 @@ describe("GroupPage interactions", () => {
       })
     );
 
-    const busy = findButtonByExactText("Alles auswählen...");
+    const busy = findButtonByExactText("Auswahl läuft...");
     expect(busy.disabled).toBe(true);
   });
 });

@@ -19,9 +19,10 @@ test.describe("A11y smoke", () => {
   }
 
   test("hat keine kritischen AXE-Verstosse mit offenem Search Overlay", async ({ page }) => {
+    await page.setViewportSize({ width: 900, height: 900 });
     await page.goto("/#/search?q=KONF");
-    await page.getByRole("button", { name: "Suche öffnen" }).click();
-    await expect(page.getByRole("dialog", { name: "Suche" })).toBeVisible();
+    await page.locator(".app-header-shell").getByRole("button", { name: "Suche öffnen" }).click();
+    await expect(page.getByRole("dialog", { name: "Katalog durchsuchen" })).toBeVisible();
 
     const results = await new AxeBuilder({ page }).analyze();
     const violations = results.violations.filter((violation) => {

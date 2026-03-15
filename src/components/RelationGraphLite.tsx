@@ -38,17 +38,17 @@ function withAngles(ids: string[], angleStart: number, angleEnd: number) {
 }
 
 function edgeColor(edge: RelationGraphEdge) {
-  return edge.relType === "required" ? "#b45309" : "#0b7285";
+  return edge.relType === "required" ? "var(--amber)" : "var(--accent)";
 }
 
 function nodeStrokeColor(relTypes: Set<string>) {
   if (relTypes.has("required") && relTypes.has("related")) {
-    return "#0f766e";
+    return "var(--accent-muted)";
   }
   if (relTypes.has("required")) {
-    return "#b45309";
+    return "var(--amber-muted)";
   }
-  return "#0b7285";
+  return "var(--accent-muted)";
 }
 
 export function RelationGraphLite({ controlId, graph, relFilter, onNodeClick }: RelationGraphLiteProps) {
@@ -229,18 +229,18 @@ export function RelationGraphLite({ controlId, graph, relFilter, onNodeClick }: 
           {filteredGraph.nodes.length} Knoten / {filteredGraph.edges.length} Kanten
         </span>
         <div className="relation-graph-zoom-controls">
-          <button type="button" className="secondary" onClick={() => zoomStep(-0.12)}>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => zoomStep(-0.12)}>
             -
           </button>
-          <button type="button" className="secondary" onClick={() => setZoom(1)}>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setZoom(1)}>
             {Math.round(zoom * 100)}%
           </button>
-          <button type="button" className="secondary" onClick={() => zoomStep(0.12)}>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => zoomStep(0.12)}>
             +
           </button>
           <button
             type="button"
-            className="secondary"
+            className="btn btn-secondary btn-sm"
             onClick={() => {
               setPan({ x: 0, y: 0 });
               setZoom(1);
@@ -263,10 +263,10 @@ export function RelationGraphLite({ controlId, graph, relFilter, onNodeClick }: 
       >
         <defs>
           <marker id="arrow-related" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-            <polygon points="0,0 8,4 0,8" fill="#0b7285" />
+            <polygon points="0,0 8,4 0,8" fill="var(--accent)" />
           </marker>
           <marker id="arrow-required" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-            <polygon points="0,0 8,4 0,8" fill="#b45309" />
+            <polygon points="0,0 8,4 0,8" fill="var(--amber)" />
           </marker>
         </defs>
 
@@ -297,11 +297,11 @@ export function RelationGraphLite({ controlId, graph, relFilter, onNodeClick }: 
             );
           })}
 
-          <circle cx={CENTER_X} cy={CENTER_Y} r="41" fill="#0f172a" />
-          <text x={CENTER_X} y={CENTER_Y - 4} textAnchor="middle" fill="#fff" fontSize="11" fontWeight="700">
+          <circle cx={CENTER_X} cy={CENTER_Y} r="41" fill="var(--surface-0)" stroke="var(--accent-muted)" strokeWidth="2.4" />
+          <text x={CENTER_X} y={CENTER_Y - 4} textAnchor="middle" fill="var(--text-primary)" fontSize="11" fontWeight="700">
             {controlId}
           </text>
-          <text x={CENTER_X} y={CENTER_Y + 14} textAnchor="middle" fill="#cbd5e1" fontSize="10">
+          <text x={CENTER_X} y={CENTER_Y + 14} textAnchor="middle" fill="var(--text-secondary)" fontSize="10">
             Fokus
           </text>
 
@@ -316,12 +316,12 @@ export function RelationGraphLite({ controlId, graph, relFilter, onNodeClick }: 
 
                   return (
                     <g key={`node-${id}`} className="graph-node" onClick={() => onNodeClick(id)}>
-                      <circle cx={pos.x} cy={pos.y} r={radius} fill="#ffffff" stroke={nodeStrokeColor(relTypes)} strokeWidth="2.2" />
+                      <circle cx={pos.x} cy={pos.y} r={radius} fill="var(--surface-1)" stroke={nodeStrokeColor(relTypes)} strokeWidth="2.2" />
                       <text
                         x={pos.x}
                         y={pos.y + 4}
                         textAnchor="middle"
-                        fill="#0f172a"
+                        fill="var(--text-primary)"
                         fontSize={depth === 1 ? "10.4" : "9.4"}
                         fontWeight="600"
                       >

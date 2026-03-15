@@ -58,9 +58,9 @@ describe("ControlDetailPanel", () => {
     );
 
     expect(html).toContain("Zur Ergebnisliste");
+    expect(html).toContain('aria-expanded="true"');
     expect(html).toContain('aria-expanded="false"');
-    expect(html).toContain("▾");
-    expect(html).not.toContain("▸");
+    expect(html).toContain("c-accordion-toggle");
     expect(html).toContain("Guidance");
     expect(html).toContain("Relationen");
   });
@@ -87,8 +87,7 @@ describe("ControlDetailPanel", () => {
       />
     );
 
-    expect(html).toContain('aria-expanded="true"');
-    expect(html).toContain("▾");
-    expect(html).not.toContain("▸");
+    expect(html.match(/aria-expanded="true"/g)?.length ?? 0).toBe(4);
+    expect(html).toContain("c-accordion-toggle");
   });
 });

@@ -13,8 +13,9 @@ export function StatusToast({ message, tone = "info" }: StatusToastProps) {
   }
 
   return (
-    <div className={`status-toast ${tone}`} role="status" aria-live="polite">
-      {message}
+    <div className={`status-toast status-toast-${tone}`} role="status" aria-live="polite">
+      <span className={`status-toast-dot status-toast-dot-${tone}`} aria-hidden="true" />
+      <span>{message}</span>
     </div>
   );
 }

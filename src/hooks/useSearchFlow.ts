@@ -130,19 +130,14 @@ export function useSearchFlow({
 
     const safeQuery = sanitizeSearchText(debouncedSearchText);
 
-    if (route.view === "search") {
-      if (route.query === safeQuery && !route.controlId) {
-        return;
-      }
-      replaceHash(buildSearchHash(safeQuery, sort, filters, null, null));
+    if (route.view !== "search") {
       return;
     }
 
-    if (!safeQuery) {
+    if (route.query === safeQuery && !route.controlId) {
       return;
     }
-
-    navigate(buildSearchHash(safeQuery, sort, filters, null, null));
+    replaceHash(buildSearchHash(safeQuery, sort, filters, null, null));
   }, [
     bootState,
     debouncedSearchText,
@@ -152,7 +147,6 @@ export function useSearchFlow({
     sort,
     route.view === "search" ? route.query : "",
     route.view === "search" ? route.controlId : null,
-    navigate,
     replaceHash
   ]);
 
@@ -285,8 +279,12 @@ export function useSearchFlow({
     setSearchOverlayText("");
     setSearchInputDirty(false);
     clearPendingSearchResultsFocus();
-    const nextFilters = route.view === "search" ? filters : defaultFilters();
-    replaceHash(buildSearchHash("", sort, nextFilters, null, null));
+    if (route.view === "search") {
+      replaceHash(buildSearchHash("", sort, filters, null, null));
+      return;
+    }
+
+    setFilters(defaultFilters());
   }
 
   function handleSearchTextChange(nextValue: string) {
